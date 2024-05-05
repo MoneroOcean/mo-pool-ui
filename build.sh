@@ -1,5 +1,10 @@
 #!/bin/bash -x
-# sudo npm install -g uglifycss uglify-js html-minifier
+# DEBIAN_FRONTEND=noninteractive apt-get install -y chromium-browser
+# npm install -g uglifycss uglify-js html-minifier
+# npm install -D critical@latest
+# snap install chromium
+
+export PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
 
 uglifycss --output build/style_min.css style.css &&\
 #uglifyjs  --output build/script_min.js script.js web_miner/miner.js &&\
@@ -7,6 +12,6 @@ uglifycss --output build/style_min.css style.css &&\
 uglifyjs  --output build/script_min.js script.js &&\
 #cp web_miner/cn.min.js build/cn.min.js &&\
 html-minifier --output build/index-raw.html index.html --collapse-whitespace --remove-comments --remove-optional-tags --remove-redundant-attributes --remove-script-type-attributes --remove-tag-whitespace --use-short-doctype --minify-css true --minify-js true &&\
-node critical.js &&\
+node critical.mjs &&\
 rm build/index-raw.html &&\
 echo OK
