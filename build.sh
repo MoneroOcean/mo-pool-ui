@@ -4,6 +4,9 @@
 # npm install -D critical@latest
 # snap install chromium
 
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+
+cd $SCRIPT_DIR
 export PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
 mkdir `pwd`/tmp 2>/dev/null
 
