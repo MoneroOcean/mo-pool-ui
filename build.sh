@@ -5,7 +5,7 @@
 # snap install chromium
 
 export PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
-mkdir `pwd`/tmp 2/dev/null
+mkdir `pwd`/tmp 2>/dev/null
 
 uglifycss --output build/style_min.css style.css &&\
 #uglifyjs  --output build/script_min.js script.js web_miner/miner.js &&\
