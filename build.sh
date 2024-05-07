@@ -19,5 +19,5 @@ html-minifier --output build/index-raw.html index.html --collapse-whitespace --r
 TMP=`pwd`/tmp node critical.mjs &&\
 rm build/index-raw.html &&\
 sudo rm -rf /var/www/mo &&\
-sudo cp build /var/www/mo &&\
+sudo cp -r build /var/www/mo &&\
 echo OK
