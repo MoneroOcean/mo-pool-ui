@@ -852,7 +852,6 @@ function init(){
 		ft += '<span class="nav" data-tar="'+m+'">'+$$.nav[m]+'</span>';
 		i++;
 	}
-	ft += ' &middot; <span class="nav" data-tar="old">Old UI</span>';
 	document.querySelector('#HeadMenu select').innerHTML = mn;
 	document.getElementById('FootR').innerHTML = ft;
 	
