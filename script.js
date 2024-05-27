@@ -356,6 +356,7 @@ var	mde = 'l',
 					'<li><b>XNA</b>: Nb931jkFtFN7QWpu4FqSThaoKajYjS5iFZ</li>'+
 					'<li><b>CLORE</b>: AdXPHtV8yb86a8QKsbs8gmUpRpcxufRn8n</li>'+
 					'<li><b>RTM</b>: RUCyaEZxQu3Eure73XPQ57si813RYAMQKC</li>'+
+					'<li><b>KCN</b>: kc1qchtxq2gw9dc4r58hcegd6n4jspew6j9mu3yz8q</li>'+
 					'<li><b>BTRM</b>: Bfhtr2g56tg73TNZBRCu6fJUD39Kur6SGG</li>'+
 					'<li><b>ERG</b>: 9fe533kUzAE57YfPP6o3nzsYMKN2W2uCxvg8KG8Vn5DDeJGetRw</li>'+
 					'<li><b>BTC</b>: 3HRbMgcvbqHVW7P34MNGvF2Gh3DE26iHdw</li>'+
@@ -462,6 +463,12 @@ var COINS = {
 		divisor: 100000000,
 		url: "https://explorer.raptoreum.com",
 		time: 120,
+	},
+	5110: {
+		name: "KCN",
+		divisor: 100000000,
+		url: "https://kcnxp.com",
+		time: 60,
 	},
 	10225: {
 		name: "BTRM",
