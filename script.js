@@ -80,7 +80,7 @@ var	mde = 'l',
 			coins: [
 				{name: 'name', lbl: 'Name', cls: 'min'},
 				{name: 'algo', lbl: 'Algo', cls: 'min'},
-				{name: 'profit', lbl: 'Profit', 'tooltip':'Profit per hash in percent', cls: 'min'},
+				{name: 'profit', lbl: 'Hash Scalar', 'tooltip':'Profit per hash in percent', cls: 'min'},
 				{name: 'eff', lbl: 'Effort', 'tooltip':'Current block effort in percent', cls: 'min'},
 				{name: 'reward_perc', lbl: 'Reward', 'tooltip':'Block reward in percent', cls: 'min'},
 				{name: 'accounts', lbl: 'Accounts', 'tooltip':'Account (Wallet) Count', cls: 'min'},
