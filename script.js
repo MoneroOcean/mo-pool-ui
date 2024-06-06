@@ -165,20 +165,20 @@ var	mde = 'l',
 			  a:	'Pool support many ports that are only different by their starting difficulty. Please select them based on your miner speed:'+
 				'<ul>'+
 					'<li><b>80</b> (SSL <b>443</b>): 100 diff (1-5 h/s)</li>'+
-					'<li><b>10001</b> (SSL <b>20001</b>): 1000 diff (5-50 h/s)</li>'+
-					'<li><b>10002</b> (SSL <b>20002</b>): 2000 diff (50-100 h/s)</li>'+
-					'<li><b>10004</b> (SSL <b>20004</b>): 4000 diff (100-150 h/s)</li>'+
-					'<li><b>10008</b> (SSL <b>20008</b>): 8000 diff (150-300 h/s)</li>'+
-					'<li><b>10016</b> (SSL <b>20016</b>): 16000 diff (300-500 h/s)</li>'+
-					'<li><b>10032</b> (SSL <b>20032</b>): 32000 diff (500-1000 h/s)</li>'+
-					'<li><b>10064</b> (SSL <b>20064</b>): 64000 diff (1000-2000 h/s)</li>'+
-					'<li><b>10128</b> (SSL <b>20128</b>): 128000 diff (2000-4000 h/s)</li>'+
-					'<li><b>10256</b> (SSL <b>20256</b>): 256000 diff (4000-8000 h/s)</li>'+
-					'<li><b>10512</b> (SSL <b>20512</b>): 512000 diff (8000-20000 h/s)</li>'+
-					'<li><b>11024</b> (SSL <b>21024</b>): 1024000 diff (20000-40000 h/s)</li>'+
-					'<li><b>12048</b> (SSL <b>22048</b>): 2048000 diff (40000-80000 h/s)</li>'+
-					'<li><b>14096</b> (SSL <b>24096</b>): 4096000 diff (80000-160000 h/s)</li>'+
-					'<li><b>18192</b> (SSL <b>28192</b>): 8192000 diff (160000+ h/s)</li>'+
+					'<li><b>10001</b> (SSL <b>20001</b>): 10000 diff (1 kH/s)</li>'+
+					'<li><b>10002</b> (SSL <b>20002</b>): 20000 diff (2 kH/s)</li>'+
+					'<li><b>10004</b> (SSL <b>20004</b>): 40000 diff (4 kH/s)</li>'+
+					'<li><b>10008</b> (SSL <b>20008</b>): 80000 diff (8 kH/s)</li>'+
+					'<li><b>10016</b> (SSL <b>20016</b>): 160000 diff (16 kH/s)</li>'+
+					'<li><b>10032</b> (SSL <b>20032</b>): 320000 diff (32 kH/s)</li>'+
+					'<li><b>10064</b> (SSL <b>20064</b>): 6400000 diff (64 kH/s)</li>'+
+					'<li><b>10128</b> (SSL <b>20128</b>): 1280000 diff (128 kH/s)</li>'+
+					'<li><b>10256</b> (SSL <b>20256</b>): 2560000 diff (256 kH/s)</li>'+
+					'<li><b>10512</b> (SSL <b>20512</b>): 5120000 diff (512 kH/s)</li>'+
+					'<li><b>11024</b> (SSL <b>21024</b>): 10240000 diff (1 MH/s)</li>'+
+					'<li><b>12048</b> (SSL <b>22048</b>): 20480000 diff (2 MH/s)</li>'+
+					'<li><b>14096</b> (SSL <b>24096</b>): 40960000 diff (4 MH/s)</li>'+
+					'<li><b>18192</b> (SSL <b>28192</b>): 81920000 diff (8 MH/s)</li>'+
 				'</ul>'
 			},
 
