@@ -575,7 +575,7 @@ var COINS = {
 	},
 	19081: {
 		name: "SAL",
-		divisor: 1000000000000,
+		divisor: 100000000,
 		url: "https://explorer.salvium.io",
 		time: 120,
 	},
