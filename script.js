@@ -306,6 +306,8 @@ var	mde = 'l',
 					'<b>View key</b>: 2f7c00584635ec0b51f0b40b92f1f4bdbc35c88ac5cfe8a4de86b40a56949f08</li>'+
 					'<li><b>ZEPH</b>: ZEPHYR2nic7ULkkmgZNX8a9i2tMbkxuCqjgWZYuee3awX7RhtmhoT98CwGEGrruWZVSKtA7Z7JC8m7oeYHtBD9cBEZzdEh9BSdq4q<br>'+
 					'<b>View key</b>: 5cd8b069bceefc6d22d50247c3260978e69abaf2c5d9cc5d1351c022343f5200</li>'+
+					'<li><b>SAL</b>: SaLvdWKnkz6MvVgxXr2TWSDSvESz6EBcz3wmMFch2sQuMYz2sUQGVNDYhkYaSuvkDr9GSYp5h6BeQHnGK8HzKhqGeZCZzG3AHS3<br>'+
+					'<b>View key</b>: f4cd8ca26a19670db540b45898dc93df57a4e942b4533351d203a9140cc6aa01</li>'+
 					'<li><b>AEON</b>: WmsEg3RuUKCcEvFBtXcqRnGYfiqGJLP1FGBYiNMgrcdUjZ8iMcUn2tdcz59T89inWr9Vae4APBNf7Bg2DReFP5jr23SQqaDMT<br>'+
 					'<b>View key</b>: edf3d3c64d6b9be56292bfa322a89ddc7dfa0e62c0339f6ef35fad5341243d06</li>'+
 					'<li><b>ETN</b>: etnkQMp3Hmsay2p7uxokuHRKANrMDNASwQjDUgFb5L2sDM3jqUkYQPKBkooQFHVWBzEaZVzfzrXoETX6RbMEvg4R4csxfRHLo1<br>'+
@@ -569,6 +571,12 @@ var COINS = {
 		name: "ZEPH",
 		divisor: 1000000000000,
 		url: "https://explorer.zephyrprotocol.com",
+		time: 120,
+	},
+	19081: {
+		name: "SAL",
+		divisor: 1000000000000,
+		url: "https://explorer.salvium.io",
 		time: 120,
 	},
 };
