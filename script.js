@@ -431,7 +431,7 @@ var COINS = {
 	19950: {
 		name: "XWP",
 		divisor: 1000000000000,
-		url: "https://explorer.xwp.one",
+		url: "https://explorer.getswap.eu",
 		time: 15,
 		unit: "G",
 		factor: 32,
