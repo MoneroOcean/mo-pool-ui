@@ -393,7 +393,7 @@ var COINS = {
 	12211: {
 		name: "RYO",
 		divisor: 1000000000,
-		url: "https://explorer.ryo-currency.com",
+		url: "https://explorer.ryo.tools",
 		time: 240,
 	},
 	//18981: {
@@ -439,7 +439,7 @@ var COINS = {
 	8766: {
 		name: "RVN",
 		divisor: 100000000,
-		url: "https://explorer.ravencoin.org",
+		url: "https://blockbook.ravencoin.org",
 		time: 60,
 		unit: "H",
 		factor: 0xFFFFFFFFFFFFFFFF / 0xFF000000,
@@ -2687,6 +2687,8 @@ function hashToLink(hash, port, type) {
 	var url = port in COINS ? COINS[port].url : "";
 	if (port == 11898 || port == 38081) {
 		return '<a class="C1 hov" target="_blank" href="' + url + '/block.html?hash=' + hash + '">' + hash + '</a>';
+        } else if (port == 16000) {                                                                                   
+                return '<a class="C1 hov" target="_blank" href="' + url + '/index.html?hash=' + hash + '">' + hash + '</a>';   
 	} else if (port == 13007) {
 		return '<a class="C1 hov" target="_blank" href="' + url + '/?hash=' + hash + '">' + hash + '</a>';
         } else if (port == 11812) {
