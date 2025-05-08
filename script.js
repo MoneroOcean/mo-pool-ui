@@ -378,6 +378,12 @@ var COINS = {
 		url: "https://xmrchain.net",
 		time: 120,
 	},
+        18144: {
+                name: "TXM",
+                divisor: 1000000,
+                url: "https://explore.tari.com",
+                time: 120,
+        },
 	//18181: {
 	//	name: "XMC",
 	//	divisor: 1000000000000,
@@ -2695,7 +2701,7 @@ function hashToLink(hash, port, type) {
 		return '<a class="C1 hov" target="_blank" href="' + url + '/' + type + '?' + type + "_info=" + hash + '">' + hash + '</a>';
 	} else if (port == 8545 || port == 8645) {
 		return '<a class="C1 hov" target="_blank" href="' + url + '/' + type + '/0x' + hash + '">' + hash + '</a>';
-	} else if (port == 9053) {
+	} else if (port == 9053 || port == 18144) {
 		return '<a class="C1 hov" target="_blank" href="' + url + '/blocks/' + hash + '">' + hash + '</a>';
 	} else {
 		return '<a class="C1 hov" target="_blank" href="' + url + '/' + type + '/' + hash + '">' + hash + '</a>';
