@@ -354,7 +354,7 @@ var	mde = 'l',
 					'<b>View key</b>: f7f9a43be2780137a2b7e3b2f9cefcc54087fa0bf33f2a5008e0225f93093b0b</li>'+
                                 	'<li><b>BLOC</b>: abLoc5iUG4a6oAb2dqygxkS5M2uHWx16zHb9fUWMzpSEDwm6T7PSq2MLdHonWZ16CGfnJKRomq75aZyviTo6ZjHeYQMzNAEkjMg<br>'+
 					'<b>View key</b>: 84d70052d80c4dda33f1ad34c7a6e5ee3e23defa17c6f8afbc039e9c0bfe5b0f</li>'+
-                                        '<li><b>TXM</b>: 12FrDe5cUauXdMeCiG1DU3XQZdShjFd9A4p9agxsddVyAwpmz73x4b2Qdy5cPYaGmKNZ6g1fbCASJpPxnjubqjvHDa5</li>'+
+                                        '<li><b>XTM</b>: 12FrDe5cUauXdMeCiG1DU3XQZdShjFd9A4p9agxsddVyAwpmz73x4b2Qdy5cPYaGmKNZ6g1fbCASJpPxnjubqjvHDa5</li>'+
 					'<li><b>RVN</b>: RLVJv9rQNHzXS3Zn4JH8hfAHmm1LfECMxy</li>'+
 					'<li><b>XNA</b>: Nb931jkFtFN7QWpu4FqSThaoKajYjS5iFZ</li>'+
 					'<li><b>CLORE</b>: AdXPHtV8yb86a8QKsbs8gmUpRpcxufRn8n</li>'+
