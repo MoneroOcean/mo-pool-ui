@@ -1381,8 +1381,7 @@ function Dash_calc(){
 
 	api('netstats').then(function(){
 		api('poolstats').then(function(){
-			var t = //h_raw / difficultyToHashRate($D.netstats.difficulty, mport) * (24*60*60) / COINS[mport].time * $D.poolstats.minBlockRewards[mport] * f.value;
-				h_raw * $D.poolstats.coinProfit[mport] * f.value;
+			var t = h_raw * $D.poolstats.coinProfit[mport] * f.value;
 			var fiat = $Q.fiat_symbol + Rnd(t * $D.poolstats.price[$Q.fiat_name], 2, 'txt');
 			document.getElementById('MinerCalc').innerHTML = Rnd(t, 4, 'txt') + ' ' + $Q.cur.sym + " (" + fiat + ")";
 		});
