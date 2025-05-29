@@ -1364,9 +1364,9 @@ function Dash_calc(){
 		u = document.getElementById('MinerCalcUnit'),
 		u_val = u.value || 'H';
 
-	if(h_val && h_val > 0){
+	if (h_val && h_val > 0) {
 		h_raw = h_val * $D.hashconv[u_val];
-	}else{
+	} else {
 		h_raw = $D.miner_hash_avg;
 	}
 
@@ -1381,9 +1381,10 @@ function Dash_calc(){
 
 	api('netstats').then(function(){
 		api('poolstats').then(function(){
-			var t = h_raw / difficultyToHashRate($D.netstats.difficulty, mport) * (24*60*60) / COINS[mport].time * $D.poolstats.minBlockRewards[mport] * f.value;
+			var t = //h_raw / difficultyToHashRate($D.netstats.difficulty, mport) * (24*60*60) / COINS[mport].time * $D.poolstats.minBlockRewards[mport] * f.value;
+				h_raw * $D.poolstats.coinProfit[mport] * f.value;
 			var fiat = $Q.fiat_symbol + Rnd(t * $D.poolstats.price[$Q.fiat_name], 2, 'txt');
-			document.getElementById('MinerCalc').innerHTML = Rnd(t, 4, 'txt')+' '+$Q.cur.sym + " (" + fiat + ")";
+			document.getElementById('MinerCalc').innerHTML = Rnd(t, 4, 'txt') + ' ' + $Q.cur.sym + " (" + fiat + ")";
 		});
 	});
 }
