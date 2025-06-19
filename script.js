@@ -548,14 +548,14 @@ var COINS = {
 		url: "https://explorer.scalaproject.io",
 		time: 120,
 	},
-	33124: {
-		name: "XTNC",
-		divisor: 1000000000,
-		url: "https://explorer.xtendcash.com",
-		time: 120,
-		unit: "G",
-		factor: 32,
-	},
+	//33124: {
+	//	name: "XTNC",
+	//	divisor: 1000000000,
+	//	url: "https://explorer.xtendcash.com",
+	//	time: 120,
+	//	unit: "G",
+	//	factor: 32,
+	//},
 	2086: {
 		name: "BLOC",
 		divisor: 10000,
