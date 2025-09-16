@@ -397,7 +397,7 @@ var COINS = {
                 url: "https://explore.tari.com",
                 time: 480,
                 unit: "G",
-                factor: 42,
+                factor: 1,
         },
 	//18181: {
 	//	name: "XMC",
