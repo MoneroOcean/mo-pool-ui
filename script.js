@@ -383,13 +383,21 @@ var COINS = {
                 name: "XTM",
                 divisor: 1000000,
                 url: "https://explore.tari.com",
-                time: 360,
+                time: 480,
         },
 	18146: {
                 name: "XTM-T",
                 divisor: 1000000,
                 url: "https://explore.tari.com",
-                time: 360,
+                time: 480,
+        },
+        18148: {
+                name: "XTM-C",
+                divisor: 1000000,,
+                url: "https://explore.tari.com",
+                time: 480,
+                unit: "G",
+                factor: 42,
         },
 	//18181: {
 	//	name: "XMC",
