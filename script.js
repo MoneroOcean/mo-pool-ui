@@ -396,7 +396,7 @@ var COINS = {
                 divisor: 1000000,
                 url: "https://explore.tari.com",
                 time: 480,
-                unit: "G",
+                unit: "S",
                 factor: 1,
         },
 	//18181: {
