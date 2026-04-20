@@ -338,14 +338,10 @@ var	mde = 'l',
 					'<b>View key</b>: 45917d1ce55822950bfe842cde8216911d4012ac8983be84ae9ff86b2d160600</li>'+
                                 	'<li><b>XTNC</b>: XtazhSxz1bbJLpT2JuiD2UWFUJYSFty5SVWuF6sy2w9v8pn69smkUxkTVCQc8NKCd6CBMNDGzgdPRYBKaHdbgZ5SNptVH1yPCTQ<br>'+
 					'<b>View key</b>: N/A (not mining for a long time)</li>'+
-                                	'<li><b>IRD</b>: ir3DHyB8Ub1aAHEewMeUxQ7b7tQdWa7VL8M5oXDPohS3Me4nhwvALXM4mym2kWg9VsceT75dm6XWiWF1K4zu8RVQ1HJD8Z3R9<br>'+
-					'<b>View key</b>: 51c009878bebf6c0bd74cc9c0462a72d0e87a52b1e97ffa9d3773be7688d930e</li>'+
                                 	'<li><b>ARQ</b>: ar4Ha6ZQCkKRhkKQLfexv7VZQM2MhUmMmU9hmzswCPK4T3o2rbPKZM1GxEoYg4AFQsh57PsEets7sbpU958FAvxo2RkkTQ1gE<br>'+
 					'<b>View key</b>: ed87009c609adc6e66a4ba2e41f6a2bda95be2e453c54d8c08859e317bfc5e06</li>'+
                                 	'<li><b>XWP</b>: fh4MCJrakhWGoS6Meqp6UxGE1GNfAjKaRdPjW36rTffDiqvEq2HWEKZhrbYRw7XJb3CXxkjL3tcYGTT39m5qgjvk1ap4bVu1R<br>'+
 					'<b>View key</b>: 5b33addab62f45d41408b58a310fcfddf60715308c5c5a1444729c5d228ebe02</li>'+
-                                	'<li><b>XEQ</b>: Tvzp9tTmdGP9X8hCEw1Qzn18divQajJYTjR5HuUzHPKyLK5fzRt2X73FKBDzcnHMDJKdgsPhUDVrKHVcDJQVmLBg33NbkdjQb<br>'+
-					'<b>View key</b>: d76f65dab320b9ef36aecf025b6b9e0acccc0e6dbaa21cd0222b09c71eaa640b</li>'+
                                 	'<li><b>XTA</b>: ipN5cNhm7RXAGACP4ZXki4afT3iJ1A6Ka5U4cswE6fBPDcv8JpivurBj3vu1bXwPyb8KZEGsFUYMmToFG4N9V9G72X4WpAQ8L<br>'+
 					'<b>View key</b>: ffd55911bbc5efe654b60b7fcad99c0857e78ce3877d8947e8334899595d0600</li>'+
                                 	'<li><b>DERO</b>: dero1qygrgnz9gea2rqgwhdtpfpa3mvagt5uyq0g92nurwrpk6wnn7hdnzqgudsv6t<br>'+
@@ -357,7 +353,6 @@ var	mde = 'l',
                                         '<li><b>XTM</b>: 12FrDe5cUauXdMeCiG1DU3XQZdShjFd9A4p9agxsddVyAwpmz73x4b2Qdy5cPYaGmKNZ6g1fbCASJpPxnjubqjvHDa5</li>'+
 					'<li><b>RVN</b>: RLVJv9rQNHzXS3Zn4JH8hfAHmm1LfECMxy</li>'+
 					'<li><b>XNA</b>: Nb931jkFtFN7QWpu4FqSThaoKajYjS5iFZ</li>'+
-					'<li><b>CLORE</b>: AdXPHtV8yb86a8QKsbs8gmUpRpcxufRn8n</li>'+
 					'<li><b>RTM</b>: RUCyaEZxQu3Eure73XPQ57si813RYAMQKC</li>'+
 					'<li><b>KCN</b>: kc1qchtxq2gw9dc4r58hcegd6n4jspew6j9mu3yz8q</li>'+
 					'<li><b>BTRM</b>: Bfhtr2g56tg73TNZBRCu6fJUD39Kur6SGG</li>'+
@@ -443,12 +438,6 @@ var COINS = {
 		unit: "G",
 		factor: 16,
 	},
-	9231: {
-		name: "XEQ",
-		divisor: 10000,
-		url: "https://explorer.equilibria.network",
-		time: 120,
-	},
 	19950: {
 		name: "XWP",
 		divisor: 1000000000000,
@@ -469,14 +458,6 @@ var COINS = {
 		name: "XNA",
 		divisor: 100000000,
 		url: "https://explorer.neurai.org",
-		time: 60,
-		unit: "H",
-		factor: 0xFFFFFFFFFFFFFFFF / 0xFF000000,
-	},
-	9766: {
-		name: "CLORE",
-		divisor: 100000000,
-		url: "https://exploreblockchain.clore.ai",
 		time: 60,
 		unit: "H",
 		factor: 0xFFFFFFFFFFFFFFFF / 0xFF000000,
@@ -569,12 +550,6 @@ var COINS = {
 		divisor: 10000,
 		url: "https://bloc-explorer.com",
 		time: 120,
-	},
-	13007: {
-		name: "IRD",
-		divisor: 100000000,
-		url: "https://explorer.ird.cash",
-		time: 175,
 	},
 	19994: {
 		name: "ARQ",
@@ -2710,8 +2685,6 @@ function hashToLink(hash, port, type) {
 		return '<a class="C1 hov" target="_blank" href="' + url + '/block.html?hash=' + hash + '">' + hash + '</a>';
         } else if (port == 16000) {
                 return '<a class="C1 hov" target="_blank" href="' + url + '/index.html?hash=' + hash + '">' + hash + '</a>';
-	} else if (port == 13007) {
-		return '<a class="C1 hov" target="_blank" href="' + url + '/?hash=' + hash + '">' + hash + '</a>';
         } else if (port == 11812) {
 		return '<a class="C1 hov" target="_blank" href="' + url + '/' + type + '?' + type + "_info=" + hash + '">' + hash + '</a>';
 	} else if (port == 8545 || port == 8645) {
