@@ -1,0 +1,59 @@
+@media (max-width: 920px) {
+  .tp {
+    gap: 8px;
+    padding-inline: 12px;
+  }
+  .nv { gap: 2px; min-width: 0; }
+  .nv a { padding: 7px 5px; }
+  .wpto { align-items: stretch; flex-direction: column; }
+  .wpt { width: 100%; margin-left: 0; justify-content: end; }
+  .pkg { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ab { grid-template-columns: 1fr; }
+  .vl { font-size: 24px; }
+}
+
+@media (max-width: 920px) and (min-width: 620px) {
+  .pkg { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (max-width: 740px) {
+  .tp {
+    grid-template-columns: minmax(0, 1fr) max-content;
+    gap: 8px 10px;
+  }
+  .bd { grid-area: 1 / 1; justify-self: start; min-width: 0; }
+  .nv { grid-area: 2 / 1 / auto / -1; justify-content: center; }
+  .ta { grid-area: 1 / 2; justify-self: end; }
+}
+
+@media (max-width: 520px) {
+  .sh { padding: 10px; }
+  .tp { padding: 10px; }
+  .bd span { font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .nv { max-width: calc(100vw - 20px); }
+  .nv a { padding: 6px 5px; }
+  .ph, .cd { padding: 12px; }
+  .bf .bcl,
+  .bf .bpt { display: contents; }
+  .bf .bcl > .fd {
+    grid-column: 1;
+    grid-row: 1;
+    justify-self: start;
+  }
+  .bf #bcx { max-width: 42vw; }
+  .bf .bpt > .fd {
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: end;
+  }
+  .bf .bpt > .fd select { width: 58px; }
+  .bf .bpt .br {
+    grid-column: 2;
+    grid-row: 2;
+    gap: 4px;
+    justify-self: end;
+  }
+  .bf .bl { grid-column: 1; grid-row: 2; }
+  .cw { height: 220px; }
+  .ys { height: 220px; }
+}

@@ -1,92 +1,73 @@
-<!DOCTYPE html>
-<html>
+<!doctype html>
+<html lang="en">
 <head>
-<title>Monero (XMR) Mining Pool - MoneroOcean</title>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<meta name="theme-color" content="#efefef" />
-<meta name="description" content="Welcome to MoneroOcean mining pool! Here you can mine Monero or even more profitable coins but still get payments in Monero, the best private cryptocurrency in the world!">
-<link rel="preload" href="font/GothamCondensed-Medium.woff2" as="font" crossorigin="anonymous">
-<link rel="stylesheet" type="text/css" href="style_min.css" />
-<link rel="shortcut icon" type="image/x-icon" href="assets/favicon.ico" />
-<link rel="icon" type="image/png" href="assets/favicon-16x16.png" sizes="16x16">
-<link rel="icon" type="image/png" href="assets/favicon-32x32.png" sizes="32x32">
-<link rel="apple-touch-icon" href="assets/apple-touch-icon-180x180.png" sizes="180x180">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MoneroOcean Pool Dashboard | XMR Mining Pool</title>
+  <meta name="description" content="Mine the most profitable coins and receive Monero payouts on MoneroOcean. Track wallets, workers, blocks, payments, coins, and setup.">
+  <meta name="theme-color" content="#050706">
+  <meta name="robots" content="index,follow">
+  <link rel="canonical" href="https://moneroocean.stream/">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="MoneroOcean Pool Dashboard">
+  <meta property="og:description" content="Mine profitable coins and receive Monero payouts on MoneroOcean.">
+  <meta property="og:url" content="https://moneroocean.stream/">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="MoneroOcean Pool Dashboard">
+  <meta name="twitter:description" content="Mine profitable coins and get paid in Monero.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Cpath d='M13.8 6.4 C17.8 19.5 34.6 33.5 62.6 37.5 C75.6 41.5 83.2 48.6 90 54.6 C96.8 48.6 104.4 41.5 117.4 37.5 C145.4 33.5 162.2 19.5 166.2 6.4 C167.2 51.4 144.5 70.4 119.6 79.4 C105.2 84.4 101 90.4 101 97.9 C102 112.8 107.7 141 121 171 C103.4 164.8 98.2 164.8 90 171 C81.8 164.8 76.6 164.8 59 171 C72.3 141 78 112.8 79 97.9 C79 90.4 74.8 84.4 60.4 79.4 C35.5 70.4 12.8 51.4 13.8 6.4 Z' fill='%236aff7f'/%3E%3C/svg%3E" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+  <!-- If this JSON-LD changes, build.sh updates the nginx script-src hash from build/index.html. For manual updates, run ./csp-hash.sh build/index.html after npm run build. -->
+  <script type="application/ld+json">
+    {"@context":"https://schema.org","@type":"WebApplication","name":"MoneroOcean Pool Dashboard","url":"https://moneroocean.stream/","applicationCategory":"FinanceApplication","operatingSystem":"Any","description":"Mine profitable coins and receive Monero payouts on MoneroOcean."}
+  </script>
 </head>
+<body>
+  <a class="skl" href="#app">Skip to dashboard</a>
+  <header class="tp">
+    <a class="bd" href="#/" aria-label="MoneroOcean home">
+      <svg class="bm" viewBox="0 0 180 180" aria-hidden="true">
+        <path class="bt" d="M13.8 6.4 C17.8 19.5 34.6 33.5 62.6 37.5 C75.6 41.5 83.2 48.6 90 54.6 C96.8 48.6 104.4 41.5 117.4 37.5 C145.4 33.5 162.2 19.5 166.2 6.4 C167.2 51.4 144.5 70.4 119.6 79.4 C105.2 84.4 101 90.4 101 97.9 C102 112.8 107.7 141 121 171 C103.4 164.8 98.2 164.8 90 171 C81.8 164.8 76.6 164.8 59 171 C72.3 141 78 112.8 79 97.9 C79 90.4 74.8 84.4 60.4 79.4 C35.5 70.4 12.8 51.4 13.8 6.4 Z"></path>
+      </svg>
+      <span>MoneroOcean</span>
+    </a>
+    <nav class="nv" aria-label="Primary">
+      <a href="#/" title="Track wallets and view pool hashrate.">Wallets</a>
+      <a href="#/coins" title="Coin profitability, effort, pool hashrate, world hashrate, and PPLNS share.">Coins</a>
+      <a href="#/blocks" title="Recent XMR and altcoin blocks with live effort and luck context.">Blocks</a>
+      <a href="#/payments" title="Pool payout batches and XMR payout timing.">Payments</a>
+      <a href="#/calc" title="Estimate XMR and fiat mining profit from current pool profitability.">Calc</a>
+      <a href="#/setup" title="Generate miner commands and choose pool ports.">Setup</a>
+      <a href="#/help" title="Pool terms, privacy, support links, and donation address.">Help</a>
+    </nav>
+    <div class="ta">
+      <button id="rnw" class="rb" title="Refresh visible data" aria-label="Refresh visible data">
+        <span class="rk" aria-hidden="true">↻</span>
+        <span id="rst" class="sro" aria-live="polite">Starting</span>
+      </button>
+      <button id="th" class="ib" title="Switch light/dark theme" aria-label="Switch light/dark theme">☾</button>
+      <button id="ct" class="ib" title="Toggle explanatory comments" aria-label="Toggle explanatory comments" aria-pressed="true">?</button>
+    </div>
+  </header>
 
-<body class="C0bkl">
-<header>
-	<div id="HeadLogo" class="txtmed C2 hov nav noselect" data-tar="home">MoneroOcean</div>
-	<div id="HeadMenu"><select class="txtmed C2 C0bkl"></select><div class="select-point C1fl rot90"></div></div>
-	<div id="TogMode" class="C1fl hov"></div>
-	<div id="Timer" class="hov">
-		<div id="TimerPie" class="C1bk">
-			<div id="TimerDisc" class="C0bkl"></div>
-			<div id="TimerText" class="txttny C1 noselect"></div>
-		</div>
-		<div id="TimerRefresh" class="C2fl C0bkl hide"></div>
-		<div id="TimerLoader" class="C1fl C0bkl preload hide"></div>
-	</div>
-</header>
-<div id="NetStats">
-	<div class="SplitL">
-		<table class="C3l"><tr>
-			<td width="33%" class="center"><span id="WorldHash" class="txtbig">--</span><div class="pbar"></div><span class="txttny C2">World XMR Hashrate</span></td>
-			<td width="33%" class="center"><span id="PoolHash" class="txtbig">--</span><div class="pbar"></div><a href="https://stats.uptimerobot.com/BrD44hEJx" class="txttny C2 noselect" target="_blank" title="Pool uptime monitors">Pool Hashrate</a></td>
-			<td width="33%" class="center"><span id="CurrEffort" class="txtbig">--</span><div class="pbar"></div><span class="txttny C2">Current XMR Block Effort</span></td>
-		</tr></table>
-	</div>
-	<div class="SplitR">
-		<table class="C3l"><tr>
-			<td width="33%" class="center"><span id="BlockCount" class="txtbig">--</span><div class="pbar"></div><span class="nav txttny C2 noselect" data-tar="blocks">Blocks Found</span></td>
-			<td width="33%" class="center"><span id="AccountCount" class="txtbig">--</span><div class="pbar"></div><span class="txttny C2 noselect">Accounts Connected</span></td>
-			<td width="33%" class="center"><span id="PaymentsMade" class="txtbig">--</span><div class="pbar"></div><span class="nav txttny C2 noselect" data-tar="payments">Payments Made</span></td>
-		</tr></table>
-	</div>
-</div>
-<div id="Addr" class="LR85">
-	<div class="SplitL">
-		<table class="C3l"><tr>
-			<td class="hide"><div id="AddrRecent"><select class="C3l C0bkl txttny"></select><div class="select-point C1fl rot90"></div></div></td>
-			<td class="hide"><div id="AddrDelete" class="Btn16 C1fl"></div></td>
-			<td width="99%"><div class="hbar"></div><div id="DashAddrCell"><input id="AddrField" type="text" class="FLDl txt C3l" autofocus></div><div class="hbar"></div></td>
-		</tr></table>
-	</div>
-	<div class="SplitR">
-		<table class="C3l"><tr>
-			<td width="40%"><span id="DashDue" class="txtbig">--</span><div class="pbar"></div><span id="DashDueLbl" class="txttny C2 noselect">XMR Total Due</span></td>
-			<td width="20%"><div id="DashPayBtn" class="nopoint" title="Miner options"><div class="Loader C1fl"></div></div></td>
-			<td width="40%"><span id="DashPaid" class="txtbig">--</span><div class="pbar"></div><span id="DashPaidLbl" class="txttny C2 noselect">XMR Paid</span></td>
-		</tr></table>
-	</div>
-</div>
-<div id="Stage" class="StageFade"></div>
-<div class="footer C0bkgrdl">
-	<div class="hbar"></div>
-	<div id="FootL" class="C2">
-		<a href="https://twitter.com/MoneroOcean" target="_blank"><img src="assets/twitter.svg" width="40px" height="40px" title="Subscribe to our Twitter to get updates about new blocks and other info!"></a>
-		&nbsp;
-  	        <a href="https://discordapp.com/invite/jXaR2kA" target="_blank"><img src="assets/discord.svg" width="40px" height="40px" title="Support on pool dedicated Discord chat channel"></a>
-		&nbsp;
-  	        <a href="http://minerbox.witplex.com/" target="_blank"><img src="assets/minerbox.png" width="40px" height="40px" title="Phone app to track mining stats"></a>
-	</div>
-	<div id="FootR" class="txtmed C2 right"></div>
-	<div class="shim10"></div>
-</div>
-<script type="application/ld+json">
-{
-	  "@context": "http://schema.org",
-	  "@type": "product",
-	  "name": "MoneroOcean",
-	  "url": "https://moneroocean.stream",
-	  "logo": "https://moneroocean.stream/assets/logo.png",
-	  "category": "monero mining pool",
-	  "audience": "miners"
-}
-</script>
+  <main id="app" class="sh" tabindex="-1">
+    <section class="ccp">
+      <h1>MoneroOcean XMR Mining Pool Dashboard</h1>
+      <p>MoneroOcean lets miners mine profitable coins while receiving payouts in Monero. Use this dashboard to paste an XMR wallet address, review workers, find ports, copy setup commands, and check blocks or payments.</p>
+    </section>
+    <section id="view" aria-live="polite"></section>
+  </main>
+
+  <footer class="ft">
+    <a href="https://x.com/MoneroOcean" rel="noopener" target="_blank">X</a>
+    <a href="https://discordapp.com/invite/jXaR2kA" rel="noopener" target="_blank">Discord</a>
+    <span class="fc">Based on work of <a href="https://github.com/MoneroOcean" rel="noopener" target="_blank">MoneroOcean</a>, <a href="https://github.com/Thunderosa" rel="noopener" target="_blank">Thunderosa</a>, and <a href="https://github.com/mesh0000" rel="noopener" target="_blank">mesh0000</a>.</span>
+    <a href="https://old.moneroocean.stream" rel="noopener">Old UI</a>
+  </footer>
+
+  <noscript>
+    <div class="ns">This dashboard needs JavaScript to load live pool data. You can still mine using gulf.moneroocean.stream and receive XMR payouts with your Monero address.</div>
+  </noscript>
+  <script src="script.js" type="module"></script>
 </body>
-<script type="text/javascript" src="script_min.js"></script>
-<script>
-	init();
-</script>
 </html>

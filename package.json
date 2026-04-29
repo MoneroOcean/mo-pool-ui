@@ -1,0 +1,19 @@
+{
+  "name": "mo-pool-ui",
+  "version": "1.0.0",
+  "description": "MoneroOcean mining pool dashboard.",
+  "author": "MoneroOcean",
+  "license": "MIT",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "build": "./build.sh"
+  },
+  "devDependencies": {
+    "csso-cli": "^4.0.2",
+    "esbuild": "^0.25.12",
+    "html-minifier-terser": "^7.2.0",
+    "terser": "^5.46.2"
+  }
+}

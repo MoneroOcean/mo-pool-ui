@@ -1,0 +1,11 @@
+plan*.txt
+node_modules/
+package-lock.json
+build/
+coverage/
+*.map
+*.log
+.env
+.env.*
+.DS_Store
+Thumbs.db
