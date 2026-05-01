@@ -24,14 +24,14 @@ Table, paging, and shared controls:
   describe layout hooks.
 
 Charts and graph UI:
-  cs chart shell, ca chart area, cw chart wrap, coo chart overlay, cr chart
+  cs chart shell, ca/cph chart area/placeholder, cw chart wrap, coo chart overlay, cr chart
   readout, csm chart summary, ys y-axis labels, xs x-axis labels, ctt chart SVG,
   hc hashrate chart, cur cursor line, cv cursor vertical line, chz cursor
   horizontal line, pw PPLNS window, rw raw line, smo smoothed line, gs graph
   switch/control strip.
 
 Pool, status, and wallet:
-  ks KPI/status link, sdot status dot, sgn/syo/srd status green/yellow/red,
+  ks KPI/status link, sdot status dot, sgn/syo/srd/sgu status green/yellow/red/unknown,
   wl wallet list, ws wallet summary card, wb wallet block/detail section,
   wh wallet header, wa wallet actions, wtr wallet title row, wtl wallet title
   link, wrm wallet remove button, wtc wallet track card, wgg worker graph grid,

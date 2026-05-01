@@ -1,14 +1,16 @@
 import { api } from "../api.js";
 import { shortAddress } from "../format.js";
-import { normalizeMotd, shouldShowMotd } from "../motd.js";
+import { dismissMotd, normalizeMotd, shouldShowMotd } from "../motd.js";
 import { isXmrAddress } from "../routes.js";
-import { state } from "../state.js";
+import { getCache, state } from "../state.js";
 import { localHistoryEnabled, saveWallet } from "../privacy.js";
 import { summarizeUptimeRobot } from "../uptime.js";
-import { chartHtml, hashrateChart } from "./charts.js";
-import { chipLink, escapeHtml, graphControls, recover } from "./common.js";
+import { bindChartHover, chartHtml, hashrateChart } from "./charts.js";
+import { chipLink, escapeHtml, graphControls, recover, skel } from "./common.js";
 import { poolDashboard } from "./pool-dashboard.js";
 import { walletRouteWithGraph, lastShareAgeSuffix, walletKpis, workerList } from "./wallet.js";
+
+const UNKNOWN_UPTIME = { tone: "gray", label: "Unknown", detail: "UptimeRobot status unavailable" };
 
 export async function homeView(route = state.r) {
   const focusedAddress = route.n === "wallet" ? route.a : "";
@@ -21,22 +23,19 @@ export async function homeView(route = state.r) {
   const graphMode = route.q?.m || state.gm;
   state.gw = graphWindow;
   state.gm = graphMode;
-  const [pool, network, uptimeData, poolChartRows, motdData] = await Promise.all([
+  const [pool, network] = await Promise.all([
     api.poolStats(),
-    api.networkStats(),
-    recover(api.uptimeStatus(), null),
-    recover(api.poolChart(), []),
-    recover(api.motd(), {})
+    api.networkStats()
   ]);
   state.p = Number(pool.pplnsWindowTime) || 0;
-  const uptime = uptimeData ? summarizeUptimeRobot(uptimeData) : { tone: "yellow", label: "Unknown", detail: "UptimeRobot status unavailable" };
-  const motd = normalizeMotd(motdData);
+  const poolChartRows = getCache("pool/chart/hashrate");
+  const motd = normalizeMotd(getCache("pool/motd") || {});
 
   return `
     <div class="gd">
-      ${poolDashboard(pool, network, uptime)}
+      ${poolDashboard(pool, network, cachedUptime())}
       ${poolHashrateChart(poolChartRows, graphWindow)}
-      ${motdCard(motd)}
+      ${motdSlot(motd)}
       ${dashboardGraphControls(graphWindow, graphMode)}
       <div id="wl" class="wl">
         ${state.w.length ? await walletSummaryCards() : `<div class="cd mt">No wallets tracked yet.</div>`}
@@ -50,6 +49,40 @@ export async function homeView(route = state.r) {
         ${focusedAddress && !focusedValid ? `<p class="red ex">Invalid wallet address. Paste a complete XMR payout address.</p>` : ""}
       </div>
     </div>`;
+}
+
+export function bindHomeUptime() {
+  const node = document.getElementById("up");
+  if (!node) return;
+  setTimeout(() => api.uptimeStatus().then((data) => {
+    if (node.isConnected) setUptimeNode(node, summarizeUptimeRobot(data));
+  }).catch(() => {}), 2500);
+}
+
+export function bindHomeDeferred() {
+  const chart = document.getElementById("pch");
+  if (chart) setTimeout(() => api.poolChart().then((rows) => {
+    if (!chart.isConnected || state.r.n !== "home") return;
+    if (!Array.isArray(rows) || !rows.length) return;
+    chart.outerHTML = poolHashrateChart(rows, state.gw);
+    bindChartHover();
+  }).catch(() => {}), 700);
+  const motd = document.getElementById("mtd");
+  if (motd) setTimeout(() => api.motd().then((data) => {
+    if (!motd.isConnected || state.r.n !== "home") return;
+    setMotdSlot(motd, normalizeMotd(data));
+  }).catch(() => {}), 900);
+}
+
+function cachedUptime() {
+  const cached = getCache("uptimerobot/status");
+  return cached ? summarizeUptimeRobot(cached) : UNKNOWN_UPTIME;
+}
+
+function setUptimeNode(node, uptime) {
+  const tone = { green: "sgn", yellow: "syo", red: "srd", gray: "sgu" }[uptime.tone] || "syo";
+  node.className = `ks ${tone}`;
+  node.title = uptime.detail;
 }
 
 export function walletTrackButtonLabel(historyEnabled = localHistoryEnabled()) { return historyEnabled ? "Track wallet" : "Temporary track wallet"; }
@@ -77,10 +110,28 @@ function dashboardGraphRoute(graphWindow, graphMode) {
 }
 
 function poolHashrateChart(rows, graphWindow) {
+  if (!Array.isArray(rows) || !rows.length) return `<section id="pch" class="pn"><div class="cd cph">${skel("Loading pool hashrate chart")}</div></section>`;
   const graph = hashrateChart(rows, graphWindow, "hsh");
-  return `<section class="pn">
-    <div class="cd">${graph.p.length ? chartHtml(graph.m, graph.l, graph.r, graph.a, "Pool-wide hashrate chart") : `<p class="mt">Pool-wide hashrate graph appears after backend history is available.</p>`}</div>
+  return `<section id="pch" class="pn">
+    <div class="cd">${chartHtml(graph.m, graph.l, graph.r, graph.a, "Pool-wide hashrate chart")}</div>
   </section>`;
+}
+
+function motdSlot(motd) {
+  const html = motdCard(motd);
+  return `<div id="mtd"${html ? "" : " class=\"hd\""}>${html}</div>`;
+}
+
+function setMotdSlot(node, motd) {
+  const html = motdCard(motd);
+  node.classList.toggle("hd", !html);
+  node.innerHTML = html;
+  const button = node.querySelector("[data-dm]");
+  if (button) button.addEventListener("click", (event) => {
+    dismissMotd(event.currentTarget.dataset.dm, { persist: localHistoryEnabled() });
+    event.currentTarget.closest(".mc")?.remove();
+    node.classList.add("hd");
+  });
 }
 
 function motdCard(motd) {

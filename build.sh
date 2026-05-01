@@ -154,7 +154,7 @@ npx csso-cli build/style.css --output build/style.css
 
 sed \
   -e "s|href=\"style.css\"|href=\"style.css?v=${SHA}\"|" \
-  -e "s|src=\"script.js\" type=\"module\"|src=\"script.js?v=${SHA}\"|" \
+  -e "s|src=\"script.js\" type=\"module\"|src=\"script.js?v=${SHA}\" defer|" \
   index.html > build/index.html
 npx html-minifier-terser build/index.html --collapse-whitespace --remove-comments --remove-redundant-attributes --collapse-boolean-attributes --remove-attribute-quotes --remove-optional-tags --use-short-doctype --minify-css true --minify-js true -o build/index.html
 
@@ -173,5 +173,7 @@ CSP_HASH="$(./csp-hash.sh build/index.html)"
 update_nginx_csp_hash "$CSP_HASH"
 
 printf 'Built build/index.html, build/script.js, build/style.css using cache key %s\n' "$SHA"
+printf 'Build byte sizes:\n'
+wc -c build/index.html build/style.css build/script.js
 printf 'Deployed to /var/www/mo-pool-ui\n'
 printf 'Current JSON-LD CSP hash is %s\n' "$CSP_HASH"

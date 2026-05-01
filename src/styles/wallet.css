@@ -199,7 +199,6 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  color: inherit;
 }
 .sdot {
   width: 9px;
@@ -211,3 +210,4 @@
 .sgn .sdot { color: var(--lg); }
 .syo .sdot { color: var(--o); }
 .srd .sdot { color: var(--rd); }
+.sgu .sdot { color: var(--m); }

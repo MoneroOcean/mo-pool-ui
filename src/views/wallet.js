@@ -109,7 +109,7 @@ function poolDashboardWithWindow(poolStats, networkStats, uptimeData) {
   state.p = Number(poolStats.pplnsWindowTime) || 0;
   const uptime = uptimeData
     ? summarizeUptimeRobot(uptimeData)
-    : { tone: "yellow", label: "Unknown", detail: "UptimeRobot status unavailable" };
+    : { tone: "gray", label: "Unknown", detail: "UptimeRobot status unavailable" };
   return poolDashboard(poolStats, networkStats, uptime);
 }
 

@@ -249,3 +249,4 @@ body.theme-light #th[aria-pressed=true] {
   margin: 0 auto;
   padding: 18px;
 }
+#view { display: block; min-height: calc(100vh - 150px); }

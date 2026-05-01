@@ -55,6 +55,8 @@ function timeTicks(minTime, maxTime) {
 
 export function bindChartHover() {
   qsa(".hc").forEach((chart) => {
+    if (chart.dataset.hb) return;
+    chart.dataset.hb = "1";
     const points = JSON.parse(chart.dataset.pts || "[]");
     const maxTime = Math.max(...points.map((point) => Number(point.t) || 0));
     const readout = qs(".cr", chart.closest(".cd"));

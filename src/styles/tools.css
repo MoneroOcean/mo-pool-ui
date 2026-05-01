@@ -255,6 +255,8 @@ th {
 .ca {
   min-width: 0;
 }
+.cph { align-content: center; display: grid; min-height: 328px; }
+.cph .sk { justify-self: center; width: min(100%, 560px); }
 .ctt {
   width: 100%;
   height: 100%;

@@ -48,8 +48,8 @@ export function graphControls(routeFor, graphWindow, graphMode, className = "br 
 export function uptimeLabel(label, uptime) {
   // summarizeUptimeRobot returns semantic tones for tests and business logic;
   // the DOM uses short private class hooks documented in style.css.
-  const tone = { green: "sgn", yellow: "syo", red: "srd" }[uptime.tone] || "syo";
-  return { html: `<a class="ks ${tone}" href="${UPTIME_URL}" rel="noopener" target="_blank" title="${escapeHtml(uptime.detail)}"><span class="sdot" aria-hidden="true"></span><span>${escapeHtml(label)}</span></a>` };
+  const tone = { green: "sgn", yellow: "syo", red: "srd", gray: "sgu" }[uptime.tone] || "syo";
+  return { html: `<a id="up" class="ks ${tone}" href="${UPTIME_URL}" rel="noopener" target="_blank" title="${escapeHtml(uptime.detail)}"><span class="sdot" aria-hidden="true"></span><span>${escapeHtml(label)}</span></a>` };
 }
 
 export function tablePage(title, intro, headings, rows, controls = "", tableLabel = "", emptyText = "") {

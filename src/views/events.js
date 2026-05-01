@@ -10,7 +10,7 @@ import { bindChartHover } from "./charts.js";
 import { bindSettingsForms, syncWalletTabsAlignment, walletPaymentRoute } from "./wallet.js";
 import { paymentRoute } from "./payments.js";
 import { bindSetupEvents, syncSetupLayout } from "./setup.js";
-import { syncWalletTrackButtonLabels } from "./home.js";
+import { bindHomeDeferred, bindHomeUptime, syncWalletTrackButtonLabels } from "./home.js";
 import { attr, off, on, byId, qs, qsa } from "../dom.js";
 
 export function bindViewEvents() {
@@ -44,7 +44,9 @@ export function bindViewEvents() {
   bindCalcEvents();
   bindLocalHistoryControls();
   bindSetupEvents();
-  syncViewLayout();
+  bindHomeUptime();
+  bindHomeDeferred();
+  requestAnimationFrame(syncViewLayout);
   off(window, "resize", syncViewLayout);
   on(window, "resize", syncViewLayout);
   bindChartHover();

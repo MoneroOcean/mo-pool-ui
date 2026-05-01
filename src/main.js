@@ -78,6 +78,7 @@ async function render({ background = false } = {}) {
   updateCanonical(state.r);
   updateNav();
   view.toggleAttribute("aria-busy", true);
+  if (shouldScrollToTop(previousRoute, state.r, keepCurrentView, background)) window.scrollTo(0, 0);
   // The cyberpunk glyph skeleton is intentionally narrow: it appears only for
   // cold graph-heavy views where the user is likely to wait on network and
   // chart data. Fast tab switches and cached graph views keep the current UI in
@@ -112,6 +113,10 @@ function isSameViewNavigation(previous, next) {
 
 function isStaticRoute(route) {
   return ["calc", "setup", "help"].includes(route.n);
+}
+
+function shouldScrollToTop(previous, next, keepCurrentView, background) {
+  return !background && !keepCurrentView && previous?.n === "home" && next.n === "wallet";
 }
 
 // Cold-cache checks use API endpoint keys rather than route names because the
