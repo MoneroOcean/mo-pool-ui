@@ -50,20 +50,22 @@ export function loadWatchlist() {
 export function saveWallet(address) {
   if (!isXmrAddress(address)) return loadWatchlist();
   const next = [{ address, time: Date.now() }, ...loadWatchlist().filter((row) => row.address !== address)].slice(0, MAX);
-  if (canStoreHistory()) localStorage.setItem(KEY, JSON.stringify(next));
-  return next;
+  return saveWatchlist(next);
 }
 
 export function appendWallet(address) {
   if (!isXmrAddress(address)) return loadWatchlist();
   const existing = loadWatchlist().filter((row) => row.address !== address);
   const next = [...existing, { address, time: Date.now() }].slice(-MAX);
-  if (canStoreHistory()) localStorage.setItem(KEY, JSON.stringify(next));
-  return next;
+  return saveWatchlist(next);
 }
 
 export function rmWallet(address) {
   const next = loadWatchlist().filter((row) => row.address !== address);
+  return saveWatchlist(next);
+}
+
+function saveWatchlist(next) {
   if (canStoreHistory()) localStorage.setItem(KEY, JSON.stringify(next));
   return next;
 }

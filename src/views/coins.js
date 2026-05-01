@@ -7,7 +7,20 @@ import { nextSortDirectionForKey, sortDirection, sortRows } from "../table-sort.
 import { cellHtml, chipLink, coinCell, escapeHtml, explorerHeightLink, tablePage } from "./common.js";
 import { blockRoute, effortCell } from "./blocks.js";
 
-const COIN_SORT_KEYS = ["name", "algo", "profit", "effort", "reward", "wallets", "pool", "world", "height", "pplns", "notes"];
+const COIN_COLUMNS = [
+  ["Coin", "name"],
+  ["Algo", "algo"],
+  ["Hash scalar", "profit"],
+  ["Effort", "effort"],
+  ["Reward", "reward"],
+  ["Wallets", "wallets"],
+  ["Pool", "pool"],
+  ["World", "world"],
+  ["Top height", "height"],
+  ["PPLNS", "pplns"],
+  ["Notes", "notes"]
+];
+const COIN_SORT_KEYS = COIN_COLUMNS.map(([, key]) => key);
 const COIN_TEXT_SORT_KEYS = { name: "asc", algo: "asc", notes: "asc" };
 
 export async function coinsView() {
@@ -52,7 +65,7 @@ function coinRows(pool, network, showIssues, hideDisabled) {
 function coinControls(sortKey, direction, showIssues, hideDisabled) {
   const inactive = chipLink(hideDisabled ? "Show inactive coins" : "Hide inactive coins", coinsRoute(sortKey, direction, showIssues, !hideDisabled));
   const issues = chipLink(showIssues ? "Hide disabled coins" : "Show disabled coins", coinsRoute(sortKey, direction, !showIssues, hideDisabled));
-  return `<div title="${escapeHtml(EXPLANATIONS.h)}"><div class="br">${inactive}${issues}</div><p class="ex dx">${EXPLANATIONS.h}</p></div>`;
+  return `<div title="${escapeHtml(EXPLANATIONS.h)}"><div class=br>${inactive}${issues}</div><p class="ex dx">${EXPLANATIONS.h}</p></div>`;
 }
 
 function coinTableRow(row) {
@@ -80,19 +93,7 @@ function coinSortKey(value) {
 }
 
 function coinHeadings(active, direction, showIssues, hideDisabled) {
-  return [
-    sortableCoinHeading("Coin", "name", active, direction, showIssues, hideDisabled),
-    sortableCoinHeading("Algo", "algo", active, direction, showIssues, hideDisabled),
-    sortableCoinHeading({ html: `<span title="${escapeHtml(EXPLANATIONS.h)}">Hash scalar</span>` }, "profit", active, direction, showIssues, hideDisabled),
-    sortableCoinHeading("Effort", "effort", active, direction, showIssues, hideDisabled),
-    sortableCoinHeading("Reward", "reward", active, direction, showIssues, hideDisabled),
-    sortableCoinHeading("Wallets", "wallets", active, direction, showIssues, hideDisabled),
-    sortableCoinHeading("Pool", "pool", active, direction, showIssues, hideDisabled),
-    sortableCoinHeading("World", "world", active, direction, showIssues, hideDisabled),
-    sortableCoinHeading("Top height", "height", active, direction, showIssues, hideDisabled),
-    sortableCoinHeading("PPLNS", "pplns", active, direction, showIssues, hideDisabled),
-    sortableCoinHeading("Notes", "notes", active, direction, showIssues, hideDisabled)
-  ];
+  return COIN_COLUMNS.map(([label, key]) => sortableCoinHeading(key === "profit" ? { html: `<span title="${escapeHtml(EXPLANATIONS.h)}">${label}</span>` } : label, key, active, direction, showIssues, hideDisabled));
 }
 
 function sortableCoinHeading(label, key, active, direction, showIssues, hideDisabled) {
@@ -103,17 +104,16 @@ function sortableCoinHeading(label, key, active, direction, showIssues, hideDisa
 }
 
 function coinsRoute(sort, dir, showIssues = false, hideDisabled = false) {
-  const params = new URLSearchParams();
-  if (showIssues) params.set("i", "1");
-  if (hideDisabled) params.set("h", "1");
-  params.set("s", coinSortKey(sort));
-  params.set("d", sortDirection(dir));
-  return `#/coins?${params.toString()}`;
+  const params = [];
+  if (showIssues) params.push("i=1");
+  if (hideDisabled) params.push("h=1");
+  params.push(`s=${coinSortKey(sort)}`, `d=${sortDirection(dir)}`);
+  return `#/coins?${params.join("&")}`;
 }
 
 function coinRow(row, cells) {
   if (!row.disabled) return cells;
-  return cells.map((cell) => ({ html: `<span class="ci" title="Coin is not active for mining">${cellHtml(cell)}</span>` }));
+  return cells.map((cell) => ({ html: `<span class=ci title="Coin is not active for mining">${cellHtml(cell)}</span>` }));
 }
 
 function rewardPercent(pool, port) {

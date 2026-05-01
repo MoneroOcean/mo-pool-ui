@@ -1,9 +1,11 @@
 export const isFiniteNumber = Number.isFinite;
+export const encodeUrlPart = encodeURIComponent;
+const HTML_ESCAPES = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" };
 
 export function formatNumber(value, digits = 0) {
   const number = Number(value);
   if (!isFiniteNumber(number)) return "--";
-  return new Intl.NumberFormat("en-US", { maximumFractionDigits: digits }).format(number);
+  return number.toLocaleString("en-US", { maximumFractionDigits: digits });
 }
 
 export function formatHashrate(value, unit = "H/s") {
@@ -22,7 +24,7 @@ export function formatHashrate(value, unit = "H/s") {
 export function formatXmr(value, digits = 6) {
   const number = Number(value);
   if (!isFiniteNumber(number)) return "-- XMR";
-  return `${number.toFixed(digits).replace(/0+$/, "").replace(/\.$/, "")} XMR`;
+  return `${trimFixed(number, digits)} XMR`;
 }
 
 export function atomicXmr(value) {
@@ -41,7 +43,11 @@ export function formatTinyPercent(value, digits = 2, maxDigits = 8) {
   if (!isFiniteNumber(number)) return "--";
   if (number === 0) return `${number.toFixed(digits)}%`;
   if (Math.abs(number) >= 10 ** -digits) return `${number.toFixed(digits)}%`;
-  return `${number.toFixed(maxDigits).replace(/0+$/, "").replace(/\.$/, "")}%`;
+  return `${trimFixed(number, maxDigits)}%`;
+}
+
+export function trimFixed(value, digits) {
+  return Number(value).toFixed(digits).replace(/\.?0+$/, "");
 }
 
 export function formatAge(timestampSeconds, now = Date.now()) {
@@ -49,13 +55,10 @@ export function formatAge(timestampSeconds, now = Date.now()) {
   if (!isFiniteNumber(ts) || ts <= 0) return "--";
   const seconds = Math.max(0, Math.floor((now - ts * 1000) / 1000));
   if (seconds < 60) return `${seconds}s ago`;
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 48) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  if (days < 365) return `${days}d ago`;
-  return `${Math.floor(days / 365)}y ago`;
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+  if (seconds < 172800) return `${Math.floor(seconds / 3600)}h ago`;
+  if (seconds < 31536000) return `${Math.floor(seconds / 86400)}d ago`;
+  return `${Math.floor(seconds / 31536000)}y ago`;
 }
 
 export function formatDate(timestampSeconds) {
@@ -71,12 +74,7 @@ export function normalizeTimestampSeconds(value) {
 }
 
 export function escapeHtml(value) {
-  return String(value ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
+  return String(value ?? "").replace(/[&<>"']/g, (char) => HTML_ESCAPES[char]);
 }
 
 export function shortAddress(address) {

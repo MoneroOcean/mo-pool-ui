@@ -1,4 +1,4 @@
-import { isFiniteNumber } from "./format.js";
+import { isFiniteNumber, trimFixed } from "./format.js";
 
 function boundedNumber(value, min = 0, inclusive = true) {
   const number = Number(value);
@@ -83,8 +83,7 @@ export function formatPayoutThresholdInput(threshold, policy) {
 
 function formatTrimmedDecimal(value, digits) {
   const number = Number(value);
-  if (!isFiniteNumber(number)) return "";
-  return number.toFixed(digits).replace(/0+$/, "").replace(/\.$/, "");
+  return isFiniteNumber(number) ? trimFixed(number, digits) : "";
 }
 
 export function validatePayoutThreshold(value, policy) {

@@ -1,4 +1,5 @@
 import { XMR_ADDRESS_RE } from "./constants.js";
+import { encodeUrlPart } from "./format.js";
 
 export function isXmrAddress(value) {
   return XMR_ADDRESS_RE.test(String(value ?? "").trim());
@@ -24,21 +25,21 @@ export function parseRoute(hash = "") {
       n: "wallet",
       a: parts[1] || "",
       t: tab,
-      p: `#/wallet/${encodeURIComponent(parts[1] || "")}/${tab}`,
+      p: `#/wallet/${encodeUrlPart(parts[1] || "")}/${tab}`,
       q: query
     };
   }
   if (parts[0] === "blocks" && parts[1]) {
     const coin = coinPortFromRoute(parts[1]);
     if (!coin) return { n: "blocks", p: "#/blocks", q: query };
-    return { n: "blocks", c: coin, p: `#/blocks/${encodeURIComponent(routeCoinId(coin))}`, q: query };
+    return { n: "blocks", c: coin, p: `#/blocks/${encodeUrlPart(routeCoinId(coin))}`, q: query };
   }
   if (["coins", "blocks", "payments", "calc", "setup", "help"].includes(parts[0])) return { n: parts[0], p: `#/${parts[0]}`, q: query };
   return { n: "home", p: "#/", q: query };
 }
 
 export function walletRoute(address, tab = "overview") {
-  return `#/wallet/${encodeURIComponent(address)}/${encodeURIComponent(walletTab(tab))}`;
+  return `#/wallet/${encodeUrlPart(address)}/${encodeUrlPart(walletTab(tab))}`;
 }
 
 function walletTab(value) {

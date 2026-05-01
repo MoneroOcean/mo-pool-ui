@@ -92,9 +92,6 @@
   flex: 1 auto;
   justify-content: end;
 }
-.z .stg + .stg {
-  justify-content: start;
-}
 .st {
   min-width: 0;
   min-height: 40px;
@@ -276,7 +273,7 @@ th {
   opacity: 0;
   stroke: var(--o);
 }
-.ctt.has-cursor .cur {
+.ctt.hcu .cur {
   opacity: 1;
 }
 .mc .ph {

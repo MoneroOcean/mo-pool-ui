@@ -8,12 +8,15 @@ import { escapeHtml, recover } from "./common.js";
 
 const CALC_MO_CVS_URL = "https://github.com/MoneroOcean/nodejs-pool/blob/master/block_share_dumps/calc_mo_cvs.js";
 const XMRCHAIN_URL = "https://xmrchain.net";
-const DEFAULT_REFERENCE_PORTS = [80, 10001, 10002, 10004, 10008, 10016, 10032, 10064, 10128, 10256, 10512, 11024, 12048, 14096, 18192];
+const DEFAULT_REFERENCE_PORTS = [80, ...Array.from({ length: 14 }, (_, index) => 10000 + 2 ** index)];
 
 export async function helpView() {
   const policy = payoutPolicyFromConfig(await recover(api.config(), {}));
   const thresholdText = (value) => formatPayoutThresholdInput(value, policy);
   const historyEnabled = localHistoryEnabled();
+  const statusLink = helpLink(UPTIME_URL, "status");
+  const discordLink = helpLink(DISCORD_URL, "Discord");
+  const statusOrDiscord = `${statusLink} or ${discordLink}`;
   const ppCopy = policy
     ? [
       `${EXPLANATIONS.py} Limits: ${thresholdText(policy.m)} XMR min, ${thresholdText(policy.d)} XMR default.`,
@@ -55,15 +58,15 @@ export async function helpView() {
     ]],
     ["High XMRig ping", [
       "XMRig pool ping can include share validation, so it may exceed ICMP ping.",
-      `Judge by accepted shares, stale/rejected rate, and disconnects. If rejects spike, try a nearby host, web-friendly port, or check ${helpLink(UPTIME_URL, "status")} and ${helpLink(DISCORD_URL, "Discord")}.`
+      `Judge by accepted shares, stale/rejected rate, and disconnects. If rejects spike, try a nearby host, web-friendly port, or check ${statusLink} and ${discordLink}.`
     ]],
     ["Rejected/throttled shares", [
       "Throttled shares usually mean too many low-difficulty shares. Use a higher difficulty port or proxy.",
       "Low difficulty share means a result missed assigned difficulty. If one device repeats it, check miner, clocks, memory, thermals, and algo.",
-      `If many miners report the same reject pattern, check ${helpLink(UPTIME_URL, "status")} or ${helpLink(DISCORD_URL, "Discord")} before large local changes.`
+      `If many miners report the same reject pattern, check ${statusOrDiscord} before large local changes.`
     ]],
     ["Hosts, ports, Tor", [
-      `Use ${POOL_HOST}; it routes miners to a nearby healthy node. Check ${helpLink(UPTIME_URL, "status")} or ${helpLink(DISCORD_URL, "Discord")} during incidents.`,
+      `Use ${POOL_HOST}; it routes miners to a nearby healthy node. Check ${statusOrDiscord} during incidents.`,
       `Setup selects a port from estimated hashrate. Reference ports: ${referencePortSummary()}.`,
       `Ports 80 and 443 help on web-only networks. Tor onion for non-TLS mining: ${TOR_MINING_HOST}.`
     ]],
@@ -79,19 +82,18 @@ export async function helpView() {
       "Use a mining-only address or subaddress if you do not want mining linked to other wallet activity."
     ]],
     ["Help the pool", [
-      `Report broken explorers, confusing UI/setup output, and incidents in ${helpLink(DISCORD_URL, "Discord")} or by email. Donation address:<div class="cbx hdn"><button class="cpy" data-c="#da">Copy</button><pre id="da">${DONATION_XMR}</pre></div>`
+      `Report broken explorers, confusing UI/setup output, and incidents in ${discordLink} or by email. Donation address:<div class="cbx hdn"><button class="cpy" data-c="#da">Copy</button><pre id="da">${DONATION_XMR}</pre></div>`
     ]]
   ];
-  return `<section class="pn"><div class="ph"><h1>Help</h1></div><div class="cd gd hg">${rows.map(([q, a, open]) => helpEntry(q, a, open)).join("")}</div></section>`;
+  return `<section class=pn><div class=ph><h1>Help</h1></div><div class="cd gd hg">${rows.map(([q, a, open]) => helpEntry(q, a, open)).join("")}</div></section>`;
 }
 
 function helpEntry(question, answers, open = false) {
-  const body = Array.isArray(answers) ? `<ul class="hl">${answers.map((answer) => `<li>${answer}</li>`).join("")}</ul>` : answers;
-  return `<details ${open ? "open" : ""}><summary>${escapeHtml(question)}</summary><div class="mt he">${body}</div></details>`;
+  return `<details ${open ? "open" : ""}><summary>${escapeHtml(question)}</summary><div class="mt he"><ul class="hl">${answers.map((answer) => `<li>${answer}</li>`).join("")}</ul></div></details>`;
 }
 
 function helpLink(href, label) {
-  return `<a href="${escapeHtml(href)}" rel="noopener" target="_blank">${escapeHtml(label)}</a>`;
+  return `<a href="${escapeHtml(href)}" rel=noopener target=_blank>${escapeHtml(label)}</a>`;
 }
 
 export function referencePortSummary(ports = DEFAULT_REFERENCE_PORTS) {

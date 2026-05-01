@@ -23,7 +23,7 @@ export async function paymentsView(route = state.r) {
 function paymentControls(page, limit, rowCount, totalCount = 0) {
   const pageCount = pageCountFor(totalCount, limit);
   const hasNext = page < pageCount || (!totalCount && rowCount >= limit);
-  return `<div class="bc">
+  return `<div class=bc>
     <span></span>
     <div class="bpt">
       ${pageSizeSelect("pps", limit)}

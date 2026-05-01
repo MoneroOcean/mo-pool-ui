@@ -1,8 +1,8 @@
-import { averageVisible, chartModel, filterWindow, isWithinPplnsWindow, pplnsWindowRect, svgLine } from "../charts.js";
+import { averageVisible, chartModel, filterWindow, isWithinPplnsWindow, pplnsWindowRect } from "../charts.js";
 import { formatDate, formatHashrate, normalizeTimestampSeconds } from "../format.js";
 import { state } from "../state.js";
 import { escapeHtml } from "./common.js";
-import { attr, on, qs, qsa } from "../dom.js";
+import { attr, on, qs, qsa, tog } from "../dom.js";
 
 export function chartHtml(model, line, raw, average, label, detail = "") {
   // The chart is plain SVG plus a small data-pts payload so hover works without
@@ -12,7 +12,7 @@ export function chartHtml(model, line, raw, average, label, detail = "") {
   const pplns = pplnsWindowRect(model, state.p);
   const pplnsRect = pplns ? `<rect class="pw" x="${pplns.x.toFixed(1)}" width="${pplns.width.toFixed(1)}" height="${pplns.height}"></rect>` : "";
   const detailLine = (Array.isArray(detail) ? detail : detail ? [detail] : []).map((line) => `<small>${escapeHtml(line)}</small>`).join("");
-  return `<div class="cs"><div class="ys">${scaleRows(model.n, model.x).map((value) => `<span>${formatHashrate(value)}</span>`).join("")}</div><div class="ca"><div class="cw"><div class="coo"><span class=csm><span>Average ${formatHashrate(average)} · PPLNS ${formatHashrate(pplnsAverage(model))}</span>${detailLine}</span><span class=cr>Point: move over graph</span></div><svg class="ctt hc" viewBox="0 0 700 220" preserveAspectRatio="none" role="img" aria-label="${escapeHtml(label)}" data-pts="${pointData}">${pplnsRect}<path class="rw" d="${raw}"></path><path class="smo" d="${line}"></path><line class="cur cv" x1="0" x2="0" y1="0" y2="220"></line><line class="cur chz" x1="0" x2="700" y1="0" y2="0"></line></svg></div><div class="xs">${timeTicks(model.s, model.e).map((tick) => `<span>${escapeHtml(tick)}</span>`).join("")}</div></div></div>`;
+  return `<div class="cs"><div class="ys">${scaleRows(model.n, model.x).map((value) => `<span>${formatHashrate(value)}</span>`).join("")}</div><div class="ca"><div class="cw"><div class="coo"><span class=csm><span>Average ${formatHashrate(average)} · PPLNS ${formatHashrate(pplnsAverage(model))}</span>${detailLine}</span><span class=cr>Point: move over graph</span></div><svg class="ctt hc" viewBox="0 0 700 220" preserveAspectRatio="none" role="img" aria-label="${escapeHtml(label)}" data-p="${pointData}">${pplnsRect}<path class="rw" d="${raw}"></path><path class="smo" d="${line}"></path><line class="cur cv" x1="0" x2="0" y1="0" y2="220"></line><line class="cur chz" x1="0" x2="700" y1="0" y2="0"></line></svg></div><div class="xs">${timeTicks(model.s, model.e).map((tick) => `<span>${escapeHtml(tick)}</span>`).join("")}</div></div></div>`;
 }
 
 export function hashrateChart(rows, graphWindow, key = "hsh2") {
@@ -20,13 +20,26 @@ export function hashrateChart(rows, graphWindow, key = "hsh2") {
 }
 
 function chartForPoints(points, key = "hsh2") {
+  const model = chartModel(points, key);
   return {
     p: points,
-    l: svgLine(points, key, 700, 220, true),
-    r: svgLine(points, key),
+    l: chartPath(model.r, true),
+    r: chartPath(model.r),
     a: averageVisible(points, key),
-    m: chartModel(points, key)
+    m: model
   };
+}
+
+function chartPath(rows, smooth = false) {
+  const key = smooth && rows.length > 2 ? "z" : "y";
+  return rows.map((point, index) => {
+    if (!index) return `M${point.x},${point[key]}`;
+    if (key === "z") {
+      const mid = (rows[index - 1].x + point.x) / 2;
+      return `C${mid},${point.z} ${mid},${point.z} ${point.x},${point.z}`;
+    }
+    return `L${point.x},${point.y}`;
+  }).join(" ");
 }
 
 function pplnsAverage(model) {
@@ -57,7 +70,7 @@ export function bindChartHover() {
   qsa(".hc").forEach((chart) => {
     if (chart.dataset.hb) return;
     chart.dataset.hb = "1";
-    const points = JSON.parse(chart.dataset.pts || "[]");
+    const points = JSON.parse(chart.dataset.p || "[]");
     const maxTime = Math.max(...points.map((point) => Number(point.t) || 0));
     const readout = qs(".cr", chart.closest(".cd"));
     const vertical = qs(".cv", chart);
@@ -66,20 +79,19 @@ export function bindChartHover() {
       if (!points.length) return;
       const rect = chart.getBoundingClientRect();
       const x = ((event.clientX - rect.left) / rect.width) * 700;
-      // Cursor lines form the "aim" marker: one vertical and one horizontal
-      // solid line pinned to the nearest real backend sample, not interpolated.
+      // Cursor lines are pinned to the nearest real backend sample, not interpolated.
       const point = points.reduce((best, item) => Math.abs(item.x - x) < Math.abs(best.x - x) ? item : best, points[0]);
       attr(vertical, "x1", point.x);
       attr(vertical, "x2", point.x);
       attr(horizontal, "y1", point.y);
       attr(horizontal, "y2", point.y);
-      chart.classList.add("has-cursor");
+      tog(chart, "hcu", true);
       const pplns = isWithinPplnsWindow(point.t, maxTime, state.p) ? " · PPLNS" : "";
       if (readout) readout.textContent = `${formatDate(point.t)} · ${formatHashrate(point.v)}${pplns}`;
     };
     on(chart, "pointermove", update);
     on(chart, "pointerleave", () => {
-      chart.classList.remove("has-cursor");
+      tog(chart, "hcu", false);
       if (readout) readout.textContent = "Point: move over graph";
     });
   });

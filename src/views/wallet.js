@@ -5,24 +5,40 @@ import { coinName } from "../pool.js";
 import { walletRoute, isXmrAddress } from "../routes.js";
 import { formatPayoutThresholdInput, normalizePayoutPolicy, payoutFeeText, payoutPolicyFromConfig, payoutThresholdFromAtomic, validatePayoutThreshold } from "../settings.js";
 import { state } from "../state.js";
-import { summarizeUptimeRobot } from "../uptime.js";
+import { UNKNOWN_UPTIME, summarizeUptimeRobot } from "../uptime.js";
 import { saveWallet } from "../privacy.js";
 import { compactWorkerRows, sortWorkerListRows, sortWorkerRows, workerDisplayMode, workerGraphColumns, workerListSortMode, workerSortDirection, workerSortMode } from "../wallet.js";
 import { MAX_ROUTE_PAGE, blockPageSize, pageCountFor, routePageNumber } from "../paging.js";
 import { nextSortDirection, nextSortDirectionForKey } from "../table-sort.js";
-import { attr, on, qs, qsa, tog } from "../dom.js";
+import { attr, on, qs } from "../dom.js";
 import { activeAttr, blockHashLink, cellHtml, chipLink, coinCell, dateCell, escapeHtml, formatAtomicXmrValue, graphControls, kpi, linkLabel, pageSizeSelect, pagerNav, paymentHashLink, recover, tablePage } from "./common.js";
 import { chartHtml, hashrateChart, normalizeGraph } from "./charts.js";
 import { poolDashboard } from "./pool-dashboard.js";
 
 const BLOCK_REWARD_HELP = "Per-block PPLNS rewards. Hashes link to share dump CSVs.";
 const EMAIL_ALERTS_HELP = "Toggle alerts; replace with Current/New email.";
+const OVERVIEW_TAB = "overview";
+const BLOCK_REWARDS_TAB = "block-rewards";
+const WITHDRAWALS_TAB = "withdrawals";
+const THRESHOLD_TAB = "payment-threshold";
+const EMAIL_ALERTS_TAB = "email-alerts";
+const WORKER_COLUMNS = [
+  ["Worker", "name"],
+  ["XMR", "xmr"],
+  ["Raw", "raw"],
+  ["Avg XMR", "avg"],
+  ["Avg Raw", "avgraw"],
+  ["Last", "last"],
+  ["Valid", "valid"],
+  ["Invalid", "invalid"],
+  ["Hashes", "hashes"]
+];
 let workerMode = 0;
 let workerShowDead = true;
 
 export async function walletView(route) {
   const address = route.a;
-  if (!isXmrAddress(address)) return `<section class="pn"><div class="cd"><h1>Invalid wallet address</h1><p class="mt">Paste a complete XMR payout address.</p></div></section>`;
+  if (!isXmrAddress(address)) return `<section class=pn><div class=cd><h1>Invalid wallet address</h1><p class=mt>Paste a complete XMR payout address.</p></div></section>`;
   state.a = address;
   state.w = saveWallet(address);
   const graphWindow = route.q?.w || state.gw;
@@ -35,10 +51,10 @@ export async function walletView(route) {
   const workerDir = workerMode === "list" && workerSort === "name" && !route.q?.d ? "asc" : workerSortDirection(route.q?.d);
   const graphDetails = route.q?.x === "1";
   const pages = walletPages(route.q || {});
-  const activeTab = route.t || "overview";
+  const activeTab = route.t || OVERVIEW_TAB;
   const results = await fetchWalletPanels(address, activeTab, pages);
   const detailBody = walletDetailBody(activeTab, results, address, graphWindow, graphMode, workerSort, workerDir, graphDetails, pages);
-  const overviewExtras = activeTab === "overview"
+  const overviewExtras = activeTab === OVERVIEW_TAB
     ? `<div class="cd gs">${walletGraphControls(address, graphWindow, graphMode, workerSort, workerDir, graphDetails)}</div>${walletWorkersSection(address, results.wr, results.wc, graphWindow, graphMode, workerSort, workerDir, graphDetails)}`
     : "";
   return `
@@ -51,7 +67,7 @@ export async function walletView(route) {
           </div>
           <div class="wa">
             <nav class="tb it" aria-label="Wallet detail views">
-              ${walletDetailTabs(address, route.t || "overview", graphWindow, graphMode, workerSort, workerDir, graphDetails)}
+              ${walletDetailTabs(address, route.t || OVERVIEW_TAB, graphWindow, graphMode, workerSort, workerDir, graphDetails)}
             </nav>
           </div>
         </div>
@@ -67,9 +83,9 @@ function walletPages(query) {
 }
 
 async function fetchWalletPanels(address, dataTab, pages) {
-  const needsOverview = dataTab === "overview";
-  const needsWithdrawals = dataTab === "withdrawals";
-  const needsSettings = dataTab === "payment-threshold" || dataTab === "email-alerts";
+  const needsOverview = dataTab === OVERVIEW_TAB;
+  const needsWithdrawals = dataTab === WITHDRAWALS_TAB;
+  const needsSettings = dataTab === THRESHOLD_TAB || dataTab === EMAIL_ALERTS_TAB;
   const needsWalletStats = needsOverview || needsWithdrawals;
   const [poolData, networkData, uptimeData, configData, walletStats, userSettings, chartRows, workers, workerCharts, payments, blockPayments] = await Promise.all([
     recover(api.poolStats(), null),
@@ -82,14 +98,14 @@ async function fetchWalletPanels(address, dataTab, pages) {
     needsOverview ? recover(api.walletWorkers(address), {}) : {},
     needsOverview ? recover(api.walletWorkerCharts(address), {}) : {},
     needsWithdrawals ? recover(api.walletPayments(address, pages.wp - 1, pages.wl), []) : [],
-    dataTab === "block-rewards" ? recover(api.walletBlockPayments(address, pages.bp - 1, pages.bl), []) : []
+    dataTab === BLOCK_REWARDS_TAB ? recover(api.walletBlockPayments(address, pages.bp - 1, pages.bl), []) : []
   ]);
   const poolStats = poolData || {};
   const networkStats = networkData || {};
   const graphPoints = normalizeGraph(chartRows.length ? chartRows : walletStats);
   const poolBlock = poolData && networkData
     ? poolDashboardWithWindow(poolStats, networkStats, uptimeData)
-    : `<section class="pn"><div class="cd mt">Pool dashboard temporarily unavailable.</div></section>`;
+    : `<section class=pn><div class="cd mt">Pool dashboard temporarily unavailable.</div></section>`;
   return {
     // Private wallet panel bundle: pb pool dashboard block, ps pool stats,
     // st wallet stats, se settings, wr worker rows, wc worker chart map,
@@ -111,53 +127,53 @@ function poolDashboardWithWindow(poolStats, networkStats, uptimeData) {
   state.p = Number(poolStats.pplnsWindowTime) || 0;
   const uptime = uptimeData
     ? summarizeUptimeRobot(uptimeData)
-    : { tone: "gray", label: "Unknown", detail: "UptimeRobot status unavailable" };
+    : UNKNOWN_UPTIME;
   return poolDashboard(poolStats, networkStats, uptime);
 }
 
 function walletDetailBody(tab, data, address, graphWindow, graphMode, workerSort, workerDir, graphDetails, pages) {
-  if (tab === "withdrawals") return walletWithdrawalsPanel(address, data.st, graphWindow, graphMode, workerSort, workerDir, graphDetails, data.pr, pages.wp, pages.wl, pages.bp, pages.bl);
-  if (tab === "block-rewards") return walletBlockRewardsPanel(address, data.ps, graphWindow, graphMode, workerSort, workerDir, graphDetails, data.br, pages.bp, pages.bl, pages.wp, pages.wl);
-  if (tab === "payment-threshold") return paymentThresholdPanel(address, data.se, data.pp);
-  if (tab === "email-alerts") return emailAlertsPanel(address, data.se);
+  if (tab === WITHDRAWALS_TAB) return walletWithdrawalsPanel(address, data.st, graphWindow, graphMode, workerSort, workerDir, graphDetails, data.pr, pages.wp, pages.wl, pages.bp, pages.bl);
+  if (tab === BLOCK_REWARDS_TAB) return walletBlockRewardsPanel(address, data.ps, graphWindow, graphMode, workerSort, workerDir, graphDetails, data.br, pages.bp, pages.bl, pages.wp, pages.wl);
+  if (tab === THRESHOLD_TAB) return paymentThresholdPanel(address, data.se, data.pp);
+  if (tab === EMAIL_ALERTS_TAB) return emailAlertsPanel(address, data.se);
   const graph = hashrateChart(data.gp, graphWindow, graphMode === "raw" ? "hsh" : "hsh2");
   return walletOverview(data.st, data.wr, graph, address, graphWindow, graphMode, workerSort, workerDir, graphDetails);
 }
 
 function walletDetailTabs(address, activeTab, graphWindow, graphMode, workerSort, workerDir, graphDetails) {
   const tabs = [
-    ["overview", "Overview", "Wallet balance, pool-side hashrate, total graph, worker graphs."],
-    ["block-rewards", "Block rewards", BLOCK_REWARD_HELP],
-    ["withdrawals", "XMR withdrawals", EXPLANATIONS.py],
-    ["payment-threshold", "Payment threshold", EXPLANATIONS.py],
-    ["email-alerts", "Email alerts", "Manage email notices."]
+    [OVERVIEW_TAB, "Overview", "Wallet balance, pool-side hashrate, total graph, worker graphs."],
+    [BLOCK_REWARDS_TAB, "Block rewards", BLOCK_REWARD_HELP],
+    [WITHDRAWALS_TAB, "XMR withdrawals", EXPLANATIONS.py],
+    [THRESHOLD_TAB, "Payment threshold", EXPLANATIONS.py],
+    [EMAIL_ALERTS_TAB, "Email alerts", "Manage email notices."]
   ];
   const active = activeTab;
   // The magnifier is visually paired with Overview because the extra total
   // hashes/share lines only exist on overview graphs. On other wallet tabs it
   // still links back to Overview with details enabled, instead of implying that
   // table views have a hidden detail mode.
-  const targetDetails = active === "overview" ? !graphDetails : true;
-  const detailsToggle = `<a href="${walletRouteWithGraph(address, "overview", graphWindow, graphMode, workerSort, workerDir, targetDetails)}" title="${active === "overview" && graphDetails ? "Hide graph share stats" : "Show graph share stats"}" aria-pressed="${active === "overview" && graphDetails}">🔍</a>`;
+  const targetDetails = active === OVERVIEW_TAB ? !graphDetails : true;
+  const detailsToggle = `<a href="${walletRouteWithGraph(address, OVERVIEW_TAB, graphWindow, graphMode, workerSort, workerDir, targetDetails)}" title="${active === OVERVIEW_TAB && graphDetails ? "Hide graph share stats" : "Show graph share stats"}" aria-pressed="${active === OVERVIEW_TAB && graphDetails}">🔍</a>`;
   return tabs.map(([tab, label, title]) => {
     const link = `<a href="${walletRouteWithGraph(address, tab, graphWindow, graphMode, workerSort, workerDir, graphDetails)}" title="${escapeHtml(title)}"${activeAttr(active === tab)}>${escapeHtml(label)}</a>`;
-    return tab === "overview" ? `<span>${detailsToggle}${link}</span>` : link;
+    return tab === OVERVIEW_TAB ? `<span>${detailsToggle}${link}</span>` : link;
   }).join("");
 }
 
 function walletOverview(stats, workers, graph, address, graphWindow, graphMode, workerSort, workerDir, graphDetails) {
-  return `<section class="pn">
+  return `<section class=pn>
     <div class="cd gd kg">
-      ${walletKpis(stats, workers.length, stats.hash2 || stats.hash || graph.a, linkLabel("XMR total due", walletRouteWithGraph(address, "payment-threshold", graphWindow, graphMode, workerSort, workerDir, graphDetails)), linkLabel("XMR paid", walletRouteWithGraph(address, "withdrawals", graphWindow, graphMode, workerSort, workerDir, graphDetails)))}
+      ${walletKpis(stats, workers.length, stats.hash2 || stats.hash || graph.a, linkLabel("XMR total due", walletRouteWithGraph(address, THRESHOLD_TAB, graphWindow, graphMode, workerSort, workerDir, graphDetails)), linkLabel("XMR paid", walletRouteWithGraph(address, WITHDRAWALS_TAB, graphWindow, graphMode, workerSort, workerDir, graphDetails)))}
     </div>
-    <div class="cd">
-      ${graph.p.length ? chartHtml(graph.m, graph.l, graph.r, graph.a, "Wallet hashrate chart", graphDetails ? miningStatsLine(stats) : "") : `<p class="mt">Graph appears after submitted shares. Backend samples every 2 minutes; points use a 10-minute window.</p>`}
+    <div class=cd>
+      ${graph.p.length ? chartHtml(graph.m, graph.l, graph.r, graph.a, "Wallet hashrate chart", graphDetails ? miningStatsLine(stats) : "") : `<p class=mt>Graph appears after submitted shares. Backend samples every 2 minutes; points use a 10-minute window.</p>`}
     </div>
   </section>`;
 }
 
 function walletGraphControls(address, graphWindow, graphMode, workerSort, workerDir, graphDetails) {
-  return graphControls((window, mode) => walletRouteWithGraph(address, "overview", window, mode, workerSort, workerDir, graphDetails), graphWindow, graphMode);
+  return graphControls((window, mode) => walletRouteWithGraph(address, OVERVIEW_TAB, window, mode, workerSort, workerDir, graphDetails), graphWindow, graphMode);
 }
 
 export function walletKpis(stats, workerCount, currentHashrate, dueLabel = "XMR total due", paidLabel = "XMR paid") {
@@ -175,7 +191,7 @@ export function walletWorkersSection(address, workers, workerCharts, graphWindow
   const nameDir = nextSortDirection(workerSort, workerDir, "name");
   const hashrateDir = nextSortDirection(workerSort, workerDir, "h");
   const cols = typeof displayMode === "number" ? displayMode : workerGraphColumns();
-  const controls = `<div class=bc><div class=br>${workerModeLinks(address, graphWindow, graphMode, workerSort, workerDir, graphDetails, cols, showDead)}</div><div class=br>${chipLink(`Name${workerSort === "name" ? (workerDir === "asc" ? " ↑" : " ↓") : ""}`, walletRouteWithGraph(address, "overview", graphWindow, graphMode, "name", nameDir, graphDetails, cols, showDead), workerSort === "name")}${chipLink(`Hashrate${workerSort === "h" ? (workerDir === "asc" ? " ↑" : " ↓") : ""}`, walletRouteWithGraph(address, "overview", graphWindow, graphMode, "h", hashrateDir, graphDetails, cols, showDead), workerSort === "h")}</div></div>`;
+  const controls = `<div class=bc><div class=br>${workerModeLinks(address, graphWindow, graphMode, workerSort, workerDir, graphDetails, cols, showDead)}</div><div class=br>${chipLink(`Name${workerSort === "name" ? (workerDir === "asc" ? " ↑" : " ↓") : ""}`, walletRouteWithGraph(address, OVERVIEW_TAB, graphWindow, graphMode, "name", nameDir, graphDetails, cols, showDead), workerSort === "name")}${chipLink(`Hashrate${workerSort === "h" ? (workerDir === "asc" ? " ↑" : " ↓") : ""}`, walletRouteWithGraph(address, OVERVIEW_TAB, graphWindow, graphMode, "h", hashrateDir, graphDetails, cols, showDead), workerSort === "h")}</div></div>`;
   return `<section class=pn><div class=cd>${controls}<div class="wgg w${cols}">${sorted.map((worker) => workerGraphCard(worker, workerCharts?.[worker.n], chartKey, graphWindow, graphDetails)).join("") || `<div class=mt>No workers.</div>`}</div></div></section>`;
 }
 
@@ -192,26 +208,16 @@ function workerModeControls(address, graphWindow, graphMode, workerSort, workerD
 
 function workerModeLinks(address, graphWindow, graphMode, workerSort, workerDir, graphDetails, activeMode, showDead = workerShowDead) {
   const mode = activeMode || workerMode || workerGraphColumns();
-  const deadLink = chipLink("Dead", walletRouteWithGraph(address, "overview", graphWindow, graphMode, workerSort, workerDir, graphDetails, mode, !showDead), showDead);
+  const deadLink = chipLink("Dead", walletRouteWithGraph(address, OVERVIEW_TAB, graphWindow, graphMode, workerSort, workerDir, graphDetails, mode, !showDead), showDead);
   return deadLink + ["list", 1, 2, 3].map((value) => {
     const sort = value === "list" ? workerListSortMode(workerSort) : workerSortMode(workerSort);
     const direction = value === "list" && sort === "name" && workerSort !== "name" ? "asc" : workerDir;
-    return chipLink(value === "list" ? "List" : value, walletRouteWithGraph(address, "overview", graphWindow, graphMode, sort, direction, graphDetails, value, showDead), mode === value);
+    return chipLink(value === "list" ? "List" : value, walletRouteWithGraph(address, OVERVIEW_TAB, graphWindow, graphMode, sort, direction, graphDetails, value, showDead), mode === value);
   }).join("");
 }
 
 function workerTableHeadings(address, graphWindow, graphMode, active, direction, graphDetails, showDead = workerShowDead) {
-  return [
-    sortableWorkerHeading("Worker", "name", address, graphWindow, graphMode, active, direction, graphDetails, showDead),
-    sortableWorkerHeading("XMR", "xmr", address, graphWindow, graphMode, active, direction, graphDetails, showDead),
-    sortableWorkerHeading("Raw", "raw", address, graphWindow, graphMode, active, direction, graphDetails, showDead),
-    sortableWorkerHeading("Avg XMR", "avg", address, graphWindow, graphMode, active, direction, graphDetails, showDead),
-    sortableWorkerHeading("Avg Raw", "avgraw", address, graphWindow, graphMode, active, direction, graphDetails, showDead),
-    sortableWorkerHeading("Last", "last", address, graphWindow, graphMode, active, direction, graphDetails, showDead),
-    sortableWorkerHeading("Valid", "valid", address, graphWindow, graphMode, active, direction, graphDetails, showDead),
-    sortableWorkerHeading("Invalid", "invalid", address, graphWindow, graphMode, active, direction, graphDetails, showDead),
-    sortableWorkerHeading("Hashes", "hashes", address, graphWindow, graphMode, active, direction, graphDetails, showDead)
-  ];
+  return WORKER_COLUMNS.map(([label, key]) => sortableWorkerHeading(label, key, address, graphWindow, graphMode, active, direction, graphDetails, showDead));
 }
 
 function sortableWorkerHeading(label, key, address, graphWindow, graphMode, active, direction, graphDetails, showDead = workerShowDead) {
@@ -219,7 +225,7 @@ function sortableWorkerHeading(label, key, address, graphWindow, graphMode, acti
   const firstDirection = { name: "asc" };
   const next = nextSortDirectionForKey(active, direction, key, firstDirection);
   const arrow = selected ? (direction === "asc" ? " ↑" : " ↓") : "";
-  return { html: `<a class="sort" href="${walletRouteWithGraph(address, "overview", graphWindow, graphMode, key, next, graphDetails, "list", showDead)}">${escapeHtml(label)}${escapeHtml(arrow)}</a>` };
+  return { html: `<a class="sort" href="${walletRouteWithGraph(address, OVERVIEW_TAB, graphWindow, graphMode, key, next, graphDetails, "list", showDead)}">${escapeHtml(label)}${escapeHtml(arrow)}</a>` };
 }
 
 function workerTableRow(worker) {
@@ -238,7 +244,7 @@ function workerTableRow(worker) {
 }
 
 function redCell(cell) {
-  return { html: `<span class="red">${cellHtml(cell)}</span>` };
+  return { html: `<span class=red>${cellHtml(cell)}</span>` };
 }
 
 function workerGraphCard(worker, chartRows, chartKey, graphWindow, graphDetails) {
@@ -246,7 +252,7 @@ function workerGraphCard(worker, chartRows, chartKey, graphWindow, graphDetails)
   const zeroHashrate = Number(worker.r) <= 0;
   const inactive = worker.st !== "Active" || zeroHashrate;
   const statusTitle = worker.st;
-  const workerName = inactive ? `<span class="red" title="${escapeHtml(statusTitle)}">${escapeHtml(worker.n)}</span>` : escapeHtml(worker.n);
+  const workerName = inactive ? `<span class=red title="${escapeHtml(statusTitle)}">${escapeHtml(worker.n)}</span>` : escapeHtml(worker.n);
   const rate = `<span class=${inactive ? "red" : "mt"}${inactive ? ` title="${escapeHtml(statusTitle)}"` : ""}>${formatHashrate(worker.r)}</span>`;
   return `<article class=cd><div class="wch${zeroHashrate ? " red" : ""}"><h3>${workerName}${lastShareAgeSuffix(worker.l)}</h3>${rate}</div>${graph.p.length ? chartHtml(graph.m, graph.l, graph.r, graph.a, `${worker.n} worker hashrate chart`, graphDetails ? miningStatsLine(worker) : "") : `<p class=mt>No worker chart points.</p>`}</article>`;
 }
@@ -312,7 +318,7 @@ function blockRewardValueCell(value, digits, stalePruned) {
   const text = formatNumber(number, digits);
   if (number !== 0) return text;
   if (!stalePruned) return text;
-  return { html: `<span class="red" title="${escapeHtml(STALE_BLOCK_REWARD_TITLE)}">${escapeHtml(text)}</span>` };
+  return { html: `<span class=red title="${escapeHtml(STALE_BLOCK_REWARD_TITLE)}">${escapeHtml(text)}</span>` };
 }
 
 function walletPaymentTable(title, headings, rows, controls) {
@@ -322,12 +328,12 @@ function walletPaymentTable(title, headings, rows, controls) {
 function walletWithdrawalControls(address, graphWindow, graphMode, workerSort, workerDir, graphDetails, page, limit, rowCount, totalCount, blockRewardPage, blockRewardLimit) {
   const pageCount = pageCountFor(totalCount, limit);
   const hasNext = page < pageCount || (!totalCount && rowCount >= limit);
-  return walletPager("ww", page, limit, pageCount, hasNext, (nextPage, nextLimit) => walletPaymentRouteFor(address, "withdrawals", graphWindow, graphMode, workerSort, workerDir, graphDetails, nextPage, nextLimit, blockRewardPage, blockRewardLimit), true, EXPLANATIONS.py);
+  return walletPager("ww", page, limit, pageCount, hasNext, (nextPage, nextLimit) => walletPaymentRouteFor(address, WITHDRAWALS_TAB, graphWindow, graphMode, workerSort, workerDir, graphDetails, nextPage, nextLimit, blockRewardPage, blockRewardLimit), true, EXPLANATIONS.py);
 }
 
 function walletBlockRewardControls(address, graphWindow, graphMode, workerSort, workerDir, graphDetails, page, limit, rowCount, hasStaleTail, withdrawalPage, withdrawalLimit) {
   const hasNext = page < MAX_ROUTE_PAGE && rowCount >= limit && !hasStaleTail;
-  return walletPager("wr", page, limit, 0, hasNext, (nextPage, nextLimit) => walletPaymentRouteFor(address, "block-rewards", graphWindow, graphMode, workerSort, workerDir, graphDetails, withdrawalPage, withdrawalLimit, nextPage, nextLimit), false, BLOCK_REWARD_HELP);
+  return walletPager("wr", page, limit, 0, hasNext, (nextPage, nextLimit) => walletPaymentRouteFor(address, BLOCK_REWARDS_TAB, graphWindow, graphMode, workerSort, workerDir, graphDetails, withdrawalPage, withdrawalLimit, nextPage, nextLimit), false, BLOCK_REWARD_HELP);
 }
 
 function walletPager(kind, page, limit, pageCount, hasNext, routeFor, canEditPage = true, explanation = "") {
@@ -360,7 +366,7 @@ export function walletPaymentRoute(overrides = {}) {
   const query = route.q || {};
   return walletPaymentRouteFor(
     route.a,
-    route.t === "block-rewards" ? "block-rewards" : "withdrawals",
+    route.t === BLOCK_REWARDS_TAB ? BLOCK_REWARDS_TAB : WITHDRAWALS_TAB,
     query.w || state.gw,
     query.m || state.gm,
     workerSortMode(query.s),
@@ -383,12 +389,12 @@ function paymentThresholdPanel(address, settings, pp) {
     <form id="wpf" class="cd sgc" data-a="${escapeHtml(address)}" data-pp="${escapeHtml(JSON.stringify(policy))}" title="${escapeHtml(`Minimum threshold is ${minimumThreshold} XMR. ${EXPLANATIONS.py}`)}">
       <label class="sft" for="wpi">Current payment threshold (XMR)</label>
       <div class="sgr spr">
-        <input id="wpi" inputmode="decimal" autocomplete="off" value="${escapeHtml(thresholdText)}" aria-describedby="wfee">
-        <button id="wps" type="submit">Update</button>
+        <input id=wpi inputmode=decimal autocomplete=off value="${escapeHtml(thresholdText)}" aria-describedby=wfee>
+        <button id=wps type=submit>Update</button>
       </div>
-      <p id="wfee" class="mt" title="Estimated XMR tx fee from pool policy. Higher thresholds reduce relative fee.">${escapeHtml(payoutFeeText(threshold, policy))}</p>
+      <p id=wfee class=mt title="Estimated XMR tx fee from pool policy. Higher thresholds reduce relative fee.">${escapeHtml(payoutFeeText(threshold, policy))}</p>
       <p class="mt ex dx">Minimum threshold is ${minimumThreshold} XMR. ${EXPLANATIONS.py}</p>
-      <p id="wpst" class="sst mt" role="status"></p>
+      <p id=wpst class="sst mt" role=status></p>
     </form>
   </section>`;
 }
@@ -398,17 +404,17 @@ function emailAlertsPanel(address, settings) {
   return `<section class="pn sgd">
     <form id="wef" class="cd sgc" data-a="${escapeHtml(address)}" title="${EMAIL_ALERTS_HELP}">
       <div class="sgr spr">
-        <button id="wet" class="sb" type="submit" data-ea="toggle" data-ee="${ee ? "0" : "1"}" aria-pressed="${ee}" title="${ee ? "Disable email alerts" : "Enable email alerts"}">Email alerts: ${ee ? "Enabled" : "Disabled"}</button>
+        <button id=wet class=sb type=submit data-ea=toggle data-ee="${ee ? "0" : "1"}" aria-pressed="${ee}" title="${ee ? "Disable email alerts" : "Enable email alerts"}">Email alerts: ${ee ? "Enabled" : "Disabled"}</button>
       </div>
       <label for="wefr">Current email</label>
-      <input id="wefr" type="email" autocomplete="email" placeholder="old@example.com">
+      <input id=wefr type=email autocomplete=email placeholder=old@example.com>
       <label for="weto">New email</label>
-      <input id="weto" type="email" autocomplete="email" placeholder="new@example.com">
-      <div class="br">
-        <button type="submit" data-ea="change" data-ee="1">Change email</button>
+      <input id=weto type=email autocomplete=email placeholder=new@example.com>
+      <div class=br>
+        <button type=submit data-ea=change data-ee=1>Change email</button>
       </div>
       <p class="mt ex dx">${EMAIL_ALERTS_HELP}</p>
-      <p id="west" class="sst mt" role="status"></p>
+      <p id=west class="sst mt" role=status></p>
     </form>
   </section>`;
 }
@@ -428,19 +434,6 @@ function miningStatsLine(stats = {}) {
   const valid = stats.vs ?? stats.validShares ?? stats.valid ?? stats.shares ?? stats.s ?? 0;
   const invalid = stats.is ?? stats.invalidShares ?? stats.invalid ?? stats.badShares ?? stats.bad_shares ?? 0;
   return [`Total hashes ${formatNumber(total)}`, `Valid shares ${formatNumber(valid)}`, `Invalid shares ${formatNumber(invalid)}`];
-}
-
-export function syncWalletTabsAlignment() {
-  qsa(".wh").forEach((head) => {
-    const title = head.firstElementChild;
-    const actions = qs(".wa", head);
-    if (!title || !actions) return;
-    head.classList.remove("tbt");
-    const titleRect = title.getBoundingClientRect();
-    const actionsRect = actions.getBoundingClientRect();
-    const isBelowTitle = actionsRect.left <= titleRect.right + 4;
-    tog(head, "tbt", isBelowTitle);
-  });
 }
 
 export function bindSettingsForms() {
@@ -479,7 +472,7 @@ async function saveThreshold(event, thresholdForm, thresholdInput, thresholdStat
   try {
     const result = await api.updateThreshold(address, threshold);
     api.clearUserSettings(address);
-    setSettingsStatus(thresholdStatus, result.msg || "Threshold updated.", "luck-green");
+    setSettingsStatus(thresholdStatus, result.msg || "Threshold updated.", "green");
   } catch (error) {
     setSettingsStatus(thresholdStatus, error.message || "Threshold update failed.", "red");
   }
@@ -500,7 +493,7 @@ function bindEmailForm() {
     try {
       const result = await api.subscribeEmail(address, enabled, from, to);
       api.clearUserSettings(address);
-      setSettingsStatus(emailStatus, result.msg || "Email preferences updated.", "luck-green");
+      setSettingsStatus(emailStatus, result.msg || "Email preferences updated.", "green");
       syncEmailToggle(enabled);
     } catch (error) {
       setSettingsStatus(emailStatus, error.message || "Email update failed.", "red");

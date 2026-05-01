@@ -2,8 +2,16 @@ import { api } from "../api.js";
 import { isXmrAddress } from "../routes.js";
 import { SETUP_GPU_VENDORS, SETUP_HASHRATE_UNITS, SETUP_OS, setupAddress, setupAlgoOptions, setupConfiguredPorts, setupHashrateDefaults, setupPlan, setupProfileOptions } from "../setup.js";
 import { state } from "../state.js";
-import { escapeHtml, optionMarkup, selectField } from "./common.js";
+import { escapeHtml, optionMarkup } from "./common.js";
 import { byId, on, qs, tog } from "../dom.js";
+
+const SETUP_STEPS = [
+  ["Download", "sd", "d", "dn"],
+  ["Run TLS", "srt", "rt", "rtn", "srtw"],
+  ["Run", "sr", "r", "rn", "srw"],
+  ["Tor", "sto", "to", "ton", "stow"],
+  ["Point workers at proxy", "sl", "l", "ln", "slw"]
+];
 
 export async function setupView() {
   const address = setupWalletAddress();
@@ -19,7 +27,7 @@ export async function setupView() {
     hashrateUnit: query.u,
     ports: state.s
   });
-  if (!plan.s.p) return `<section class="pn"><div class="cd"><h1>${escapeHtml(plan.tt)}</h1><p class="red">${escapeHtml(plan.sm)}</p></div></section>`;
+  if (!plan.s.p) return `<section class=pn><div class=cd><h1>${escapeHtml(plan.tt)}</h1><p class=red>${escapeHtml(plan.sm)}</p></div></section>`;
   const showGpu = setupShowsGpu(plan.s.pr);
   const showAlgo = setupShowsAlgo(plan.s.pr);
   return `
@@ -27,21 +35,17 @@ export async function setupView() {
       <section class="pn scp">
         <div class="cd sc" title="${escapeHtml(plan.nt)}">
           ${setupTopTabs(plan)}
-          <label class="sw">XMR wallet<input id="sw" value="${escapeHtml(address)}" autocomplete="off"></label>
+          <label class=sw>XMR wallet<input id=sw value="${escapeHtml(address)}" autocomplete=off></label>
           <div class="sfr">
-            ${selectField("sg", "GPU", SETUP_GPU_VENDORS, plan.s.g, `sfg ${showGpu ? "" : "hd"}`)}
-            ${selectField("sa", "Algorithm", setupAlgoOptions(plan.s.pr), plan.s.al, `sfa ${showAlgo ? "" : "hd"}`)}
-            <label class="shc">XMR h/r<input id="shr" value="${escapeHtml(String(plan.s.hr))}" inputmode="decimal" autocomplete="off"></label>
+            ${setupSelect("sg", "GPU", SETUP_GPU_VENDORS, plan.s.g, `sfg ${showGpu ? "" : "hd"}`)}
+            ${setupSelect("sa", "Algorithm", setupAlgoOptions(plan.s.pr), plan.s.al, `sfa ${showAlgo ? "" : "hd"}`)}
+            <label class=shc>XMR h/r<input id=shr value="${escapeHtml(String(plan.s.hr))}" inputmode=decimal autocomplete=off></label>
             <label class="su">Unit<select id="shu">${optionMarkup(SETUP_HASHRATE_UNITS.map(([id, label]) => [id, label]), plan.s.hu)}</select></label>
           </div>
           <p id="sn" class="ex dx">${escapeHtml(plan.nt)}</p>
         </div>
       </section>
-      ${setupStep("Download", "sd", plan.d, plan.dn)}
-      ${setupStep("Run TLS", "srt", plan.rt, plan.rtn, "srtw", !plan.rt)}
-      ${setupStep("Run", "sr", plan.r, plan.rn, "srw", !plan.r)}
-      ${setupStep("Tor", "sto", plan.to, plan.ton, "stow", !plan.to)}
-      ${setupStep("Point workers at proxy", "sl", plan.l, plan.ln, "slw", !plan.l)}
+      ${SETUP_STEPS.map(([title, id, textKey, noteKey, wrapId]) => setupStep(title, id, plan[textKey], plan[noteKey], wrapId, wrapId && !plan[textKey])).join("")}
     </div>`;
 }
 
@@ -54,7 +58,11 @@ function setupWalletAddress() {
 }
 
 function setupStep(tt, id, text, note = "", wrapId = "", hidden = false) {
-  return `<section${wrapId ? ` id="${escapeHtml(wrapId)}"` : ""} class="pn ss ${hidden ? "hd" : ""}"><div class="cd"><h2 id="${id}-tt" title="${escapeHtml(note)}">${escapeHtml(tt)}</h2><p id="${id}-note" class="ex dx ${note ? "" : "hd"}">${escapeHtml(note)}</p><div class="cbx"><button class="cpy" data-c="#${id}">Copy</button><pre id="${id}">${escapeHtml(text || "")}</pre></div></div></section>`;
+  return `<section${wrapId ? ` id="${escapeHtml(wrapId)}"` : ""} class="pn ss ${hidden ? "hd" : ""}"><div class=cd><h2 id="${id}-tt" title="${escapeHtml(note)}">${escapeHtml(tt)}</h2><p id="${id}-note" class="ex dx ${note ? "" : "hd"}">${escapeHtml(note)}</p><div class=cbx><button class=cpy data-c="#${id}">Copy</button><pre id="${id}">${escapeHtml(text || "")}</pre></div></div></section>`;
+}
+
+function setupSelect(id, label, options, selected, className) {
+  return `<label class="${className}">${label}<select id="${id}">${optionMarkup(options, selected)}</select></label>`;
 }
 
 function setupTopTabs(plan) {
@@ -118,11 +126,7 @@ function updateSetupCommand() {
 function syncSetupCommand(plan) {
   const nt = byId("sn");
   const controls = qs(".sc");
-  syncSetupStep("sd", plan.d, plan.dn);
-  syncSetupStep("srt", plan.rt, plan.rtn, "srtw");
-  syncSetupStep("sr", plan.r, plan.rn, "srw");
-  syncSetupStep("sto", plan.to, plan.ton, "stow");
-  syncSetupStep("sl", plan.l, plan.ln, "slw");
+  SETUP_STEPS.forEach(([, id, textKey, noteKey, wrapId]) => syncSetupStep(id, plan[textKey], plan[noteKey], wrapId));
   if (nt) {
     nt.textContent = plan.nt;
   }
@@ -164,26 +168,17 @@ function syncSetupInputs(plan) {
   }
   tog(qs(".sfg"), "hd", !setupShowsGpu(plan.s.pr));
   tog(qs(".sfa"), "hd", !setupShowsAlgo(plan.s.pr));
-  syncSetupLayout();
-}
-
-export function syncSetupLayout(tabs = byId("stt")) {
-  const groups = tabs?.children || [];
-  if (groups[1]) tog(tabs, "z", groups[1].offsetTop > groups[0].offsetTop);
 }
 
 function syncSetupRoute(plan) {
   if (state.r.n !== "setup") return;
-  const params = new URLSearchParams();
-  if (isXmrAddress(plan.s.a)) params.set("a", plan.s.a);
-  params.set("o", plan.s.os);
-  params.set("p", plan.s.pr);
-  if (setupShowsGpu(plan.s.pr)) params.set("g", plan.s.g);
-  if (setupShowsAlgo(plan.s.pr)) params.set("al", plan.s.al);
-  params.set("h", String(plan.s.hr));
-  params.set("u", plan.s.hu);
-  history.replaceState(null, "", `#/setup?${params.toString()}`);
-  state.r.q = Object.fromEntries(params);
+  const query = { o: plan.s.os, p: plan.s.pr, h: String(plan.s.hr), u: plan.s.hu };
+  if (isXmrAddress(plan.s.a)) query.a = plan.s.a;
+  if (setupShowsGpu(plan.s.pr)) query.g = plan.s.g;
+  if (setupShowsAlgo(plan.s.pr)) query.al = plan.s.al;
+  const params = Object.entries(query).map(([key, value]) => `${key}=${value}`).join("&");
+  history.replaceState(null, "", `#/setup?${params}`);
+  state.r.q = query;
 }
 
 function setupShowsGpu(profile) {

@@ -42,19 +42,19 @@ function smoothLine(rows) {
   }, "");
 }
 
-export function chartModel(points, key, width = 700, height = 220) {
+export function chartModel(points, key) {
   const bounds = chartBounds(points, key);
   const rows = points.map((point) => {
-    const x = ((point.tme - bounds.minTime) / bounds.span) * width;
-    const y = chartY(Number(point[key]) || 0, bounds.min, bounds.max, height);
+    const x = ((point.tme - bounds.minTime) / bounds.span) * 700;
+    const y = chartY(Number(point[key]) || 0, bounds.min, bounds.max);
     return { ...point, x, y, v: Number(point[key]) || 0 };
   });
   let z = rows[0]?.y || 0;
   for (const row of rows) row.z = z += (row.y - z) * 0.2;
   // Chart models are internal and carried through every graph render, so they
-  // use compact keys: w/h SVG size, n/x min/max value, s/e start/end time, r
-  // rendered rows, and row.v value. Public API point names remain untouched.
-  return { w: width, h: height, n: bounds.min, x: bounds.max, s: bounds.minTime, e: bounds.maxTime, r: rows };
+  // use compact keys: n/x min/max value, s/e start/end time, r rendered rows,
+  // and row.v value. Public API point names remain untouched.
+  return { n: bounds.min, x: bounds.max, s: bounds.minTime, e: bounds.maxTime, r: rows };
 }
 
 function chartBounds(points, key) {
@@ -71,12 +71,10 @@ export function pplnsWindowRect(model, pplnsSeconds) {
   if (!model || !isFiniteNumber(seconds) || seconds <= 0) return null;
   const minTime = Number(model.s);
   const maxTime = Number(model.e);
-  const width = Number(model.w) || 700;
-  const height = Number(model.h) || 220;
   if (!isFiniteNumber(minTime) || !isFiniteNumber(maxTime) || maxTime <= minTime) return null;
   const span = maxTime - minTime;
-  const start = Math.max(0, width * ((maxTime - seconds - minTime) / span));
-  return { x: start, y: 0, width: width - start, height };
+  const start = Math.max(0, 700 * ((maxTime - seconds - minTime) / span));
+  return { x: start, y: 0, width: 700 - start, height: 220 };
 }
 
 export function isWithinPplnsWindow(timestamp, maxTimestamp, pplnsSeconds) {
@@ -87,10 +85,7 @@ export function isWithinPplnsWindow(timestamp, maxTimestamp, pplnsSeconds) {
   return latestTime - pointTime <= seconds;
 }
 
-function chartY(value, min, max, height) {
-  const topPadding = height * 0.14;
-  const bottomPadding = height * 0.16;
-  const plotHeight = height - topPadding - bottomPadding;
+function chartY(value, min, max) {
   const span = Math.max(1, max - min);
-  return topPadding + (1 - Math.min(1, Math.max(0, (value - min) / span))) * plotHeight;
+  return 30.8 + (1 - Math.min(1, Math.max(0, (value - min) / span))) * 154;
 }

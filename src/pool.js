@@ -14,29 +14,22 @@ function coinMetadata(poolStats = {}, port) {
 }
 
 // Normalized coin rows are private table/sort data, so the keys are short:
-// p port, s symbol, d display name, n name, a algo, ac active, pr profit,
-// c comment, dr disabled reason, ec exchange configured, h hashrate,
-// m miners, ps PPLNS share, b alt blocks found, t block time, u atomic units.
+// p port, n name, a algo, ac active, c comment, dr disabled reason,
+// ec exchange configured, h hashrate, m miners, ps PPLNS share.
 function normalizedCoinRow(key, coin = {}) {
   const port = String(coin.port ?? key);
-  const symbol = coin.symbol || String(port);
+  const name = coin.displayName || coin.symbol || String(port);
   return {
     p: port,
-    s: symbol,
-    d: coin.displayName || symbol,
-    n: coin.displayName || symbol,
+    n: name,
     a: coin.algo || "--",
     ac: coin.active === true,
-    pr: Number(coin.profit) || 0,
     c: coin.comment || "",
     dr: coin.disabledReason || "",
     ec: String(port) === String(XMR_PORT) || coin.exchangeConfigured === true,
     h: Number(coin.hashrate) || 0,
     m: Number(coin.miners) || 0,
-    ps: Number(coin.pplnsShare) || 0,
-    b: Number(coin.altBlocksFound) || 0,
-    t: Number(coin.blockTime) || 0,
-    u: Number(coin.atomicUnits) || 0
+    ps: Number(coin.pplnsShare) || 0
   };
 }
 

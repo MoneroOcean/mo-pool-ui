@@ -66,7 +66,7 @@ h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: v
   color: var(--m);
   font-size: 12px;
 }
-body.comments-off .dx {
+body.cof .dx {
   display: none;
 }
 .br,
@@ -128,8 +128,7 @@ body.comments-off .dx {
   font-size: 12px;
 }
 .bl span { font-weight: 800; }
-.luck-green { color: var(--lg); }
-.luck-red { color: var(--rd); }
+.green { color: var(--lg); }
 .bl .ex {
   flex-basis: 100%;
 }

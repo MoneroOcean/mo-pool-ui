@@ -4,8 +4,13 @@ export const UPTIME_API = "https://stats.uptimerobot.com/api/getMonitorList/BrD4
 export const DISCORD_URL = "https://discordapp.com/invite/jXaR2kA";
 const SUPPORT_EMAIL_CODES = "c3VwcG9ydEBtb25lcm9vY2Vhbi5zdHJlYW0=";
 export const supportEmail = () => atob(SUPPORT_EMAIL_CODES);
-export const DONATION_XMR = "499fS1Phq64hGeqV8p2AfXbf6Ax7gP6FybcMJq6Wbvg8Hw6xms8tCmdYpPsTLSaTNuLEtW4kF2DDiWCFcw4u7wSvFD8wFWE";
+export const DONATION_XMR = "89TxfrUmqJJcb1V124WsUzA78Xa3UYHt7Bg8RGMhXVeZYPN8cE5CZEk58Y1m23ZMLHN7wYeJ9da5n5MXharEjrm41hSnWHL";
 export const XMR_PORT = 18081;
+export const HASHRATE_UNITS = [
+  ["h", "H/s", 1],
+  ["kh", "KH/s", 1000],
+  ["mh", "MH/s", 1000000]
+];
 export const XMR_ADDRESS_RE = /^[48][1-9A-HJ-NP-Za-km-z]{94}([1-9A-HJ-NP-Za-km-z]{11})?$/;
 const XMRCHAIN_URL = "https://xmrchain.net";
 const TARI_EXPLORER_URL = "https://explore.tari.com";

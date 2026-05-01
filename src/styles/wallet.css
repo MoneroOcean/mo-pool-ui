@@ -92,15 +92,6 @@
   min-width: min-content;
   max-width: 100%;
 }
-.wh.tbt .wa {
-  flex-basis: 100%;
-  justify-content: start;
-  margin-left: 0;
-}
-.wh.tbt .it {
-  justify-content: start;
-  width: 100%;
-}
 .wtl {
   color: var(--t);
 }

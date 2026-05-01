@@ -7,11 +7,11 @@ import { trackWalletState } from "../wallet.js";
 import { blockRoute } from "./blocks.js";
 import { calcRoute, calcRowsForDisplay } from "./calc.js";
 import { bindChartHover } from "./charts.js";
-import { bindSettingsForms, syncWalletTabsAlignment, walletPaymentRoute } from "./wallet.js";
+import { bindSettingsForms, walletPaymentRoute } from "./wallet.js";
 import { paymentRoute } from "./payments.js";
-import { bindSetupEvents, syncSetupLayout } from "./setup.js";
+import { bindSetupEvents } from "./setup.js";
 import { bindHomeDeferred, bindHomeUptime, syncWalletTrackButtonLabels } from "./home.js";
-import { attr, off, on, byId, qs, qsa } from "../dom.js";
+import { attr, on, byId, qs, qsa } from "../dom.js";
 
 export function bindViewEvents() {
   on(qs("#af"), "submit", (event) => {
@@ -46,15 +46,7 @@ export function bindViewEvents() {
   bindSetupEvents();
   bindHomeUptime();
   bindHomeDeferred();
-  requestAnimationFrame(syncViewLayout);
-  off(window, "resize", syncViewLayout);
-  on(window, "resize", syncViewLayout);
   bindChartHover();
-}
-
-function syncViewLayout() {
-  syncWalletTabsAlignment();
-  syncSetupLayout();
 }
 
 function bindBlockControls() {

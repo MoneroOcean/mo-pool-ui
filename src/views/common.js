@@ -1,10 +1,13 @@
 import { BLOCK_SHARE_DUMP_BASE, COIN_EXPLORERS, COIN_HEIGHT_EXPLORERS, GRAPH_WINDOWS, UPTIME_URL } from "../constants.js";
 import { PAGE_SIZES } from "../paging.js";
-import { atomicXmr, escapeHtml, formatAge, formatDate, formatNumber, isFiniteNumber } from "../format.js";
+import { atomicXmr, encodeUrlPart, escapeHtml, formatAge, formatDate, formatNumber, isFiniteNumber } from "../format.js";
 import { coinName } from "../pool.js";
+import { uptimeToneClass } from "../uptime.js";
+
+const EXTERNAL_LINK = "rel=noopener target=_blank";
 
 export function skel(label = "Loading") {
-  return `<div class="sk" role="status" aria-label="${escapeHtml(label)}"><span class="skx" aria-hidden="true">${glyphLines()}</span></div>`;
+  return `<div class=sk role=status aria-label="${escapeHtml(label)}"><span class=skx aria-hidden=true>${glyphLines()}</span></div>`;
 }
 
 function glyphLines() {
@@ -18,7 +21,7 @@ function glyphLines() {
 }
 
 export function errorPanel(error) {
-  return `<section class="pn"><div class="cd"><h2>Data unavailable</h2><p class="red">${escapeHtml(error.message || error)}</p></div></section>`;
+  return `<section class=pn><div class=cd><h2>Data unavailable</h2><p class=red>${escapeHtml(error.message || error)}</p></div></section>`;
 }
 
 export function recover(promise, fallback) {
@@ -26,7 +29,7 @@ export function recover(promise, fallback) {
 }
 
 export function kpi(label, value, explain) {
-  return `<div title="${escapeHtml(explain)}"><span class="vl">${escapeHtml(value)}</span><span class="lb">${cellHtml(label)}</span><p class="ex dx">${escapeHtml(explain)}</p></div>`;
+  return `<div title="${escapeHtml(explain)}"><span class=vl>${escapeHtml(value)}</span><span class=lb>${cellHtml(label)}</span><p class="ex dx">${escapeHtml(explain)}</p></div>`;
 }
 
 export function linkLabel(label, href) {
@@ -34,11 +37,11 @@ export function linkLabel(label, href) {
 }
 
 export function activeAttr(active) {
-  return active ? " aria-current='page'" : "";
+  return active ? " aria-current=page" : "";
 }
 
 export function chipLink(label, href, active = false, attrs = "") {
-  return `<a class="cp" href="${href}"${activeAttr(active)}${attrs ? ` ${attrs}` : ""}>${escapeHtml(label)}</a>`;
+  return `<a class=cp href="${href}"${activeAttr(active)}${attrs ? ` ${attrs}` : ""}>${escapeHtml(label)}</a>`;
 }
 
 export function graphControls(routeFor, graphWindow, graphMode, className = "br sbr") {
@@ -48,14 +51,13 @@ export function graphControls(routeFor, graphWindow, graphMode, className = "br 
 export function uptimeLabel(label, uptime) {
   // summarizeUptimeRobot returns semantic tones for tests and business logic;
   // the DOM uses short private class hooks documented in style.css.
-  const tone = { green: "sgn", yellow: "syo", red: "srd", gray: "sgu" }[uptime.tone] || "syo";
-  return { html: `<a id="up" class="ks ${tone}" href="${UPTIME_URL}" rel="noopener" target="_blank" title="${escapeHtml(uptime.detail)}"><span class="sdot" aria-hidden="true"></span><span>${escapeHtml(label)}</span></a>` };
+  return { html: `<a id=up class="ks ${uptimeToneClass(uptime.tone)}" href="${UPTIME_URL}" ${EXTERNAL_LINK} title="${escapeHtml(uptime.detail)}"><span class=sdot aria-hidden=true></span><span>${escapeHtml(label)}</span></a>` };
 }
 
 export function tablePage(title, intro, headings, rows, controls = "", tableLabel = "", emptyText = "") {
-  const header = title ? `<div class="ph"><div><h1>${title}</h1>${intro ? `<p class="mt">${intro}</p>` : ""}</div></div>` : "";
-  const emptyRow = emptyText ? `<tr><td colspan="${headings.length}" class="mt">${escapeHtml(emptyText)}</td></tr>` : "";
-  return `<section class="pn">${header}${controls ? `<div class="cd">${controls}</div>` : ""}<div class="cd tw"><table${tableLabel ? ` aria-label="${escapeHtml(tableLabel)}"` : ""}><thead><tr>${headings.map((h) => `<th class="${hashHeadingClass(h)}">${cellHtml(h)}</th>`).join("")}</tr></thead><tbody>${rows.map((row) => `<tr>${row.map((cell) => `<td>${cellHtml(cell)}</td>`).join("")}</tr>`).join("") || emptyRow}</tbody></table></div></section>`;
+  const header = title ? `<div class=ph><div><h1>${title}</h1>${intro ? `<p class=mt>${intro}</p>` : ""}</div></div>` : "";
+  const emptyRow = emptyText ? `<tr><td colspan=${headings.length} class=mt>${escapeHtml(emptyText)}</td></tr>` : "";
+  return `<section class=pn>${header}${controls ? `<div class=cd>${controls}</div>` : ""}<div class="cd tw"><table${tableLabel ? ` aria-label="${escapeHtml(tableLabel)}"` : ""}><thead><tr>${headings.map((h) => `<th class="${hashHeadingClass(h)}">${cellHtml(h)}</th>`).join("")}</tr></thead><tbody>${rows.map((row) => `<tr>${row.map((cell) => `<td>${cellHtml(cell)}</td>`).join("")}</tr>`).join("") || emptyRow}</tbody></table></div></section>`;
 }
 
 export function cellHtml(cell) {
@@ -68,31 +70,31 @@ function hashHeadingClass(heading) {
 }
 
 export function coinCell(value) {
-  return { html: `<span class="ccell">${cellHtml(value)}</span>` };
+  return { html: `<span class=ccell>${cellHtml(value)}</span>` };
 }
 
 export function explorerHeightLink(port, height) {
   const value = height || "--";
   const url = explorerHeightUrl(port, value);
   if (!url || value === "--") return value;
-  return { html: `<a href="${url}" rel="noopener" target="_blank" title="Open ${escapeHtml(coinName({}, port))} block ${escapeHtml(value)}">${escapeHtml(value)}</a>` };
+  return { html: `<a href="${url}" ${EXTERNAL_LINK} title="Open ${escapeHtml(coinName({}, port))} block ${escapeHtml(value)}">${escapeHtml(value)}</a>` };
 }
 
 function explorerHeightUrl(port, height) {
   const template = COIN_HEIGHT_EXPLORERS[port] || COIN_HEIGHT_EXPLORERS[Number(port)];
-  if (template) return template.replace("{height}", encodeURIComponent(height));
+  if (template) return template.replace("{height}", encodeUrlPart(height));
   return COIN_EXPLORERS[port] || COIN_EXPLORERS[Number(port)] || "";
 }
 
 export function blockHashLink(hash) {
   if (!hash) return "--";
-  const href = `${BLOCK_SHARE_DUMP_BASE}/${encodeURIComponent(hash)}.cvs.xz`;
-  return { html: `<span class="hcell"><a href="${href}" rel="noopener" target="_blank" title="Download share dump CSV">${escapeHtml(hash)}</a></span>` };
+  const href = `${BLOCK_SHARE_DUMP_BASE}/${encodeUrlPart(hash)}.cvs.xz`;
+  return { html: `<span class=hcell><a href="${href}" ${EXTERNAL_LINK} title="Download share dump CSV">${escapeHtml(hash)}</a></span>` };
 }
 
 export function paymentHashLink(hash) {
   if (!hash) return "--";
-  return { html: `<span class="hcell"><a href="https://xmrchain.net/tx/${encodeURIComponent(hash)}" rel="noopener" target="_blank" title="Open transaction on xmrchain">${escapeHtml(hash)}</a></span>` };
+  return { html: `<span class=hcell><a href="https://xmrchain.net/tx/${encodeUrlPart(hash)}" ${EXTERNAL_LINK} title="Open transaction on xmrchain">${escapeHtml(hash)}</a></span>` };
 }
 
 export function dateCell(timestamp) {
@@ -109,31 +111,27 @@ function pagePicker(id, page, pageCount = 0) {
   // The page input is intentionally capped only when the backend gives a known
   // total. Wallet block rewards can have an unknown/stale tail, so those views
   // use non-editable page text or an open-ended next arrow instead.
-  return `<label class="pp"><span class="mt">Page</span><input id="${id}" type="number" min="1" ${hasTotal ? `max="${pageCount}"` : ""} value="${value}" inputmode="numeric" autocomplete="off">${hasTotal ? `<span class="mt">of ${formatNumber(pageCount)}</span>` : ""}</label>`;
+  return `<label class=pp><span class=mt>Page</span><input id="${id}" type=number min=1 ${hasTotal ? `max=${pageCount}` : ""} value="${value}" inputmode=numeric autocomplete=off>${hasTotal ? `<span class=mt>of ${formatNumber(pageCount)}</span>` : ""}</label>`;
 }
 
 export function pageSizeSelect(id, limit) {
-  return `<label class="fd">Rows<select id="${id}">${PAGE_SIZES.map((size) => `<option value="${size}" ${size === limit ? "selected" : ""}>${size}</option>`).join("")}</select></label>`;
+  return `<label class=fd>Rows<select id="${id}">${PAGE_SIZES.map((size) => `<option value=${size} ${size === limit ? "selected" : ""}>${size}</option>`).join("")}</select></label>`;
 }
 
 function pagerArrow(label, href, enabled, ariaLabel) {
-  return `<a class="cp pa" aria-label="${ariaLabel}" ${enabled ? `href="${href}"` : `aria-disabled="true"`}>${label}</a>`;
+  return `<a class="cp pa" aria-label="${ariaLabel}" ${enabled ? `href="${href}"` : `aria-disabled=true`}>${label}</a>`;
 }
 
 export function pagerNav(ariaLabel, inputId, page, pageCount, hasNext, routeFor, limit, canEditPage = true) {
-  return `<nav class="br" aria-label="${ariaLabel}">
+  return `<nav class=br aria-label="${ariaLabel}">
         ${pagerArrow("‹", routeFor(page - 1, limit), page > 1, "Previous page")}
-        ${canEditPage ? pagePicker(inputId, page, pageCount) : `<span class="mt">Page ${formatNumber(page)}</span>`}
+        ${canEditPage ? pagePicker(inputId, page, pageCount) : `<span class=mt>Page ${formatNumber(page)}</span>`}
         ${pagerArrow("›", routeFor(page + 1, limit), hasNext, "Next page")}
       </nav>`;
 }
 
 export function blockRewardAmountCell(label, unlocked) {
-  return { html: `<span class="${unlocked ? "luck-green" : ""}" title="${unlocked ? "Unlocked" : "Pending or unlocking"}">${escapeHtml(label)}</span>` };
-}
-
-export function selectField(id, label, options, selected = "", className = "") {
-  return `<label class="${escapeHtml(className)}">${label}<select id="${id}">${optionMarkup(options, selected)}</select></label>`;
+  return { html: `<span class="${unlocked ? "green" : ""}" title="${unlocked ? "Unlocked" : "Pending or unlocking"}">${escapeHtml(label)}</span>` };
 }
 
 export function optionMarkup(options, selected = "") {

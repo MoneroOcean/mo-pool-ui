@@ -22,8 +22,6 @@ export function pageCountFor(totalCount, pageSize) {
 }
 
 export function pageQuery(page = 1, pageSize = PAGE_SIZES[0]) {
-  const params = new URLSearchParams();
-  if (page > 1) params.set("p", String(page));
-  params.set("s", String(blockPageSize(pageSize)));
-  return params.toString();
+  const size = blockPageSize(pageSize);
+  return page > 1 ? `p=${page}&s=${size}` : `s=${size}`;
 }

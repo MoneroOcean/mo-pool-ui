@@ -8,8 +8,8 @@ export function poolDashboard(pool, network, uptime) {
   const topPort = topCoinPort(pool);
   const topName = coinName(pool, topPort);
   const topWorld = worldHashrateForPort(network[topPort] || network[Number(topPort)] || {}, topPort, pool);
-  return `<section class="pn">
-    <div class="cd">
+  return `<section class=pn>
+    <div class=cd>
       <div class="gd kg pkg">
         ${kpi(uptimeLabel("Wallets", uptime), formatNumber(pool.miners), "Connected pool wallets.")}
         ${kpi(linkLabel("Pool hashrate", "#/coins"), formatHashrate(pool.hashRate), EXPLANATIONS.n)}

@@ -3,7 +3,7 @@ import { averageBlockEffort, blockCoinPort, blockEffortPercent, coinAtomicUnits,
 import { routeCoinId } from "../routes.js";
 import { api } from "../api.js";
 import { EXPLANATIONS, XMR_PORT } from "../constants.js";
-import { atomicXmr, formatNumber, formatPercent, isFiniteNumber } from "../format.js";
+import { atomicXmr, encodeUrlPart, formatNumber, formatPercent, isFiniteNumber } from "../format.js";
 import { blockHashLink, blockRewardAmountCell, dateCell, escapeHtml, explorerHeightLink, pageSizeSelect, pagerNav, tablePage } from "./common.js";
 
 export async function blocksView(route) {
@@ -43,7 +43,7 @@ function blockControls(pool, coin, coins, page, limit, rowCount, blocks = []) {
   const hasNext = page < pageCount || (!totalCount && rowCount >= limit);
   return `<div class="bc bf">
     <div class="bcl">
-      <label class="fd">Coin<select id="bcx">${coins.map((item) => `<option value="${item.port}" ${String(item.port) === String(coin) ? "selected" : ""}>${escapeHtml(item.name)}</option>`).join("")}</select></label>
+      <label class=fd>Coin<select id=bcx>${coins.map((item) => `<option value="${item.port}" ${String(item.port) === String(coin) ? "selected" : ""}>${escapeHtml(item.name)}</option>`).join("")}</select></label>
       ${blockLuck(blocks)}
     </div>
     <div class="bpt">
@@ -55,16 +55,16 @@ function blockControls(pool, coin, coins, page, limit, rowCount, blocks = []) {
 
 function blockLuck(blocks) {
   const effort = averageBlockEffort(blocks);
-  return `<div class="bl" title="${escapeHtml(EXPLANATIONS.l)}"><strong>Block effort here</strong><span class="luck-${effortTone(effort)}">${formatPercent(effort)}</span><p class="ex dx">${EXPLANATIONS.l}</p></div>`;
+  return `<div class="bl" title="${escapeHtml(EXPLANATIONS.l)}"><strong>Block effort here</strong><span class="${effortTone(effort)}">${formatPercent(effort)}</span><p class="ex dx">${EXPLANATIONS.l}</p></div>`;
 }
 
 function blockEffortCell(block) {
   const effort = blockEffortPercent(block);
-  return { html: `<span class="luck-${effortTone(effort)}" title="${escapeHtml(`${block.shares || 0} / ${block.diff || 0}`)}">${formatPercent(effort, 2)}</span>` };
+  return { html: `<span class="${effortTone(effort)}" title="${escapeHtml(`${block.shares || 0} / ${block.diff || 0}`)}">${formatPercent(effort, 2)}</span>` };
 }
 
 export function effortCell(effort) {
-  return { html: `<span class="luck-${effortTone(effort)}">${formatPercent(effort, 2)}</span>` };
+  return { html: `<span class="${effortTone(effort)}">${formatPercent(effort, 2)}</span>` };
 }
 
 function blockXmrRewardCell(block, coin, pool, network) {
@@ -100,7 +100,7 @@ function isInvalidBlock(block) {
 }
 
 function invalidBlockCell() {
-  return { html: `<span class="red" title="Orphan block">Orphaned</span>` };
+  return { html: `<span class=red title="Orphan block">Orphaned</span>` };
 }
 
 function formatCoinReward(value, port, pool) {
@@ -111,7 +111,7 @@ function formatCoinReward(value, port, pool) {
 }
 
 export function blockRoute(coin, page = 1, pageSize = PAGE_SIZES[0]) {
-  const suffix = `/${encodeURIComponent(routeCoinId(coin))}`;
+  const suffix = `/${encodeUrlPart(routeCoinId(coin))}`;
   return `#/blocks${suffix}?${pageQuery(page, pageSize)}`;
 }
 

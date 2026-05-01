@@ -1,7 +1,7 @@
 import { api } from "../api.js";
-import { CALC_PERIODS, HASHRATE_UNITS, calcProfitRows, fiatForTimezone, formatFiat, hashrateFromInput, hashrateInputFromHashrate } from "../calc.js";
+import { HASHRATE_UNITS, calcProfitRows, calcRowsForDisplay, fiatForTimezone, formatFiat, hashrateInputFromHashrate } from "../calc.js";
 import { XMR_PORT } from "../constants.js";
-import { formatXmr, isFiniteNumber } from "../format.js";
+import { encodeUrlPart, formatXmr, isFiniteNumber } from "../format.js";
 import { coinProfitValue } from "../pool.js";
 import { averageVisible, filterWindow } from "../charts.js";
 import { state } from "../state.js";
@@ -18,17 +18,17 @@ export async function calcView(route = state.r) {
   const fiat = fiatForTimezone();
   const price = Number(pool.price?.[fiat.code]);
   const phDay = coinProfitValue(pool, XMR_PORT);
-  return `<section class="pn">
+  return `<section class=pn>
     <div class="cd gd cg">
       <form id="cfm" class="cfm" data-ph="${escapeHtml(phDay)}" data-price="${escapeHtml(isFiniteNumber(price) ? price : "")}" data-fc="${escapeHtml(fiat.label)}">
-        <label>Hashrate<input id="ch" inputmode="decimal" autocomplete="off" value="${escapeHtml(value)}"></label>
+        <label>Hashrate<input id=ch inputmode=decimal autocomplete=off value="${escapeHtml(value)}"></label>
         <label>Unit<select id="cu">${HASHRATE_UNITS.map(([id, label]) => `<option value="${id}" ${id === unit ? "selected" : ""}>${label}</option>`).join("")}</select></label>
       </form>
       <div class="crs">
         ${rows.map((row) => `<article class="crc" title="${escapeHtml(row.label)} estimate">
           <span class="lb">${escapeHtml(row.label)}</span>
           <span class="vl cx" data-p="${row.days}">${escapeHtml(formatXmr(row.xmr, 8))}</span>
-          <span class="mt cfi" data-p="${row.days}">${escapeHtml(formatFiat(row.fiat, row.fiatCode))}</span>
+          <span class="mt cfi" data-p="${row.days}">${escapeHtml(formatFiat(row.fiat, row.fc))}</span>
         </article>`).join("")}
       </div>
       <p class="mt cf">XMR ${isFiniteNumber(price) ? `${fiat.label} price ${formatFiat(price, fiat.label)}.` : `${fiat.label} price unavailable from API.`}</p>
@@ -61,10 +61,7 @@ async function trackedWalletAverage(address) {
 }
 
 export function calcRoute(value, unit) {
-  const params = new URLSearchParams();
-  params.set("h", calcInputValue(value));
-  params.set("u", HASHRATE_UNITS.some((row) => row[0] === unit) ? unit : "kh");
-  return `#/calc?${params.toString()}`;
+  return `#/calc?h=${encodeUrlPart(calcInputValue(value))}&u=${HASHRATE_UNITS.some((row) => row[0] === unit) ? unit : "kh"}`;
 }
 
 function calcInputValue(value) {
@@ -73,17 +70,4 @@ function calcInputValue(value) {
   return isFiniteNumber(number) && number > 0 ? text : "1";
 }
 
-export function calcRowsForDisplay(value, unit, phDay, price, fc) {
-  const hashrate = hashrateFromInput(value, unit);
-  return CALC_PERIODS.map(([id, label, days]) => {
-    const xmr = hashrate * phDay * days;
-    return {
-      id,
-      label,
-      days,
-      xmr: isFiniteNumber(xmr) ? xmr : 0,
-      fiat: isFiniteNumber(xmr) && isFiniteNumber(price) ? xmr * price : null,
-      fc
-    };
-  });
-}
+export { calcRowsForDisplay };

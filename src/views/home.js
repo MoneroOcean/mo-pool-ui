@@ -1,16 +1,15 @@
 import { api } from "../api.js";
-import { shortAddress } from "../format.js";
+import { byId, qsa, tog } from "../dom.js";
+import { encodeUrlPart, shortAddress } from "../format.js";
 import { dismissMotd, normalizeMotd, shouldShowMotd } from "../motd.js";
 import { isXmrAddress } from "../routes.js";
 import { getCache, state } from "../state.js";
 import { localHistoryEnabled, saveWallet } from "../privacy.js";
-import { summarizeUptimeRobot } from "../uptime.js";
+import { UNKNOWN_UPTIME, summarizeUptimeRobot, uptimeToneClass } from "../uptime.js";
 import { bindChartHover, chartHtml, hashrateChart } from "./charts.js";
 import { chipLink, escapeHtml, graphControls, recover, skel } from "./common.js";
 import { poolDashboard } from "./pool-dashboard.js";
 import { walletRouteWithGraph, lastShareAgeSuffix, walletKpis, workerList } from "./wallet.js";
-
-const UNKNOWN_UPTIME = { tone: "gray", label: "Unknown", detail: "UptimeRobot status unavailable" };
 
 export async function homeView(route = state.r) {
   const focusedAddress = route.n === "wallet" ? route.a : "";
@@ -37,14 +36,14 @@ export async function homeView(route = state.r) {
       ${poolHashrateChart(poolChartRows, graphWindow)}
       ${motdSlot(motd)}
       ${dashboardGraphControls(graphWindow, graphMode)}
-      <div id="wl" class="wl">
+      <div id=wl class=wl>
         ${state.w.length ? await walletSummaryCards() : `<div class="cd mt">No wallets tracked yet.</div>`}
       </div>
       <div class="cd wtc">
         <form id="af" class="ab">
           <label class="sro" for="ai">XMR wallet address</label>
-          <input id="ai" autocomplete="off" placeholder="Paste XMR wallet address" value="">
-          <button type="submit" data-ws>${walletTrackButtonLabel()}</button>
+          <input id=ai autocomplete=off placeholder="Paste XMR wallet address" value="">
+          <button type=submit data-ws>${walletTrackButtonLabel()}</button>
         </form>
         ${focusedAddress && !focusedValid ? `<p class="red ex">Invalid wallet address. Paste a complete XMR payout address.</p>` : ""}
       </div>
@@ -52,7 +51,7 @@ export async function homeView(route = state.r) {
 }
 
 export function bindHomeUptime() {
-  const node = document.getElementById("up");
+  const node = byId("up");
   if (!node) return;
   setTimeout(() => api.uptimeStatus().then((data) => {
     if (node.isConnected) setUptimeNode(node, summarizeUptimeRobot(data));
@@ -60,14 +59,14 @@ export function bindHomeUptime() {
 }
 
 export function bindHomeDeferred() {
-  const chart = document.getElementById("pch");
+  const chart = byId("pch");
   if (chart) setTimeout(() => api.poolChart().then((rows) => {
     if (!chart.isConnected || state.r.n !== "home") return;
     if (!Array.isArray(rows) || !rows.length) return;
     chart.outerHTML = poolHashrateChart(rows, state.gw);
     bindChartHover();
   }).catch(() => {}), 700);
-  const motd = document.getElementById("mtd");
+  const motd = byId("mtd");
   if (motd) setTimeout(() => api.motd().then((data) => {
     if (!motd.isConnected || state.r.n !== "home") return;
     setMotdSlot(motd, normalizeMotd(data));
@@ -80,15 +79,14 @@ function cachedUptime() {
 }
 
 function setUptimeNode(node, uptime) {
-  const tone = { green: "sgn", yellow: "syo", red: "srd", gray: "sgu" }[uptime.tone] || "syo";
-  node.className = `ks ${tone}`;
+  node.className = `ks ${uptimeToneClass(uptime.tone)}`;
   node.title = uptime.detail;
 }
 
 export function walletTrackButtonLabel(historyEnabled = localHistoryEnabled()) { return historyEnabled ? "Track wallet" : "Temporary track wallet"; }
 
 export function syncWalletTrackButtonLabels(root = document) {
-  root.querySelectorAll("[data-ws]").forEach((button) => {
+  qsa("[data-ws]", root).forEach((button) => {
     button.textContent = walletTrackButtonLabel();
   });
 }
@@ -103,17 +101,14 @@ function dashboardGraphControls(graphWindow, graphMode) {
 }
 
 function dashboardGraphRoute(graphWindow, graphMode) {
-  const params = new URLSearchParams();
-  params.set("w", graphWindow);
-  params.set("m", graphMode);
-  return `#/?${params.toString()}`;
+  return `#/?w=${graphWindow}&m=${graphMode}`;
 }
 
 function poolHashrateChart(rows, graphWindow) {
-  if (!Array.isArray(rows) || !rows.length) return `<section id="pch" class="pn"><div class="cd cph">${skel("Loading pool hashrate chart")}</div></section>`;
+  if (!Array.isArray(rows) || !rows.length) return `<section id=pch class=pn><div class="cd cph">${skel("Loading pool hashrate chart")}</div></section>`;
   const graph = hashrateChart(rows, graphWindow, "hsh");
-  return `<section id="pch" class="pn">
-    <div class="cd">${chartHtml(graph.m, graph.l, graph.r, graph.a, "Pool-wide hashrate chart")}</div>
+  return `<section id=pch class=pn>
+    <div class=cd>${chartHtml(graph.m, graph.l, graph.r, graph.a, "Pool-wide hashrate chart")}</div>
   </section>`;
 }
 
@@ -124,13 +119,13 @@ function motdSlot(motd) {
 
 function setMotdSlot(node, motd) {
   const html = motdCard(motd);
-  node.classList.toggle("hd", !html);
+  tog(node, "hd", !html);
   node.innerHTML = html;
   const button = node.querySelector("[data-dm]");
   if (button) button.addEventListener("click", (event) => {
     dismissMotd(event.currentTarget.dataset.dm, { persist: localHistoryEnabled() });
     event.currentTarget.closest(".mc")?.remove();
-    node.classList.add("hd");
+    tog(node, "hd", true);
   });
 }
 
@@ -138,13 +133,13 @@ function motdCard(motd) {
   if (!shouldShowMotd(motd, { persist: localHistoryEnabled() })) return "";
   const title = motd.subject || "Pool notice";
   return `<section class="pn mc" data-mk="${escapeHtml(motd.key)}">
-    <div class="ph">
+    <div class=ph>
       <div>
         <h2>${escapeHtml(title)}</h2>
       </div>
       <button class="md" data-dm="${escapeHtml(motd.key)}" aria-label="Dismiss pool notice until it changes" title="Dismiss until updated">🗑</button>
     </div>
-    <div class="cd"><p class="mcp">${escapeHtml(motd.body)}</p></div>
+    <div class=cd><p class=mcp>${escapeHtml(motd.body)}</p></div>
   </section>`;
 }
 
@@ -164,7 +159,7 @@ async function walletSummaryCard(address) {
           <div class="wtr">
             <h1><a class="wtl" href="${walletRouteWithGraph(address, "overview", state.gw, state.gm)}">${shortAddress(address)}</a></h1>
             ${lastShareAgeSuffix(stats)}
-            ${chipLink("Setup", `#/setup?a=${encodeURIComponent(address)}`, false, `title="Open setup commands for this wallet"`)}
+            ${chipLink("Setup", `#/setup?a=${encodeUrlPart(address)}`, false, `title="Open setup commands for this wallet"`)}
           </div>
         </div>
         <button class="wrm" data-rw="${escapeHtml(address)}" aria-label="Remove wallet ${escapeHtml(shortAddress(address))}" title="Remove wallet">🗑</button>
@@ -172,7 +167,7 @@ async function walletSummaryCard(address) {
       <div class="cd gd kg">
         ${walletKpis(stats, workerRows.length, stats.hash2 || stats.hash || 0)}
       </div>
-      <div class="cd">${graph.p.length ? chartHtml(graph.m, graph.l, graph.r, graph.a, "Wallet hashrate chart") : `<p class="mt">No wallet graph data yet.</p>`}</div>
+      <div class=cd>${graph.p.length ? chartHtml(graph.m, graph.l, graph.r, graph.a, "Wallet hashrate chart") : `<p class=mt>No wallet graph data yet.</p>`}</div>
     </article>
   `;
 }

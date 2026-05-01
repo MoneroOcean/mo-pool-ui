@@ -1,5 +1,5 @@
 import { loadWatchlist, localHistoryEnabled, setConsent, shouldAskConsent } from "./privacy.js";
-import { endpointKey } from "./api.js";
+import { minerEndpoint, POOL_CHART, WALLET_CHART, WALLET_WORKER_CHARTS } from "./api.js";
 import { isXmrAddress, parseRoute } from "./routes.js";
 import { RefreshScheduler } from "./scheduler.js";
 import { setTitle, updateCanonical } from "./seo.js";
@@ -60,7 +60,7 @@ const scheduler = new RefreshScheduler({
   onState: (label) => {
     if (refreshLabel) {
       refreshLabel.textContent = label;
-      tog(refreshLabel.parentElement, "is-updating", label === "Updating");
+      tog(refreshLabel.parentElement, "upd", label === "Updating");
       attr(refreshLabel.parentElement, "title", `Refresh visible data. ${label}`);
       attr(refreshLabel.parentElement, "aria-label", `Refresh visible data. ${label}`);
     }
@@ -127,22 +127,22 @@ function shouldScrollToTop(previous, next, keepCurrentView, background) {
 function hasColdGraphLoad(route) {
   if (route.n === "home") {
     const keys = [
-      "pool/chart/hashrate",
-      ...state.w.map((row) => `miner/${row.address}/chart/hashrate`)
+      POOL_CHART,
+      ...state.w.map((row) => minerEndpoint(row.address, WALLET_CHART))
     ];
     return hasColdCache(keys);
   }
   if (route.n === "wallet" && (route.t || "overview") === "overview" && isXmrAddress(route.a)) {
     return hasColdCache([
-      `miner/${route.a}/chart/hashrate`,
-      `miner/${route.a}/chart/hashrate/allWorkers`
+      minerEndpoint(route.a, WALLET_CHART),
+      minerEndpoint(route.a, WALLET_WORKER_CHARTS)
     ]);
   }
   return false;
 }
 
 function hasColdCache(keys) {
-  return keys.some((key) => !state.c.has(endpointKey(key)));
+  return keys.some((key) => !state.c.has(key));
 }
 
 function syncScheduler() {
@@ -186,7 +186,7 @@ function maybeShowConsent() {
   // The prompt copy must stay explicit about what is local browser history and
   // what requires server-side support. supportEmail() obfuscates the address in
   // source while still rendering a usable contact in the browser.
-  panel.innerHTML = `<h2>Local wallet history</h2><p class="mt">Store up to 10 recent XMR addresses here for 180 days. They are sent only when opened. Use trash to clear saved wallets. For server-side deletion, email ${email}.</p><div class="br"><button id="cok">Allow local history</button><button id="cno">Do not store</button></div>`;
+  panel.innerHTML = `<h2>Local wallet history</h2><p class=mt>Store up to 10 recent XMR addresses here for 180 days. They are sent only when opened. Use trash to clear saved wallets. For server-side deletion, email ${email}.</p><div class=br><button id=cok>Allow local history</button><button id=cno>Do not store</button></div>`;
   document.body.append(panel);
   on(qs("#cok", panel), "click", () => {
     setConsent(true);

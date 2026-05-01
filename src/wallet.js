@@ -1,5 +1,6 @@
 import { isFiniteNumber, normalizeTimestampSeconds } from "./format.js";
 import { isXmrAddress } from "./routes.js";
+import { compareValues } from "./table-sort.js";
 
 export const STALE_WORKER_SECONDS = 10 * 60;
 const WORKER_LIST_SORT_KEYS = ["name", "xmr", "raw", "avg", "avgraw", "last", "valid", "invalid", "hashes"];
@@ -44,7 +45,7 @@ export function sortWorkerListRows(workers, sort = "name", direction) {
   const key = workerListSortMode(sort);
   const defaultDirection = key === "name" ? "asc" : "desc";
   const dir = workerSortDirection(direction || defaultDirection) === "asc" ? 1 : -1;
-  return [...workers].sort((a, b) => compareWorkerValues(workerListSortValue(a, key), workerListSortValue(b, key)) * dir || compareWorkerValues(a.n, b.n));
+  return [...workers].sort((a, b) => compareValues(workerListSortValue(a, key), workerListSortValue(b, key)) * dir || compareValues(a.n, b.n));
 }
 
 export function compactWorkerRows(data, charts = {}, now = Date.now()) {
@@ -67,8 +68,8 @@ function compactWorkerRow(name, stats, chartRows, now) {
   const stat = latestWorkerStat(stats);
   const hasCurrent = Boolean(stat);
   const chart = workerChartSummary(chartRows);
-  const raw = hashrateValue(stat?.row, stats, ["hsh", "hs", "hash"]);
-  const xmr = hashrateValue(stat?.row, stats, ["hsh2", "hs2", "hash2"]);
+  const raw = statValue(stat?.row, stats, ["hsh", "hs", "hash"]);
+  const xmr = statValue(stat?.row, stats, ["hsh2", "hs2", "hash2"]);
   const current = xmr || raw;
   const lastSeen = Math.max(stat?.last || 0, chart.last || 0);
   const validShares = statValue(stat?.row, stats, ["valid", "validShares", "shares", "s"]);
@@ -83,8 +84,6 @@ function compactWorkerRow(name, stats, chartRows, now) {
     th: statValue(stat?.row, stats, ["totalHash", "totalHashes", "hashes"]),
     vs: validShares,
     is: statValue(stat?.row, stats, ["invalid", "invalidShares", "badShares", "bad_shares"]),
-    s: validShares,
-    c: hasCurrent,
     st: workerStatus(hasCurrent, current, lastSeen, now)
   };
 }
@@ -100,9 +99,7 @@ function latestWorkerStat(stats) {
 }
 
 function statRows(stats) {
-  if (Array.isArray(stats)) return stats.filter(isObject);
-  if (Array.isArray(stats?.stats) && stats.stats.length) return stats.stats.filter(isObject);
-  return isObject(stats) && Object.keys(stats).some((key) => key !== "stats" && key !== "charts") ? [stats] : [];
+  return sourceRows(stats, true);
 }
 
 function workerChartSummary(source) {
@@ -114,8 +111,8 @@ function workerChartSummary(source) {
   for (const row of rows) {
     const timestamp = normalizeTimestampSeconds(row.tme ?? row.ts ?? row.time);
     if (!timestamp) continue;
-    const raw = hashrateValue(row, null, ["hsh", "hs", "hash"]);
-    const xmr = hashrateValue(row, null, ["hsh2", "hs2", "hash2"]) || raw;
+    const raw = statValue(row, null, ["hsh", "hs", "hash"]);
+    const xmr = statValue(row, null, ["hsh2", "hs2", "hash2"]) || raw;
     last = Math.max(last, timestamp);
     xmrTotal += xmr;
     rawTotal += raw;
@@ -125,18 +122,18 @@ function workerChartSummary(source) {
 }
 
 function chartRows(source) {
+  return sourceRows(source);
+}
+
+function sourceRows(source, includeObject = false) {
   if (Array.isArray(source)) return source.filter(isObject);
-  if (Array.isArray(source?.stats) && source.stats.length) return source.stats.filter(isObject);
-  if (Array.isArray(source?.charts) && source.charts.length) return source.charts.filter(isObject);
-  return [];
+  const rows = Array.isArray(source?.stats) && source.stats.length ? source.stats : Array.isArray(source?.charts) && source.charts.length ? source.charts : [];
+  if (rows.length) return rows.filter(isObject);
+  return includeObject && isObject(source) && Object.keys(source).some((key) => key !== "stats" && key !== "charts") ? [source] : [];
 }
 
 function statLastSeen(row, parent) {
   return normalizeTimestampSeconds(firstValue(row, ["tme", "ts", "time", "lts", "lastShare", "lastHash", "last"]) ?? firstValue(parent, ["lastShare", "lastHash", "lts", "last"]));
-}
-
-function hashrateValue(row, parent, keys) {
-  return statValue(row, parent, keys);
 }
 
 function statValue(row, parent, keys) {
@@ -164,13 +161,6 @@ function workerListSortValue(row, key) {
   if (key === "invalid") return row.is;
   if (key === "hashes") return row.th;
   return 0;
-}
-
-function compareWorkerValues(a, b) {
-  const numberA = Number(a);
-  const numberB = Number(b);
-  if (isFiniteNumber(numberA) && isFiniteNumber(numberB)) return numberA - numberB;
-  return String(a ?? "").localeCompare(String(b ?? ""));
 }
 
 function isObject(value) {

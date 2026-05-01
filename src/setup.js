@@ -1,45 +1,70 @@
-import { isFiniteNumber } from "./format.js";
+import { isFiniteNumber, trimFixed } from "./format.js";
+import { HASHRATE_UNITS } from "./constants.js";
 
 export const POOL_HOST = "gulf.moneroocean.stream";
 const LOCAL_PROXY = "127.0.0.1:3333";
-const XMRIG_RELEASE_API = "https://api.github.com/repos/MoneroOcean/xmrig/releases/latest";
-const SRBMINER_RELEASE_API = "https://api.github.com/repos/doktor83/SRBMiner-Multi/releases/latest";
-const META_MINER_RELEASE_API = "https://api.github.com/repos/MoneroOcean/meta-miner/releases/latest";
-const XMRIG_PROXY_RELEASE_API = "https://api.github.com/repos/MoneroOcean/xmrig-proxy/releases/latest";
+const LINUX = "linux";
+const MACOS = "macos";
+const WINDOWS = "windows";
+const INTEL = "intel";
+const XMRIG_MO = "xmrig-mo";
+const SRB_GPU = "srb-gpu";
+const META_MINER = "meta-miner";
+const XMRIG_PROXY = "xmrig-proxy";
+const XMR_NODE_PROXY = "xmr-node-proxy";
+const XMRIG = "xmrig";
+const XMRIG_EXE = `${XMRIG}.exe`;
+const XMRIG_BIN = `./${XMRIG}`;
+const XMRIG_TAR = `${XMRIG}.tar.gz`;
+const SRBMINER = "SRBMiner-MULTI";
+const SRBMINER_EXE = `${SRBMINER}.exe`;
+const SRBMINER_BIN = `./${SRBMINER}`;
+const SRBMINER_DIR = "srbminer";
+const SRBMINER_ARCHIVE = `${SRBMINER_DIR}.tar`;
+const SRBMINER_ZIP = `${SRBMINER_DIR}.zip`;
+const GITHUB_RELEASE_API = "https://api.github.com/repos/";
+const XMRIG_RELEASE_API = `${GITHUB_RELEASE_API}MoneroOcean/xmrig/releases/latest`;
+const SRBMINER_RELEASE_API = `${GITHUB_RELEASE_API}doktor83/SRBMiner-Multi/releases/latest`;
+const META_MINER_RELEASE_API = `${GITHUB_RELEASE_API}MoneroOcean/meta-miner/releases/latest`;
+const XMRIG_PROXY_RELEASE_API = `${GITHUB_RELEASE_API}MoneroOcean/xmrig-proxy/releases/latest`;
 export const TOR_MINING_HOST = "mo2tor2amawhphlrgyaqlrqx7o27jaj7yldnx3t6jip3ow4bujlwz6id.onion";
+const LINUX_XMRIG_ASSET = "grep -E 'lin64-compat|lin64\\.tar\\.gz'";
+const WIN64_ZIP_ASSET = "win64\\.zip$";
+const XMRIG_PROXY_TAR = "xmrig-proxy.tar.gz";
+const BROWSER_DOWNLOAD_URL = "browser_download_url";
+const FIRST_ASSET = "Select-Object -First 1";
+const KEEPALIVE = "--keepalive";
 
 const SETUP_PROFILES = [
-  ["xmrig-mo", "CPU multi", "MoneroOcean XMRig benchmarks CPU algos for XMR payout."],
-  ["srb-gpu", "GPU fixed", "SRBMiner-Multi for AMD, NVIDIA, and Intel GPUs."],
-  ["meta-miner", "GPU multi", "Wrapper that lets fixed-algo GPU miners switch with pool conditions."],
-  ["xmrig-proxy", "xmrig-proxy", "Many XMRig CPU workers behind one local proxy."],
-  ["xmr-node-proxy", "xmr-node-proxy", "Larger CPU farms; keep GPU miners direct or behind meta-miner."]
+  [XMRIG_MO, "CPU multi", "MoneroOcean XMRig benchmarks CPU algos for XMR payout."],
+  [SRB_GPU, "GPU fixed", "SRBMiner-Multi for AMD, NVIDIA, and Intel GPUs."],
+  [META_MINER, "GPU multi", "Wrapper that lets fixed-algo GPU miners switch with pool conditions."],
+  [XMRIG_PROXY, XMRIG_PROXY, "Many XMRig CPU workers behind one local proxy."],
+  [XMR_NODE_PROXY, XMR_NODE_PROXY, "Larger CPU farms; keep GPU miners direct or behind meta-miner."]
 ];
 
 export const SETUP_OS = [
-  ["linux", "Linux/Ubuntu"],
-  ["macos", "macOS"],
-  ["windows", "Windows"]
+  [LINUX, "Linux/Ubuntu"],
+  [MACOS, "macOS"],
+  [WINDOWS, "Windows"]
 ];
 
-export const SETUP_HASHRATE_UNITS = [
-  ["h", "H/s", 1],
-  ["kh", "KH/s", 1000],
-  ["mh", "MH/s", 1000000]
-];
+export const SETUP_HASHRATE_UNITS = HASHRATE_UNITS;
 
 export const SETUP_GPU_VENDORS = [
-  ["intel", "Intel"],
+  [INTEL, "Intel"],
   ["nvidia", "NVIDIA"],
   ["amd", "AMD"]
 ];
 
+const GPU_ALGO_IDS = ["autolykos2", "kawpow", "etchash", "cn/gpu"];
+const GPU_PROFILES = [SRB_GPU, META_MINER];
+const AUTO_PROFILES = [XMRIG_MO, META_MINER, XMRIG_PROXY, XMR_NODE_PROXY];
+const MAC_PROFILES = [XMRIG_MO, XMRIG_PROXY, XMR_NODE_PROXY];
+const AUTO_ALGO = ["auto", "Auto switch"];
 const SETUP_ALGOS = [
-  ["auto", "Auto switch"],
-  ["autolykos2", "autolykos2"],
-  ["kawpow", "kawpow"],
-  ["etchash", "etchash"],
-  ["cn/gpu", "cn/gpu"]
+  AUTO_ALGO,
+  ...GPU_ALGO_IDS.map((id) => [id, id])
 ];
 
 const SRB_ALGO = {
@@ -48,13 +73,8 @@ const SRB_ALGO = {
   etchash: "etchash",
   kawpow: "kawpow"
 };
-const GPU_ALGOS = new Set(Object.keys(SRB_ALGO));
-const META_MINER_ALGOS = [
-  ["autolykos2", "autolykos2", ""],
-  ["kawpow", "kawpow", ""],
-  ["etchash", "etchash", " --esm 2 --nicehash true"],
-  ["cn/gpu", "cryptonight_gpu", ""]
-];
+const ETCHASH_EXTRA = " --esm 2 --nicehash true";
+const META_MINER_ALGOS = GPU_ALGO_IDS.map((name) => [name, SRB_ALGO[name], name === "etchash" ? ETCHASH_EXTRA : ""]);
 const WINDOWS_POWERSHELL_BKM = "Open Windows PowerShell first. From cmd.exe, run: powershell -NoProfile";
 const PORT_METADATA_UNAVAILABLE = "Pool port metadata unavailable from API.";
 const TLS_MODE_NOTE = "TLS encrypts miner-to-pool traffic. Use plain only when TLS is blocked or unsupported.";
@@ -72,25 +92,25 @@ export function setupAddress({ queryAddress = "", activeAddress = "", watchlist 
   return queryAddress || activeAddress || watchlist.find((row) => row?.address)?.address || "YOUR_XMR_ADDRESS";
 }
 
-export function setupAlgoOptions(profile = "xmrig-mo") {
+export function setupAlgoOptions(profile = XMRIG_MO) {
   const normalized = profileId(profile);
-  if (normalized === "srb-gpu") return SETUP_ALGOS.filter(([id]) => GPU_ALGOS.has(id));
-  return [["auto", "Auto switch"]];
+  if (normalized === SRB_GPU) return SETUP_ALGOS.filter(([id]) => SRB_ALGO[id]);
+  return [AUTO_ALGO];
 }
 
-export function setupProfileOptions(os = "linux") {
-  const normalized = optionId(os, SETUP_OS, "linux");
-  if (normalized === "macos") return SETUP_PROFILES.filter((row) => ["xmrig-mo", "xmrig-proxy", "xmr-node-proxy"].includes(row[0]));
-  if (normalized === "windows") return SETUP_PROFILES.filter((row) => row[0] !== "xmr-node-proxy");
+export function setupProfileOptions(os = LINUX) {
+  const normalized = optionId(os, SETUP_OS, LINUX);
+  if (normalized === MACOS) return SETUP_PROFILES.filter((row) => MAC_PROFILES.includes(row[0]));
+  if (normalized === WINDOWS) return SETUP_PROFILES.filter((row) => row[0] !== XMR_NODE_PROXY);
   return SETUP_PROFILES;
 }
 
-export function setupHashrateDefaults(profile = "xmrig-mo", gpu = "intel") {
+export function setupHashrateDefaults(profile = XMRIG_MO, gpu = INTEL) {
   const normalized = profileId(profile);
-  if (normalized === "xmrig-proxy") return { value: 64, unit: "kh" };
-  if (normalized === "xmr-node-proxy") return { value: 128, unit: "kh" };
-  if (normalized === "srb-gpu" || normalized === "meta-miner") {
-    return gpu === "intel" ? { value: 128, unit: "kh" } : { value: 512, unit: "kh" };
+  if (normalized === XMRIG_PROXY) return { value: 64, unit: "kh" };
+  if (normalized === XMR_NODE_PROXY) return { value: 128, unit: "kh" };
+  if (GPU_PROFILES.includes(normalized)) {
+    return gpu === INTEL ? { value: 128, unit: "kh" } : { value: 512, unit: "kh" };
   }
   return { value: 4, unit: "kh" };
 }
@@ -115,17 +135,17 @@ export function setupConfiguredPorts(source = []) {
       const tlsPort = Number(row.tlsPort);
       const difficulty = Number(row.difficulty);
       const targetHashrate = Number(row.targetHashrate) || (isFiniteNumber(difficulty) && difficulty > 0 ? difficulty / 30 : 0);
-      return [isFiniteNumber(port) && port > 0 ? port : 0, isFiniteNumber(tlsPort) && tlsPort > 0 ? tlsPort : 0, targetHashrate, String(row.description || "").trim()];
+      return [port > 0 ? port : 0, tlsPort > 0 ? tlsPort : 0, targetHashrate, String(row.description || "").trim()];
     })
     .filter((row) => row[0] > 0 && row[2] > 0)
     .sort((a, b) => a[2] - b[2] || a[0] - b[0]);
 }
 
 export function setupPlan(options = {}) {
-  const os = optionId(options.os, SETUP_OS, "linux");
+  const os = optionId(options.os, SETUP_OS, LINUX);
   const profile = profileId(options.profile, os);
-  const gpu = optionId(options.gpu, SETUP_GPU_VENDORS, "intel");
-  const requestedAlgo = optionId(options.algo, SETUP_ALGOS, profileUsesAutoAlgo(profile) ? "auto" : "rx/0");
+  const gpu = optionId(options.gpu, SETUP_GPU_VENDORS, INTEL);
+  const requestedAlgo = optionId(options.algo, SETUP_ALGOS, profileUsesAutoAlgo(profile) ? AUTO_ALGO[0] : "rx/0");
   const algo = normalizeProfileAlgo(profile, requestedAlgo);
   const defaultHashrate = setupHashrateDefaults(profile, gpu);
   const hashrateUnit = optionId(options.hashrateUnit, SETUP_HASHRATE_UNITS, defaultHashrate.unit);
@@ -136,15 +156,16 @@ export function setupPlan(options = {}) {
   const worker = workerName(options.worker);
   const port = portRow?.p || 0;
   const pool = `${POOL_HOST}:${port}`;
-  const password = profile === "xmrig-mo" || algo === "auto" ? worker : `${worker}~${algo}`;
+  const password = profile === XMRIG_MO || algo === AUTO_ALGO[0] ? worker : `${worker}~${algo}`;
 
   const s = { pr: profile, os, g: gpu, al: algo, a: address, hr: hashrate, hu: hashrateUnit, hh: hashrateHps, p: port };
+  const planOptions = { os, gpu, algo, address, worker, password, pool, port, portRow };
   if (!portRow) return withSelection(unavailablePortPlan(), s);
-  if (profile === "srb-gpu") return withSelection(srbPlan({ os, gpu, algo, address, worker, password, pool, portRow }), s);
-  if (profile === "meta-miner") return withSelection(metaMinerPlan({ os, gpu, address, worker, pool, portRow }), s);
-  if (profile === "xmrig-proxy") return withSelection(xmrigProxyPlan({ os, address, worker, pool, portRow }), s);
-  if (profile === "xmr-node-proxy") return withSelection(xmrNodeProxyPlan({ os, address, worker, port, portRow }), s);
-  return withSelection(xmrigPlan({ os, address, worker, pool, portRow }), s);
+  if (profile === SRB_GPU) return withSelection(srbPlan(planOptions), s);
+  if (profile === META_MINER) return withSelection(metaMinerPlan(planOptions), s);
+  if (profile === XMRIG_PROXY) return withSelection(xmrigProxyPlan(planOptions), s);
+  if (profile === XMR_NODE_PROXY) return withSelection(xmrNodeProxyPlan(planOptions), s);
+  return withSelection(xmrigPlan(planOptions), s);
 }
 
 function withSelection(plan, s) {
@@ -152,7 +173,11 @@ function withSelection(plan, s) {
 }
 
 function unavailablePortPlan() {
-  return { tt: "Setup unavailable", sm: PORT_METADATA_UNAVAILABLE, d: "", dn: "", rt: "", rtn: "", r: "", rn: "", to: "", ton: "", l: "", ln: "", nt: `${PORT_METADATA_UNAVAILABLE} Reload after the API returns configured ports.` };
+  return { tt: "Setup unavailable", sm: PORT_METADATA_UNAVAILABLE, nt: `${PORT_METADATA_UNAVAILABLE} Reload after the API returns configured ports.` };
+}
+
+function setupPoolSummary(pool, portRow, suffix = ".") {
+  return `${pool} is derived from ${portRow.h}${suffix}`;
 }
 
 /*
@@ -168,18 +193,18 @@ text, route query parameters, miner flags, and tests stay descriptive. Map:
 */
 
 function xmrigPlan({ os, address, worker, pool, portRow }) {
-  const windows = os === "windows";
-  const macos = os === "macos";
-  const binary = windows ? "xmrig.exe" : "./xmrig";
+  const windows = os === WINDOWS;
+  const macos = os === MACOS;
+  const binary = windows ? XMRIG_EXE : XMRIG_BIN;
   const d = windows
-    ? windowsZipDownload(XMRIG_RELEASE_API, "win64\\.zip$", "xmrig.zip", "moneroocean")
+    ? windowsZipDownload(XMRIG_RELEASE_API, WIN64_ZIP_ASSET, "xmrig.zip", "moneroocean")
     : macos
       ? macXmrigDownload()
-    : `${linuxReleaseDownload("moneroocean", XMRIG_RELEASE_API, "grep -E 'lin64-compat|lin64\\.tar\\.gz'", "xmrig.tar.gz")} && tar xf xmrig.tar.gz && chmod +x xmrig`;
+    : `${linuxReleaseDownload("moneroocean", XMRIG_RELEASE_API, LINUX_XMRIG_ASSET, XMRIG_TAR)} && tar xf ${XMRIG_TAR} && chmod +x ${XMRIG}`;
   const directRun = xmrigRun(binary, pool, address, worker);
   const tlsRun = portRow.t ? xmrigRun(binary, `${POOL_HOST}:${portRow.t}`, address, worker, true) : "";
   return {
-    sm: `${pool} is derived from ${portRow.h}.`,
+    sm: setupPoolSummary(pool, portRow),
     d,
     dn: windows ? WINDOWS_POWERSHELL_BKM : macos ? XMRIG_MAC_DOWNLOAD_NOTE : "",
     rt: tlsRun,
@@ -188,8 +213,6 @@ function xmrigPlan({ os, address, worker, pool, portRow }) {
     rn: PLAIN_MODE_NOTE,
     to: windows ? "" : xmrigTorRun({ os, address, worker, port: portRow.p }),
     ton: windows ? "" : TOR_MODE_NOTE,
-    l: "",
-    ln: "",
     nt: macos
       ? `Best first CPU setup on Apple Silicon Macs. Intel macOS is not supported by this download. ${XMRIG_AUTO_SWITCH_NOTE} If Gatekeeper blocks it, remove quarantine and retry.`
       : `Best first setup for CPU mining. ${XMRIG_AUTO_SWITCH_NOTE}`
@@ -197,56 +220,50 @@ function xmrigPlan({ os, address, worker, pool, portRow }) {
 }
 
 function srbPlan({ os, gpu, algo, address, worker, password, pool, portRow }) {
-  const windows = os === "windows";
-  const binary = windows ? "SRBMiner-MULTI.exe" : "./SRBMiner-MULTI";
-  const srbAlgo = SRB_ALGO[algo] || "autolykos2";
+  const windows = os === WINDOWS;
+  const binary = windows ? SRBMINER_EXE : SRBMINER_BIN;
+  const srbAlgo = SRB_ALGO[algo] || GPU_ALGO_IDS[0];
   const disable = gpuDisableFlags(gpu);
-  const ethExtra = algo === "etchash" ? " --esm 2 --nicehash true" : "";
+  const ethExtra = algo === "etchash" ? ETCHASH_EXTRA : "";
   const d = windows
     ? srbWindowsDownload()
     : srbLinuxDownload();
   return {
-    sm: `${pool} is derived from ${portRow.h}.`,
+    sm: setupPoolSummary(pool, portRow),
     d,
     dn: windows ? WINDOWS_POWERSHELL_BKM : "",
     rt: portRow.t ? srbRun(binary, disable, srbAlgo, `${POOL_HOST}:${portRow.t}`, address, password, worker, true, ethExtra) : "",
     rtn: `${TLS_MODE_NOTE} ${SRB_RUN_NOTE}`,
     r: srbRun(binary, disable, srbAlgo, pool, address, password, worker, false, ethExtra),
     rn: PLAIN_MODE_NOTE,
-    l: "",
-    ln: "",
     nt: "SRBMiner-Multi is used for fixed algo GPU mining."
   };
 }
 
 function metaMinerPlan({ os, gpu, address, worker, pool, portRow }) {
-  const windows = os === "windows";
+  const windows = os === WINDOWS;
   const disable = gpuDisableFlags(gpu);
   const tlsPool = portRow.t ? `${POOL_HOST}:ssl${portRow.t}` : pool;
   return {
-    sm: `${tlsPool} is derived from ${portRow.h}. Meta-miner listens on ${LOCAL_PROXY} for child miners.`,
+    sm: setupPoolSummary(tlsPool, portRow, `. Meta-miner listens on ${LOCAL_PROXY} for child miners.`),
     d: windows
       ? metaMinerWindowsDownload()
       : metaMinerLinuxDownload(),
     dn: windows ? WINDOWS_POWERSHELL_BKM : "",
     rt: windows ? metaMinerWindowsRun({ address, worker, pool: tlsPool, disable }) : metaMinerLinuxRun({ address, worker, pool: tlsPool, disable }),
     rtn: TLS_MODE_NOTE,
-    r: "",
-    rn: "",
-    l: "",
-    ln: "",
     nt: "Use this only for GPU algo switching; fixed GPU setup is simpler. First run benchmarks/autotunes configured algorithms before normal mining output appears."
   };
 }
 
 function gpuDisableFlags(gpu) {
-  if (gpu === "intel") return "--disable-gpu-amd --disable-gpu-nvidia";
+  if (gpu === INTEL) return "--disable-gpu-amd --disable-gpu-nvidia";
   if (gpu === "nvidia") return "--disable-gpu-amd --disable-gpu-intel";
   return "--disable-gpu-nvidia --disable-gpu-intel";
 }
 
 function xmrigRun(binary, pool, address, worker, tls = false) {
-  return `${binary} -o ${pool} -u ${address} --rig-id ${worker} --keepalive${tls ? " --tls" : ""}`;
+  return `${binary} -o ${pool} -u ${address} --rig-id ${worker} ${KEEPALIVE}${tls ? " --tls" : ""}`;
 }
 
 function srbRun(binary, disable, algo, pool, address, password, worker, tls, extra = "") {
@@ -268,7 +285,7 @@ function metaMinerLinuxRun({ address, worker, pool, disable }) {
 WORKER='${worker}'
 POOL='${pool}'
 LOCAL_PROXY='${LOCAL_PROXY}'
-SRB='./SRBMiner-MULTI'
+SRB='${SRBMINER_BIN}'
 GPU_FLAGS='${disable}'
 COMMON="${srbCommon("$GPU_FLAGS", "$LOCAL_PROXY", "$WALLET", "$WORKER", "$SRB")} --tls false"
 
@@ -281,7 +298,7 @@ function metaMinerWindowsRun({ address, worker, pool, disable }) {
 $Worker="${worker}"
 $Pool="${pool}"
 $LocalProxy="${LOCAL_PROXY}"
-$Srb="SRBMiner-MULTI.exe"
+$Srb="${SRBMINER_EXE}"
 $GpuFlags="${disable}"
 $Common="${srbCommon("$GpuFlags", "$LocalProxy", "$Wallet", "$Worker", "$Srb")} --tls false"
 
@@ -290,13 +307,13 @@ ${metaMinerAlgoArgs("$Common", "$Worker", "`")}`;
 }
 
 function xmrigProxyPlan({ os, address, worker, pool, portRow }) {
-  const windows = os === "windows";
-  const macos = os === "macos";
+  const windows = os === WINDOWS;
+  const macos = os === MACOS;
   const binary = windows ? "xmrig-proxy.exe" : "./xmrig-proxy";
   const tlsPool = portRow.t ? `${POOL_HOST}:${portRow.t}` : pool;
-  const r = `${binary} -o ${tlsPool} -u ${address} --bind 0.0.0.0:3333 --mode nicehash --keepalive --tls`;
+  const r = `${binary} -o ${tlsPool} -u ${address} --bind 0.0.0.0:3333 --mode nicehash ${KEEPALIVE} --tls`;
   return {
-    sm: `${tlsPool} is derived from ${portRow.h}; ${PROXY_HOSTS_PORT_3333}`,
+    sm: setupPoolSummary(tlsPool, portRow, `; ${PROXY_HOSTS_PORT_3333}`),
     d: windows
       ? xmrigProxyWindowsDownload()
       : macos
@@ -305,43 +322,38 @@ function xmrigProxyPlan({ os, address, worker, pool, portRow }) {
     dn: windows ? WINDOWS_POWERSHELL_BKM : macos ? XMRIG_PROXY_MAC_DOWNLOAD_NOTE : "",
     rt: r,
     rtn: TLS_MODE_NOTE,
-    r: "",
-    rn: "",
-    l: `${windows ? "xmrig.exe" : "./xmrig"} -o PROXY_HOST:3333 -u ${worker} --nicehash --donate-over-proxy 1 --keepalive`,
+    l: `${windows ? XMRIG_EXE : XMRIG_BIN} -o PROXY_HOST:3333 -u ${worker} --nicehash --donate-over-proxy 1 ${KEEPALIVE}`,
     ln: `Worker miners connect to this proxy on port 3333 using NiceHash-compatible mode. ${REPLACE_PROXY_HOST}`,
     nt: `${macos ? "Intel macOS is not supported by this download. " : ""}Use when many XMRig CPU workers share one upstream pool connection. ${SMALL_PROXY_NOTE} MoneroOcean fork keeps proxy aligned with algo switching. Keep fixed GPU miners direct or behind meta-miner.`
   };
 }
 
 function xmrNodeProxyPlan({ os, address, worker, port, portRow }) {
-  const macos = os === "macos";
+  const macos = os === MACOS;
   const tlsPort = portRow.t || port;
-  const config = xmrNodeProxyConfig({ address, worker, port: tlsPort });
+  const config = xmrNodeProxyConfig({ address, port: tlsPort });
   return {
-    sm: `${POOL_HOST}:${tlsPort} is derived from ${portRow.h}; ${PROXY_HOSTS_PORT_3333}`,
+    sm: setupPoolSummary(`${POOL_HOST}:${tlsPort}`, portRow, `; ${PROXY_HOSTS_PORT_3333}`),
     d: macos
       ? "brew install node git\ngit clone https://github.com/MoneroOcean/xmr-node-proxy.git ~/xmr-node-proxy\ncd ~/xmr-node-proxy\nnpm install --no-audit --no-fund"
       : "sudo apt-get install git\ngit clone https://github.com/MoneroOcean/xmr-node-proxy.git ~/xmr-node-proxy\ncd ~/xmr-node-proxy\nbash install.sh",
-    dn: "",
     rt: `cat > config.json <<'JSON'\n${config}\nJSON\nnode proxy.js --config config.json`,
     rtn: TLS_MODE_NOTE,
-    r: "",
-    rn: "",
-    l: `./xmrig -o PROXY_HOST:3333 -u ${worker}`,
+    l: `${XMRIG_BIN} -o PROXY_HOST:3333 -u ${worker}`,
     ln: `Worker miners connect to xmr-node-proxy on port 3333. ${REPLACE_PROXY_HOST}`,
     nt: `Use for many CPU workers on XMR-style algorithms. ${SMALL_PROXY_NOTE} Generated xmr-node-proxy config is an rx/0 starter config. Add real algo_perf for full switching. Not for Etchash, KawPow, Autolykos2, or XTM/Tari c29.`
   };
 }
 
 function xmrigTorRun({ os, address, worker, port }) {
-  const setup = os === "macos"
+  const setup = os === MACOS
     ? "brew install tor && brew services start tor"
     : "sudo apt-get install tor && sudo systemctl enable --now tor";
   return `${setup}
-./xmrig -o ${TOR_MINING_HOST}:${port} -x 127.0.0.1:9050 -u ${address} --rig-id ${worker} --keepalive`;
+${XMRIG_BIN} -o ${TOR_MINING_HOST}:${port} -x 127.0.0.1:9050 -u ${address} --rig-id ${worker} ${KEEPALIVE}`;
 }
 
-function xmrNodeProxyConfig({ address, worker, port }) {
+function xmrNodeProxyConfig({ address, port }) {
   return `{
   "pools": [{
     "hostname": "${POOL_HOST}",
@@ -380,28 +392,24 @@ function normalizedHashrateInput(value, fallback) {
 
 function formatSetupHashrate(hashrateHps) {
   const hps = Number(hashrateHps) || 0;
-  if (hps >= 1_000_000) return `${trimNumber(hps / 1_000_000)} MH/s`;
-  if (hps >= 1000) return `${trimNumber(hps / 1000)} KH/s`;
-  return `${trimNumber(hps)} H/s`;
-}
-
-function trimNumber(value) {
-  return Number(value).toFixed(3).replace(/\.?0+$/, "");
+  if (hps >= 1_000_000) return `${trimFixed(hps / 1_000_000, 3)} MH/s`;
+  if (hps >= 1000) return `${trimFixed(hps / 1000, 3)} KH/s`;
+  return `${trimFixed(hps, 3)} H/s`;
 }
 
 function normalizeProfileAlgo(profile, algo) {
-  if (profileUsesAutoAlgo(profile)) return "auto";
-  if (profile === "srb-gpu" && !SRB_ALGO[algo]) return "autolykos2";
-  if (algo === "auto") return "rx/0";
+  if (profileUsesAutoAlgo(profile)) return AUTO_ALGO[0];
+  if (profile === SRB_GPU && !SRB_ALGO[algo]) return GPU_ALGO_IDS[0];
+  if (algo === AUTO_ALGO[0]) return "rx/0";
   return algo;
 }
 
 function profileUsesAutoAlgo(profile) {
-  return profile === "xmrig-mo" || profile === "meta-miner" || profile === "xmrig-proxy" || profile === "xmr-node-proxy";
+  return AUTO_PROFILES.includes(profile);
 }
 
-function profileId(value, os = "linux") {
-  return setupProfileOptions(os).some((row) => row[0] === value) ? value : "xmrig-mo";
+function profileId(value, os = LINUX) {
+  return setupProfileOptions(os).some((row) => row[0] === value) ? value : XMRIG_MO;
 }
 
 function optionId(value, rows, fallback) {
@@ -413,51 +421,49 @@ function workerName(value) {
 }
 
 function macXmrigDownload() {
-  return macTarDownload("moneroocean", XMRIG_RELEASE_API, "xmrig.tar.gz", "xmrig");
+  return macTarDownload("moneroocean", XMRIG_RELEASE_API, XMRIG_TAR, XMRIG);
 }
 
 function srbLinuxDownload(includeCurl = true) {
   const d = includeCurl ? linuxReleaseDownload : releaseDownload;
-  return `${d("srbminer", SRBMINER_RELEASE_API, "grep -Ei 'SRBMiner-Multi-.*-Linux\\.tar\\.(gz|xz)'", "srbminer.tar")} && tar xf srbminer.tar --strip-components=1 && chmod +x SRBMiner-MULTI`;
+  return `${d(SRBMINER_DIR, SRBMINER_RELEASE_API, "grep -Ei 'SRBMiner-Multi-.*-Linux\\.tar\\.(gz|xz)'", SRBMINER_ARCHIVE)} && tar xf ${SRBMINER_ARCHIVE} --strip-components=1 && chmod +x ${SRBMINER}`;
 }
 
 function srbWindowsDownload() {
-  return windowsZipDownload(SRBMINER_RELEASE_API, "win64\\.zip$", "srbminer.zip", "srbminer");
+  return windowsZipDownload(SRBMINER_RELEASE_API, WIN64_ZIP_ASSET, SRBMINER_ZIP, SRBMINER_DIR);
 }
 
 function metaMinerLinuxDownload() {
   return `sudo apt-get install nodejs curl
 mkdir -p ~/meta-miner && cd ~/meta-miner
 curl -L https://raw.githubusercontent.com/MoneroOcean/meta-miner/master/mm.js -o mm.js && chmod +x mm.js
-${srbLinuxDownload(false).replaceAll("~/srbminer", "~/meta-miner")}`;
+${srbLinuxDownload(false).replaceAll(`~/${SRBMINER_DIR}`, "~/meta-miner")}`;
 }
 
 function metaMinerWindowsDownload() {
   return `${windowsAssetDownload(META_MINER_RELEASE_API, "mm-v.*\\.zip$", "mm.zip")}
-New-Item -ItemType Directory -Force meta-miner | Out-Null
-Expand-Archive mm.zip -DestinationPath .\\meta-miner -Force
-Set-Location .\\meta-miner
-${windowsAssetDownload(SRBMINER_RELEASE_API, "win64\\.zip$", "srbminer.zip")}
-Expand-Archive srbminer.zip -DestinationPath .\\srbminer -Force
-$dir=Get-ChildItem .\\srbminer -Directory | Select-Object -First 1
-if ($dir) { Copy-Item "$($dir.FullName)\\*" . -Recurse -Force } else { Copy-Item ".\\srbminer\\*" . -Recurse -Force }`;
+${windowsExtractZip("mm.zip", META_MINER, false)}
+${windowsAssetDownload(SRBMINER_RELEASE_API, WIN64_ZIP_ASSET, SRBMINER_ZIP)}
+Expand-Archive ${SRBMINER_ZIP} -DestinationPath .\\${SRBMINER_DIR} -Force
+$dir=Get-ChildItem .\\${SRBMINER_DIR} -Directory | ${FIRST_ASSET}
+if ($dir) { Copy-Item "$($dir.FullName)\\*" . -Recurse -Force } else { Copy-Item ".\\${SRBMINER_DIR}\\*" . -Recurse -Force }`;
 }
 
 function xmrigProxyLinuxDownload() {
-  return `${linuxReleaseDownload("xmrig-proxy", XMRIG_PROXY_RELEASE_API, "grep -E 'lin64-compat|lin64\\.tar\\.gz'", "xmrig-proxy.tar.gz")} && tar xf xmrig-proxy.tar.gz && chmod +x xmrig-proxy`;
+  return `${linuxReleaseDownload(XMRIG_PROXY, XMRIG_PROXY_RELEASE_API, LINUX_XMRIG_ASSET, XMRIG_PROXY_TAR)} && tar xf ${XMRIG_PROXY_TAR} && chmod +x ${XMRIG_PROXY}`;
 }
 
 function xmrigProxyMacDownload() {
-  return macTarDownload("xmrig-proxy", XMRIG_PROXY_RELEASE_API, "xmrig-proxy.tar.gz", "xmrig-proxy", `if [ "$(uname -m)" != "arm64" ]; then echo "${XMRIG_PROXY_MAC_DOWNLOAD_NOTE}"; exit 1; fi`);
+  return macTarDownload(XMRIG_PROXY, XMRIG_PROXY_RELEASE_API, XMRIG_PROXY_TAR, XMRIG_PROXY, `if [ "$(uname -m)" != "arm64" ]; then echo "${XMRIG_PROXY_MAC_DOWNLOAD_NOTE}"; exit 1; fi`);
 }
 
 function xmrigProxyWindowsDownload() {
-  return windowsZipDownload(XMRIG_PROXY_RELEASE_API, "win64\\.zip$", "xmrig-proxy.zip", "xmrig-proxy");
+  return windowsZipDownload(XMRIG_PROXY_RELEASE_API, WIN64_ZIP_ASSET, "xmrig-proxy.zip", XMRIG_PROXY);
 }
 
 function releaseDownload(dir, api, grepCommand, file) {
   return `mkdir -p ~/${dir} && cd ~/${dir}
-url=$(curl -fsSL ${api} | grep browser_download_url | ${grepCommand} | head -1 | cut -d '"' -f 4)
+url=$(curl -fsSL ${api} | grep ${BROWSER_DOWNLOAD_URL} | ${grepCommand} | head -1 | cut -d '"' -f 4)
 curl -L "$url" -o ${file}`;
 }
 
@@ -468,21 +474,25 @@ ${releaseDownload(dir, api, grepCommand, file)}`;
 
 function windowsZipDownload(api, pattern, file, dir) {
   return `${windowsAssetDownload(api, pattern, file)}
-New-Item -ItemType Directory -Force ${dir} | Out-Null
+${windowsExtractZip(file, dir)}`;
+}
+
+function windowsExtractZip(file, dir, enterChild = true) {
+  return `New-Item -ItemType Directory -Force ${dir} | Out-Null
 Expand-Archive ${file} -DestinationPath .\\${dir} -Force
-$dir=Get-ChildItem .\\${dir} -Directory | Select-Object -First 1
-if ($dir) { Set-Location $dir.FullName } else { Set-Location .\\${dir} }`;
+${enterChild ? `$dir=Get-ChildItem .\\${dir} -Directory | ${FIRST_ASSET}
+if ($dir) { Set-Location $dir.FullName } else { Set-Location .\\${dir} }` : `Set-Location .\\${dir}`}`;
 }
 
 function macTarDownload(dir, api, file, binary, precheck = "") {
   return `mkdir -p ~/${dir} && cd ~/${dir}
-${precheck ? `${precheck}\n` : ""}url=$(curl -fsSL ${api} | grep browser_download_url | grep 'mac64\\.tar\\.gz' | head -1 | cut -d '"' -f 4)
+${precheck ? `${precheck}\n` : ""}url=$(curl -fsSL ${api} | grep ${BROWSER_DOWNLOAD_URL} | grep 'mac64\\.tar\\.gz' | head -1 | cut -d '"' -f 4)
 curl -L "$url" -o ${file} && tar xf ${file} && chmod +x ${binary}
 xattr -d com.apple.quarantine ${binary} 2>/dev/null || true`;
 }
 
 function windowsAssetDownload(api, pattern, file) {
   return `$r=Invoke-RestMethod ${api}
-$a=$r.assets | Where-Object name -match '${pattern}' | Select-Object -First 1
-iwr $a.browser_download_url -OutFile ${file}`;
+$a=$r.assets | Where-Object name -match '${pattern}' | ${FIRST_ASSET}
+iwr $a.${BROWSER_DOWNLOAD_URL} -OutFile ${file}`;
 }

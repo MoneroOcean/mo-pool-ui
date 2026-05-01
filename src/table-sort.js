@@ -18,7 +18,7 @@ export function sortRows(rows, key, direction = "desc") {
   return [...rows].sort((a, b) => compareValues(a[key], b[key]) * dir || compareValues(a.name, b.name));
 }
 
-function compareValues(a, b) {
+export function compareValues(a, b) {
   const numberA = numericValue(a);
   const numberB = numericValue(b);
   if (isFiniteNumber(numberA) && isFiniteNumber(numberB)) return numberA - numberB;

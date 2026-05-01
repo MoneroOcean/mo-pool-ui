@@ -1,4 +1,5 @@
 import { tog } from "./dom.js";
+import { encodeUrlPart } from "./format.js";
 
 const THEME_COOKIE = "mo.theme";
 const EXPLAIN_COOKIE = "mo.explain";
@@ -17,7 +18,7 @@ export function readPreferences(cookieText = typeof document === "undefined" ? "
 
 function writePreference(key, value) {
   if (typeof document === "undefined") return;
-  document.cookie = `${key}=${encodeURIComponent(value)}; Max-Age=${MAX_AGE}; Path=/; SameSite=Lax; Secure`;
+  document.cookie = `${key}=${encodeUrlPart(value)}; Max-Age=${MAX_AGE}; Path=/; SameSite=Lax; Secure`;
 }
 
 function clearPreference(key) {
@@ -42,8 +43,8 @@ export function saveExplanations(explanations, { persist = true } = {}) {
 }
 
 export function applyPreferences(preferences = readPreferences()) {
-  tog(document.body, "theme-light", preferences.theme === "light");
-  tog(document.body, "comments-off", preferences.explanations === "off");
+  tog(document.body, "tl", preferences.theme === "light");
+  tog(document.body, "cof", preferences.explanations === "off");
   return preferences;
 }
 

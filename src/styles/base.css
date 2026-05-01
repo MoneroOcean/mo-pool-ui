@@ -39,7 +39,7 @@ body {
   font: 14px/1.45 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   letter-spacing: 0;
 }
-body.theme-light {
+body.tl {
   color-scheme: light;
   --bg: #edf3f1;
   --p: #fff;
@@ -196,28 +196,23 @@ select {
   color: var(--g);
   font-weight: 800;
 }
-.ib[aria-pressed=true],
-.sb[aria-pressed=true],
-.st[aria-pressed=true],
+:is(.ib, .sb, .st)[aria-pressed=true],
 .cp[aria-current=page],
-.tb a[aria-pressed=true],
-.tb a[aria-current=page] {
+.tb a:is([aria-pressed=true], [aria-current=page]) {
   border-color: var(--g);
   background: linear-gradient(180deg, rgba(var(--a), .15), var(--cb));
   color: var(--g);
 }
-.ib[aria-pressed=true],
-.sb[aria-pressed=true],
+:is(.ib, .sb)[aria-pressed=true],
 .cp[aria-current=page],
-.tb a[aria-pressed=true],
-.tb a[aria-current=page] {
+.tb a:is([aria-pressed=true], [aria-current=page]) {
   box-shadow: inset 0 -2px 0 var(--g), 0 0 0 1px rgba(var(--a), .32), 0 0 18px rgba(var(--a), .22);
 }
 #th {
   font-size: 18px;
   line-height: 1;
 }
-body.theme-light #th[aria-pressed=true] {
+body.tl #th[aria-pressed=true] {
   border-color: var(--l);
   background: var(--cb);
   box-shadow: none;
@@ -239,7 +234,7 @@ body.theme-light #th[aria-pressed=true] {
   font-size: 20px;
   line-height: 1;
 }
-.rb.is-updating .rk {
+.rb.upd .rk {
   animation: spin .75s linear infinite;
 }
 @keyframes spin { to { transform: rotate(360deg); } }

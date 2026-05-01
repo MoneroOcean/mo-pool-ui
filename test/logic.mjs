@@ -84,13 +84,13 @@ test("profit calc uses XMR coinProfit, hashrate units, and timezone fiat", () =>
   assert.deepEqual(hashrateInputFromHashrate(1250000), { value: "1.25", unit: "mh" });
   assert.deepEqual(hashrateInputFromHashrate(875), { value: "875", unit: "h" });
   assert.deepEqual(hashrateInputFromHashrate(0), { value: "1", unit: "kh" });
-  assert.deepEqual(fiatForTimezone("Europe/Berlin"), { code: "eur", label: "EUR", symbol: "EUR" });
-  assert.deepEqual(fiatForTimezone("America/New_York"), { code: "usd", label: "USD", symbol: "USD" });
+  assert.deepEqual(fiatForTimezone("Europe/Berlin"), { code: "eur", label: "EUR" });
+  assert.deepEqual(fiatForTimezone("America/New_York"), { code: "usd", label: "USD" });
   const rows = calcProfitRows("2", "kh", pool, "America/New_York");
   assert.equal(rows[0].xmr, 0.00016);
   assert.equal(Number(rows[1].xmr.toFixed(8)), 0.00112);
   assert.equal(rows[0].fiat, 0.064);
-  assert.equal(rows[0].fiatCode, "USD");
+  assert.equal(rows[0].fc, "USD");
   assert.equal(formatFiat(0.064, "USD"), "$0.064");
 });
 
@@ -264,21 +264,15 @@ test("top coin is selected by largest PPLNS share and effort uses that port", ()
   assert.deepEqual(coinStatsRows({ coinProfit: { 18081: 1 } }), []);
   assert.deepEqual(coinStatsRows(pool).find((coin) => coin.p === "9998"), {
     p: "9998",
-    s: "RTM",
-    d: "Raptoreum",
     n: "Raptoreum",
     a: "--",
     ac: false,
-    pr: 8,
     c: "",
     dr: "no exchange configured",
     ec: false,
     h: 123,
     m: 7,
-    ps: 0.7,
-    b: 3,
-    t: 60,
-    u: 100_000_000
+    ps: 0.7
   });
 });
 
@@ -360,7 +354,6 @@ test("worker list model unions current stats and charts with active stale dead s
   assert.equal(byName.stale.st, "Stale");
   assert.equal(byName.dead.st, "Dead");
   assert.equal(byName.chartOnly.st, "Dead");
-  assert.equal(byName.chartOnly.c, false);
   assert.equal(byName.chartOnly.l, 9800);
 });
 
@@ -402,18 +395,18 @@ test("worker list omits status column and renders red stale and dead rows", () =
   }
   assert.doesNotMatch(html, /s=status/);
   assert.doesNotMatch(html, />Status</);
-  assert.doesNotMatch(html, /<span class="red">Stale<\/span>/);
-  assert.doesNotMatch(html, /<span class="red">Dead<\/span>/);
-  assert.match(html, /<span class="red">stale<\/span>/);
-  assert.match(html, /<span class="red">dead<\/span>/);
-  assert.match(html, /aria-current='page'>Dead<\/a><a class="cp" href="[^"]*c=list[^"]*" aria-current='page'>List<\/a>/);
+  assert.doesNotMatch(html, /<span class=red>Stale<\/span>/);
+  assert.doesNotMatch(html, /<span class=red>Dead<\/span>/);
+  assert.match(html, /<span class=red>stale<\/span>/);
+  assert.match(html, /<span class=red>dead<\/span>/);
+  assert.match(html, /aria-current=page>Dead<\/a><a class=cp href="[^"]*c=list[^"]*" aria-current=page>List<\/a>/);
   assert.match(html, /c=list/);
 
   const hiddenHtml = walletWorkersSection(address, workers, {}, "12h", "normalized", "name", "asc", false, "list", false);
-  assert.match(hiddenHtml, />Dead<\/a><a class="cp" href="[^"]*c=list[^"]*" aria-current='page'>List<\/a>/);
-  assert.match(hiddenHtml, /<span class="red">stale<\/span>/);
-  assert.doesNotMatch(hiddenHtml, /<span class="red">dead<\/span>/);
-  assert.doesNotMatch(hiddenHtml, /<span class="red">chartOnly<\/span>/);
+  assert.match(hiddenHtml, />Dead<\/a><a class=cp href="[^"]*c=list[^"]*" aria-current=page>List<\/a>/);
+  assert.match(hiddenHtml, /<span class=red>stale<\/span>/);
+  assert.doesNotMatch(hiddenHtml, /<span class=red>dead<\/span>/);
+  assert.doesNotMatch(hiddenHtml, /<span class=red>chartOnly<\/span>/);
   assert.match(hiddenHtml, /e=0/);
 });
 
@@ -439,17 +432,17 @@ test("worker graph modes mark stale and dead worker names red", () => {
 
   assert.doesNotMatch(html, /Dead\/stale:/);
   assert.match(html, /<h3>active/);
-  assert.match(html, /<h3><span class="red" title="Stale">stale<\/span>/);
-  assert.match(html, /<h3><span class="red" title="Dead">dead<\/span>/);
-  assert.match(html, /<h3><span class="red" title="Dead">chartOnly<\/span>/);
-  assert.match(html, /<div class="wch red"><h3><span class="red" title="Dead">chartOnly<\/span> <span class=lsa/);
-  assert.match(html, /<div class="wch red"><h3><span class="red" title="Dead">dead<\/span> <span class=lsa/);
+  assert.match(html, /<h3><span class=red title="Stale">stale<\/span>/);
+  assert.match(html, /<h3><span class=red title="Dead">dead<\/span>/);
+  assert.match(html, /<h3><span class=red title="Dead">chartOnly<\/span>/);
+  assert.match(html, /<div class="wch red"><h3><span class=red title="Dead">chartOnly<\/span> <span class=lsa/);
+  assert.match(html, /<div class="wch red"><h3><span class=red title="Dead">dead<\/span> <span class=lsa/);
   assert.match(html, /<span class=red title="Dead">0 H\/s<\/span>/);
 
   const hiddenHtml = walletWorkersSection(address, workers, charts, "12h", "normalized", "h", "desc", false, 2, false);
-  assert.match(hiddenHtml, /<h3><span class="red" title="Stale">stale<\/span>/);
-  assert.doesNotMatch(hiddenHtml, /<h3><span class="red" title="Dead">dead<\/span>/);
-  assert.doesNotMatch(hiddenHtml, /<h3><span class="red" title="Dead">chartOnly<\/span>/);
+  assert.match(hiddenHtml, /<h3><span class=red title="Stale">stale<\/span>/);
+  assert.doesNotMatch(hiddenHtml, /<h3><span class=red title="Dead">dead<\/span>/);
+  assert.doesNotMatch(hiddenHtml, /<h3><span class=red title="Dead">chartOnly<\/span>/);
   assert.match(hiddenHtml, /e=0/);
 });
 
@@ -481,7 +474,7 @@ test("setup output and ports mapping include required miners and ports", () => {
     assert.equal(COIN_HEIGHT_EXPLORERS[brokenPort], undefined);
   }
   assert.equal(`${BLOCK_SHARE_DUMP_BASE}/abc.cvs.xz`, "https://block-share-dumps.moneroocean.stream/abc.cvs.xz");
-  assert.equal(DONATION_XMR, "499fS1Phq64hGeqV8p2AfXbf6Ax7gP6FybcMJq6Wbvg8Hw6xms8tCmdYpPsTLSaTNuLEtW4kF2DDiWCFcw4u7wSvFD8wFWE");
+  assert.equal(DONATION_XMR, "89TxfrUmqJJcb1V124WsUzA78Xa3UYHt7Bg8RGMhXVeZYPN8cE5CZEk58Y1m23ZMLHN7wYeJ9da5n5MXharEjrm41hSnWHL");
   assert.match(setupCommandWithPorts({ profile: "xmrig-mo", address: "ADDR", worker: "rig" }), /xmrig/);
   assert.doesNotMatch(setupCommandWithPorts({ profile: "xmrig-mo", address: "ADDR", worker: "rig" }), /--coin monero/);
   assert.doesNotMatch(setupCommandWithPorts({ profile: "xmrig-mo", address: "ADDR", worker: "rig" }), / -p rig\b/);
@@ -501,7 +494,7 @@ test("setup output and ports mapping include required miners and ports", () => {
   assert.doesNotMatch(setupPlanWithPorts({ profile: "xmrig-mo", os: "windows" }).d, /Open Windows PowerShell first/);
   assert.doesNotMatch(setupPlanWithPorts({ profile: "xmrig-mo", os: "windows" }).r, /Open Windows PowerShell first|\.\\xmrig\.exe/);
   assert.match(setupPlanWithPorts({ profile: "xmrig-mo", os: "windows" }).r, /^xmrig\.exe/m);
-  assert.doesNotMatch(setupPlanWithPorts({ profile: "meta-miner", os: "windows" }).r, /Open Windows PowerShell first/);
+  assert.doesNotMatch(setupPlanWithPorts({ profile: "meta-miner", os: "windows" }).r || "", /Open Windows PowerShell first/);
   assert.match(setupPlanWithPorts({ profile: "xmrig-mo", os: "macos" }).d, /grep 'mac64\\\.tar\\\.gz'/);
   assert.doesNotMatch(setupPlanWithPorts({ profile: "xmrig-mo", os: "macos" }).d, /mac-intel|\$asset|uname -m/);
   assert.doesNotMatch(setupPlanWithPorts({ profile: "xmrig-mo", os: "macos" }).d, /macOS release assets are currently arm64 only/);
