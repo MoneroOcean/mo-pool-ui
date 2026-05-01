@@ -1,4 +1,8 @@
+import { isFiniteNumber, normalizeTimestampSeconds } from "./format.js";
 import { isXmrAddress } from "./routes.js";
+
+export const STALE_WORKER_SECONDS = 10 * 60;
+const WORKER_LIST_SORT_KEYS = ["name", "xmr", "raw", "avg", "avgraw", "last", "valid", "invalid", "hashes"];
 
 export function trackWalletState(watchlist, address, now = Date.now()) {
   if (!isXmrAddress(address)) return { watchlist, nextHash: null, clearInput: false };
@@ -19,6 +23,14 @@ export function workerGraphColumns(value, width = globalThis.innerWidth || 1300)
   return cols > 0 && cols < 4 ? cols : width >= 760 ? 2 : 1;
 }
 
+export function workerDisplayMode(value, width = globalThis.innerWidth || 1300) {
+  return value === "list" ? "list" : workerGraphColumns(value, width);
+}
+
+export function workerListSortMode(value) {
+  return WORKER_LIST_SORT_KEYS.includes(value) ? value : "name";
+}
+
 export function sortWorkerRows(workers, sort = "h", direction = "desc") {
   const rows = [...workers];
   const dir = workerSortDirection(direction) === "asc" ? 1 : -1;
@@ -26,4 +38,141 @@ export function sortWorkerRows(workers, sort = "h", direction = "desc") {
   const rate = (row) => row.r ?? row.rate;
   if (workerSortMode(sort) === "name") return rows.sort((a, b) => name(a).localeCompare(name(b)) * dir);
   return rows.sort((a, b) => (rate(a) - rate(b)) * dir || name(a).localeCompare(name(b)));
+}
+
+export function sortWorkerListRows(workers, sort = "name", direction) {
+  const key = workerListSortMode(sort);
+  const defaultDirection = key === "name" ? "asc" : "desc";
+  const dir = workerSortDirection(direction || defaultDirection) === "asc" ? 1 : -1;
+  return [...workers].sort((a, b) => compareWorkerValues(workerListSortValue(a, key), workerListSortValue(b, key)) * dir || compareWorkerValues(a.n, b.n));
+}
+
+export function compactWorkerRows(data, charts = {}, now = Date.now()) {
+  if (!data || typeof data !== "object") data = {};
+  if (!charts || typeof charts !== "object") charts = {};
+  const names = new Set([
+    ...Object.keys(data).filter((name) => name !== "global"),
+    ...Object.keys(charts).filter((name) => name !== "global")
+  ]);
+  return [...names].map((name) => compactWorkerRow(name, data[name], charts[name], now)).sort((a, b) => b.r - a.r || a.n.localeCompare(b.n));
+}
+
+export function workerStatus(hasCurrent, currentHashrate, lastSeen, now = Date.now()) {
+  const last = normalizeTimestampSeconds(lastSeen);
+  if (!hasCurrent || !last || Number(currentHashrate) <= 0) return "Dead";
+  return now / 1000 - last > STALE_WORKER_SECONDS ? "Stale" : "Active";
+}
+
+function compactWorkerRow(name, stats, chartRows, now) {
+  const stat = latestWorkerStat(stats);
+  const hasCurrent = Boolean(stat);
+  const chart = workerChartSummary(chartRows);
+  const raw = hashrateValue(stat?.row, stats, ["hsh", "hs", "hash"]);
+  const xmr = hashrateValue(stat?.row, stats, ["hsh2", "hs2", "hash2"]);
+  const current = xmr || raw;
+  const lastSeen = Math.max(stat?.last || 0, chart.last || 0);
+  const validShares = statValue(stat?.row, stats, ["valid", "validShares", "shares", "s"]);
+  return {
+    n: name,
+    r: current,
+    xmr,
+    raw,
+    ax: chart.xmr,
+    ar: chart.raw,
+    l: lastSeen,
+    th: statValue(stat?.row, stats, ["totalHash", "totalHashes", "hashes"]),
+    vs: validShares,
+    is: statValue(stat?.row, stats, ["invalid", "invalidShares", "badShares", "bad_shares"]),
+    s: validShares,
+    c: hasCurrent,
+    st: workerStatus(hasCurrent, current, lastSeen, now)
+  };
+}
+
+function latestWorkerStat(stats) {
+  const rows = statRows(stats);
+  if (!rows.length) return null;
+  return rows.reduce((best, row) => {
+    const last = statLastSeen(row, stats);
+    if (!best || last > best.last) return { row, last };
+    return best;
+  }, null);
+}
+
+function statRows(stats) {
+  if (Array.isArray(stats)) return stats.filter(isObject);
+  if (Array.isArray(stats?.stats) && stats.stats.length) return stats.stats.filter(isObject);
+  return isObject(stats) && Object.keys(stats).some((key) => key !== "stats" && key !== "charts") ? [stats] : [];
+}
+
+function workerChartSummary(source) {
+  const rows = chartRows(source);
+  let last = 0;
+  let xmrTotal = 0;
+  let rawTotal = 0;
+  let count = 0;
+  for (const row of rows) {
+    const timestamp = normalizeTimestampSeconds(row.tme ?? row.ts ?? row.time);
+    if (!timestamp) continue;
+    const raw = hashrateValue(row, null, ["hsh", "hs", "hash"]);
+    const xmr = hashrateValue(row, null, ["hsh2", "hs2", "hash2"]) || raw;
+    last = Math.max(last, timestamp);
+    xmrTotal += xmr;
+    rawTotal += raw;
+    count += 1;
+  }
+  return { last, xmr: count ? xmrTotal / count : 0, raw: count ? rawTotal / count : 0 };
+}
+
+function chartRows(source) {
+  if (Array.isArray(source)) return source.filter(isObject);
+  if (Array.isArray(source?.stats) && source.stats.length) return source.stats.filter(isObject);
+  if (Array.isArray(source?.charts) && source.charts.length) return source.charts.filter(isObject);
+  return [];
+}
+
+function statLastSeen(row, parent) {
+  return normalizeTimestampSeconds(firstValue(row, ["tme", "ts", "time", "lts", "lastShare", "lastHash", "last"]) ?? firstValue(parent, ["lastShare", "lastHash", "lts", "last"]));
+}
+
+function hashrateValue(row, parent, keys) {
+  return statValue(row, parent, keys);
+}
+
+function statValue(row, parent, keys) {
+  const value = firstValue(row, keys) ?? firstValue(parent, keys);
+  const number = Number(value);
+  return isFiniteNumber(number) ? number : 0;
+}
+
+function firstValue(source, keys) {
+  if (!isObject(source)) return undefined;
+  for (const key of keys) {
+    if (Object.hasOwn(source, key)) return source[key];
+  }
+  return undefined;
+}
+
+function workerListSortValue(row, key) {
+  if (key === "name") return row.n;
+  if (key === "xmr") return row.xmr;
+  if (key === "raw") return row.raw;
+  if (key === "avg") return row.ax;
+  if (key === "avgraw") return row.ar;
+  if (key === "last") return row.l;
+  if (key === "valid") return row.vs;
+  if (key === "invalid") return row.is;
+  if (key === "hashes") return row.th;
+  return 0;
+}
+
+function compareWorkerValues(a, b) {
+  const numberA = Number(a);
+  const numberB = Number(b);
+  if (isFiniteNumber(numberA) && isFiniteNumber(numberB)) return numberA - numberB;
+  return String(a ?? "").localeCompare(String(b ?? ""));
+}
+
+function isObject(value) {
+  return value && typeof value === "object";
 }

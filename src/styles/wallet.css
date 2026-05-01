@@ -123,6 +123,9 @@
   letter-spacing: 0;
   text-transform: none;
 }
+.wch.red {
+  --m: var(--rd);
+}
 .wrm {
   display: inline-flex; align-items: center; justify-content: center;
   position: absolute;

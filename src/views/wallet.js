@@ -7,17 +7,18 @@ import { formatPayoutThresholdInput, normalizePayoutPolicy, payoutFeeText, payou
 import { state } from "../state.js";
 import { summarizeUptimeRobot } from "../uptime.js";
 import { saveWallet } from "../privacy.js";
-import { sortWorkerRows, workerGraphColumns, workerSortDirection, workerSortMode } from "../wallet.js";
+import { compactWorkerRows, sortWorkerListRows, sortWorkerRows, workerDisplayMode, workerGraphColumns, workerListSortMode, workerSortDirection, workerSortMode } from "../wallet.js";
 import { MAX_ROUTE_PAGE, blockPageSize, pageCountFor, routePageNumber } from "../paging.js";
-import { nextSortDirection } from "../table-sort.js";
+import { nextSortDirection, nextSortDirectionForKey } from "../table-sort.js";
 import { attr, on, qs, qsa, tog } from "../dom.js";
-import { activeAttr, blockHashLink, chipLink, coinCell, dateCell, escapeHtml, formatAtomicXmrValue, graphControls, kpi, linkLabel, pageSizeSelect, pagerNav, paymentHashLink, recover, tablePage } from "./common.js";
+import { activeAttr, blockHashLink, cellHtml, chipLink, coinCell, dateCell, escapeHtml, formatAtomicXmrValue, graphControls, kpi, linkLabel, pageSizeSelect, pagerNav, paymentHashLink, recover, tablePage } from "./common.js";
 import { chartHtml, hashrateChart, normalizeGraph } from "./charts.js";
 import { poolDashboard } from "./pool-dashboard.js";
 
 const BLOCK_REWARD_HELP = "Per-block PPLNS rewards. Hashes link to share dump CSVs.";
 const EMAIL_ALERTS_HELP = "Toggle alerts; replace with Current/New email.";
-let workerCols = 0;
+let workerMode = 0;
+let workerShowDead = true;
 
 export async function walletView(route) {
   const address = route.a;
@@ -28,9 +29,10 @@ export async function walletView(route) {
   const graphMode = route.q?.m || state.gm;
   state.gw = graphWindow;
   state.gm = graphMode;
-  const workerSort = workerSortMode(route.q?.s);
-  const workerDir = workerSortDirection(route.q?.d);
-  workerCols = workerGraphColumns(route.q?.c);
+  workerMode = workerDisplayMode(route.q?.c);
+  workerShowDead = route.q?.e !== "0";
+  const workerSort = workerMode === "list" ? workerListSortMode(route.q?.s) : workerSortMode(route.q?.s);
+  const workerDir = workerMode === "list" && workerSort === "name" && !route.q?.d ? "asc" : workerSortDirection(route.q?.d);
   const graphDetails = route.q?.x === "1";
   const pages = walletPages(route.q || {});
   const activeTab = route.t || "overview";
@@ -97,7 +99,7 @@ async function fetchWalletPanels(address, dataTab, pages) {
     pp: payoutPolicyFromConfig(configData),
     st: walletStats,
     se: userSettings,
-    wr: workerList(workers),
+    wr: workerList(workers, workerCharts),
     wc: workerCharts,
     pr: payments,
     br: blockPayments,
@@ -165,22 +167,95 @@ export function walletKpis(stats, workerCount, currentHashrate, dueLabel = "XMR 
       ${kpi("Current pool estimate", formatHashrate(currentHashrate), EXPLANATIONS.c)}`;
 }
 
-function walletWorkersSection(address, workers, workerCharts, graphWindow, graphMode, workerSort, workerDir, graphDetails) {
-  const sorted = sortWorkerRows(workers, workerSort, workerDir);
+export function walletWorkersSection(address, workers, workerCharts, graphWindow, graphMode, workerSort, workerDir, graphDetails, displayMode = workerMode, showDead = workerShowDead) {
+  const visibleWorkers = showDead ? workers : workers.filter((worker) => worker.st !== "Dead");
+  if (displayMode === "list") return walletWorkerTable(address, visibleWorkers, graphWindow, graphMode, workerSort, workerDir, graphDetails, displayMode, showDead);
+  const sorted = sortWorkerRows(visibleWorkers, workerSort, workerDir);
   const chartKey = graphMode === "raw" ? "hsh" : "hsh2";
   const nameDir = nextSortDirection(workerSort, workerDir, "name");
   const hashrateDir = nextSortDirection(workerSort, workerDir, "h");
-  const cols = workerCols || workerGraphColumns();
-  return `<section class=pn><div class=cd><div class=bc><div class=br>${[1, 2, 3].map((count) => chipLink(count, walletRouteWithGraph(address, "overview", graphWindow, graphMode, workerSort, workerDir, graphDetails, count), cols === count)).join("")}</div><div class=br>${chipLink(`Name${workerSort === "name" ? (workerDir === "asc" ? " ↑" : " ↓") : ""}`, walletRouteWithGraph(address, "overview", graphWindow, graphMode, "name", nameDir, graphDetails), workerSort === "name")}${chipLink(`Hashrate${workerSort === "h" ? (workerDir === "asc" ? " ↑" : " ↓") : ""}`, walletRouteWithGraph(address, "overview", graphWindow, graphMode, "h", hashrateDir, graphDetails), workerSort === "h")}</div></div><div class="wgg w${cols}">${sorted.map((worker) => workerGraphCard(worker, workerCharts?.[worker.n], chartKey, graphWindow, graphDetails)).join("") || `<div class=mt>No workers found.</div>`}</div></div></section>`;
+  const cols = typeof displayMode === "number" ? displayMode : workerGraphColumns();
+  const controls = `<div class=bc><div class=br>${workerModeLinks(address, graphWindow, graphMode, workerSort, workerDir, graphDetails, cols, showDead)}</div><div class=br>${chipLink(`Name${workerSort === "name" ? (workerDir === "asc" ? " ↑" : " ↓") : ""}`, walletRouteWithGraph(address, "overview", graphWindow, graphMode, "name", nameDir, graphDetails, cols, showDead), workerSort === "name")}${chipLink(`Hashrate${workerSort === "h" ? (workerDir === "asc" ? " ↑" : " ↓") : ""}`, walletRouteWithGraph(address, "overview", graphWindow, graphMode, "h", hashrateDir, graphDetails, cols, showDead), workerSort === "h")}</div></div>`;
+  return `<section class=pn><div class=cd>${controls}<div class="wgg w${cols}">${sorted.map((worker) => workerGraphCard(worker, workerCharts?.[worker.n], chartKey, graphWindow, graphDetails)).join("") || `<div class=mt>No workers.</div>`}</div></div></section>`;
+}
+
+function walletWorkerTable(address, workers, graphWindow, graphMode, workerSort, workerDir, graphDetails, displayMode = workerMode, showDead = workerShowDead) {
+  const sort = workerListSortMode(workerSort);
+  const direction = sort === "name" && workerSort !== "name" ? "asc" : workerDir;
+  const sorted = sortWorkerListRows(workers, sort, direction);
+  return tablePage("", "", workerTableHeadings(address, graphWindow, graphMode, sort, direction, graphDetails, showDead), sorted.map(workerTableRow), workerModeControls(address, graphWindow, graphMode, sort, direction, graphDetails, displayMode, showDead), "Workers", "No workers.");
+}
+
+function workerModeControls(address, graphWindow, graphMode, workerSort, workerDir, graphDetails, activeMode, showDead = workerShowDead) {
+  return `<div class=bc><div class=br>${workerModeLinks(address, graphWindow, graphMode, workerSort, workerDir, graphDetails, activeMode, showDead)}</div></div>`;
+}
+
+function workerModeLinks(address, graphWindow, graphMode, workerSort, workerDir, graphDetails, activeMode, showDead = workerShowDead) {
+  const mode = activeMode || workerMode || workerGraphColumns();
+  const deadLink = chipLink("Dead", walletRouteWithGraph(address, "overview", graphWindow, graphMode, workerSort, workerDir, graphDetails, mode, !showDead), showDead);
+  return deadLink + ["list", 1, 2, 3].map((value) => {
+    const sort = value === "list" ? workerListSortMode(workerSort) : workerSortMode(workerSort);
+    const direction = value === "list" && sort === "name" && workerSort !== "name" ? "asc" : workerDir;
+    return chipLink(value === "list" ? "List" : value, walletRouteWithGraph(address, "overview", graphWindow, graphMode, sort, direction, graphDetails, value, showDead), mode === value);
+  }).join("");
+}
+
+function workerTableHeadings(address, graphWindow, graphMode, active, direction, graphDetails, showDead = workerShowDead) {
+  return [
+    sortableWorkerHeading("Worker", "name", address, graphWindow, graphMode, active, direction, graphDetails, showDead),
+    sortableWorkerHeading("XMR", "xmr", address, graphWindow, graphMode, active, direction, graphDetails, showDead),
+    sortableWorkerHeading("Raw", "raw", address, graphWindow, graphMode, active, direction, graphDetails, showDead),
+    sortableWorkerHeading("Avg XMR", "avg", address, graphWindow, graphMode, active, direction, graphDetails, showDead),
+    sortableWorkerHeading("Avg Raw", "avgraw", address, graphWindow, graphMode, active, direction, graphDetails, showDead),
+    sortableWorkerHeading("Last", "last", address, graphWindow, graphMode, active, direction, graphDetails, showDead),
+    sortableWorkerHeading("Valid", "valid", address, graphWindow, graphMode, active, direction, graphDetails, showDead),
+    sortableWorkerHeading("Invalid", "invalid", address, graphWindow, graphMode, active, direction, graphDetails, showDead),
+    sortableWorkerHeading("Hashes", "hashes", address, graphWindow, graphMode, active, direction, graphDetails, showDead)
+  ];
+}
+
+function sortableWorkerHeading(label, key, address, graphWindow, graphMode, active, direction, graphDetails, showDead = workerShowDead) {
+  const selected = active === key;
+  const firstDirection = { name: "asc" };
+  const next = nextSortDirectionForKey(active, direction, key, firstDirection);
+  const arrow = selected ? (direction === "asc" ? " ↑" : " ↓") : "";
+  return { html: `<a class="sort" href="${walletRouteWithGraph(address, "overview", graphWindow, graphMode, key, next, graphDetails, "list", showDead)}">${escapeHtml(label)}${escapeHtml(arrow)}</a>` };
+}
+
+function workerTableRow(worker) {
+  const row = [
+    worker.n,
+    formatHashrate(worker.xmr),
+    formatHashrate(worker.raw),
+    formatHashrate(worker.ax),
+    formatHashrate(worker.ar),
+    dateCell(worker.l),
+    formatNumber(worker.vs),
+    formatNumber(worker.is),
+    formatNumber(worker.th)
+  ];
+  return worker.st === "Active" ? row : row.map(redCell);
+}
+
+function redCell(cell) {
+  return { html: `<span class="red">${cellHtml(cell)}</span>` };
 }
 
 function workerGraphCard(worker, chartRows, chartKey, graphWindow, graphDetails) {
-  const graph = hashrateChart(Array.isArray(chartRows) ? chartRows : [], graphWindow, chartKey);
-  return `<article class=cd><div class=wch><h3>${escapeHtml(worker.n)}${lastShareAgeSuffix(worker.l)}</h3><span class=mt>${formatHashrate(worker.r)}</span></div>${graph.p.length ? chartHtml(graph.m, graph.l, graph.r, graph.a, `${worker.n} worker hashrate chart`, graphDetails ? miningStatsLine(worker) : "") : `<p class=mt>No worker chart points.</p>`}</article>`;
+  const graph = hashrateChart(chartRows || [], graphWindow, chartKey);
+  const zeroHashrate = Number(worker.r) <= 0;
+  const inactive = worker.st !== "Active" || zeroHashrate;
+  const statusTitle = worker.st;
+  const workerName = inactive ? `<span class="red" title="${escapeHtml(statusTitle)}">${escapeHtml(worker.n)}</span>` : escapeHtml(worker.n);
+  const rate = `<span class=${inactive ? "red" : "mt"}${inactive ? ` title="${escapeHtml(statusTitle)}"` : ""}>${formatHashrate(worker.r)}</span>`;
+  return `<article class=cd><div class="wch${zeroHashrate ? " red" : ""}"><h3>${workerName}${lastShareAgeSuffix(worker.l)}</h3>${rate}</div>${graph.p.length ? chartHtml(graph.m, graph.l, graph.r, graph.a, `${worker.n} worker hashrate chart`, graphDetails ? miningStatsLine(worker) : "") : `<p class=mt>No worker chart points.</p>`}</article>`;
 }
 
-export function walletRouteWithGraph(address, tab, window, mode, workerSort = "h", workerDir = "desc", graphDetails = false, cols = workerCols || workerGraphColumns()) {
-  return `${walletRoute(address, tab)}?w=${window}&m=${mode}&c=${cols}&s=${workerSort}&d=${workerDir}${graphDetails ? "&x=1" : ""}`;
+export function walletRouteWithGraph(address, tab, window, mode, workerSort = "h", workerDir = "desc", graphDetails = false, cols = workerMode || workerGraphColumns(), showDead = workerShowDead) {
+  const displayMode = workerDisplayMode(cols);
+  const sort = displayMode === "list" ? workerListSortMode(workerSort) : workerSortMode(workerSort);
+  const direction = displayMode === "list" && sort === "name" && workerSort !== "name" ? "asc" : workerSortDirection(workerDir);
+  return `${walletRoute(address, tab)}?w=${window}&m=${mode}&c=${displayMode}&s=${sort}&d=${direction}${showDead ? "" : "&e=0"}${graphDetails ? "&x=1" : ""}`;
 }
 
 function walletWithdrawalsPanel(address, stats, graphWindow, graphMode, workerSort, workerDir, graphDetails, withdrawals, withdrawalPage, withdrawalLimit, blockRewardPage, blockRewardLimit) {
@@ -270,7 +345,8 @@ function walletPaymentRouteFor(address, tab, graphWindow, graphMode, workerSort,
   // block rewards preserves the other table's page size. Query names stay long
   // and readable because users can see/bookmark them; only private DOM hooks are
   // abbreviated for build size.
-  let params = `w=${graphWindow}&m=${graphMode}&c=${workerCols || workerGraphColumns()}&s=${workerSort}&d=${workerDir}`;
+  let params = `w=${graphWindow}&m=${graphMode}&c=${workerMode || workerGraphColumns()}&s=${workerSort}&d=${workerDir}`;
+  if (!workerShowDead) params += "&e=0";
   if (graphDetails) params += "&x=1";
   if (withdrawalPage > 1) params += `&wp=${withdrawalPage}`;
   params += `&wl=${blockPageSize(withdrawalLimit)}`;
@@ -337,24 +413,8 @@ function emailAlertsPanel(address, settings) {
   </section>`;
 }
 
-export function workerList(data) {
-  if (!data || typeof data !== "object") return [];
-  return Object.entries(data).filter(([name]) => name !== "global").map(([name, rows]) => {
-    const latest = Array.isArray(rows) ? rows[0] : rows?.stats?.[0] || rows;
-    const validShares = latest?.valid ?? latest?.validShares ?? rows?.valid ?? rows?.validShares ?? 0;
-    // Worker rows are private graph-card data: n name, r current hashrate,
-    // l last-share timestamp, th total hashes, vs/is valid/invalid shares,
-    // s compatibility share count for older wallet stat payloads.
-    return {
-      n: name,
-      r: latest?.hsh2 || latest?.hsh || latest?.hash2 || latest?.hash || rows?.hash || 0,
-      l: latest?.tme || latest?.ts || latest?.lts || latest?.lastShare || rows?.lastShare || rows?.lastHash || 0,
-      th: latest?.totalHash ?? latest?.totalHashes ?? latest?.hashes ?? rows?.totalHash ?? rows?.totalHashes ?? rows?.hashes ?? 0,
-      vs: validShares,
-      is: latest?.invalid ?? latest?.invalidShares ?? rows?.invalid ?? rows?.invalidShares ?? 0,
-      s: validShares
-    };
-  }).sort((a, b) => b.r - a.r);
+export function workerList(data, charts = {}, now = Date.now()) {
+  return compactWorkerRows(data, charts, now);
 }
 
 export function lastShareAgeSuffix(source, now = Date.now()) {

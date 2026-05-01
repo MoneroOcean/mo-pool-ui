@@ -13,12 +13,12 @@ import { clearPreferenceStorage, parseCookieValue, readPreferences, saveExplanat
 import { summarizeUptimeRobot } from "../src/uptime.js";
 import { blockPageSize, MAX_ROUTE_PAGE, pageCountFor, routePageNumber } from "../src/paging.js";
 import { nextSortDirection, nextSortDirectionForKey, sortDirection, sortRows } from "../src/table-sort.js";
-import { sortWorkerRows, trackWalletState, workerGraphColumns, workerSortDirection, workerSortMode } from "../src/wallet.js";
+import { compactWorkerRows, sortWorkerListRows, sortWorkerRows, trackWalletState, workerDisplayMode, workerGraphColumns, workerListSortMode, workerSortDirection, workerSortMode, workerStatus } from "../src/wallet.js";
 import { formatPayoutThresholdInput, normalizePayoutThreshold, payoutFeeEstimate, payoutFeeText, payoutPolicyFromConfig, payoutThresholdFromAtomic, validatePayoutThreshold } from "../src/settings.js";
 import { calcProfitRows, fiatForTimezone, formatFiat, hashrateFromInput, hashrateInputFromHashrate } from "../src/calc.js";
 import { dismissMotd, normalizeMotd, resetMotdDismissalsForTest, shouldShowMotd } from "../src/motd.js";
 import { blockPaymentStage } from "../src/views/blocks.js";
-import { walletRouteWithGraph, lastShareAgeSuffix, workerList as walletWorkerList } from "../src/views/wallet.js";
+import { walletRouteWithGraph, lastShareAgeSuffix, walletWorkersSection, workerList as walletWorkerList } from "../src/views/wallet.js";
 import { chartHtml } from "../src/views/charts.js";
 import { referencePortSummary } from "../src/views/help.js";
 import { walletTrackButtonLabel } from "../src/views/home.js";
@@ -314,10 +314,13 @@ test("wallet graph details are opt-in and stale share labels use common age text
   assert.doesNotMatch(walletRouteWithGraph(address, "overview", "12h", "normalized"), /x=1/);
   assert.match(walletRouteWithGraph(address, "overview", "12h", "normalized", "h", "desc", true, 2), /x=1/);
   assert.match(walletRouteWithGraph(address, "overview", "12h", "normalized", "h", "desc", false, 3), /c=3/);
+  assert.match(walletRouteWithGraph(address, "overview", "12h", "normalized", "h", "desc", false, "list"), /c=list&s=name&d=asc/);
+  assert.match(walletRouteWithGraph(address, "overview", "12h", "normalized", "h", "desc", false, "list", false), /e=0/);
   assert.equal(workerGraphColumns("", 500), 1);
   assert.equal(workerGraphColumns("", 900), 2);
   assert.equal(workerGraphColumns("", 1400), 2);
   assert.equal(workerGraphColumns(3, 1400), 3);
+  assert.equal(workerDisplayMode("list"), "list");
 
   const workers = walletWorkerList({
     alpha: { hash2: 50, lastHash: 1000, totalHash: 1234, validShares: 7, invalidShares: 2 },
@@ -330,6 +333,124 @@ test("wallet graph details are opt-in and stale share labels use common age text
   assert.equal(lastShareAgeSuffix(1000, (1000 + 180) * 1000), "");
   assert.match(lastShareAgeSuffix({ lastHash: 1000 }, (1000 + 240) * 1000), /title="[^"]+">\((4m ago)\)<\/span>/);
   assert.match(chartHtml(chartModel([{ tme: 1, hsh2: 10 }], "hsh2"), "", "", 10, "test", ["Total hashes 1", "Valid shares 2", "Invalid shares 3"]), /<small>Total hashes 1<\/small><small>Valid shares 2<\/small><small>Invalid shares 3<\/small>/);
+});
+
+test("worker list model unions current stats and charts with active stale dead status", () => {
+  const now = 10_000_000;
+  assert.equal(workerStatus(true, 1, 9400, now), "Active");
+  assert.equal(workerStatus(true, 1, 9399, now), "Stale");
+  assert.equal(workerStatus(false, 1, 9990, now), "Dead");
+  assert.equal(workerStatus(true, 0, 9990, now), "Dead");
+
+  const workers = compactWorkerRows({
+    active: { hsh2: 20, hsh: 200, lastHash: 9700, totalHash: 1000, validShares: 5, invalidShares: 1 },
+    stale: { hsh2: 40, hsh: 400, lastHash: 9300, totalHashes: 2000, valid: 8, invalid: 2 },
+    dead: { hsh2: 0, hsh: 0, lastHash: 9950, hashes: 3000, valid: 1, invalid: 3 },
+    global: { hsh2: 999 }
+  }, {
+    active: [{ tme: 9990, hsh2: 10, hsh: 100 }, { tme: 9980, hsh2: 30, hsh: 300 }],
+    chartOnly: [{ tme: 9800, hsh2: 15, hsh: 150 }]
+  }, now);
+
+  assert.deepEqual(workers.map((worker) => worker.n), ["stale", "active", "chartOnly", "dead"]);
+  const byName = Object.fromEntries(workers.map((worker) => [worker.n, worker]));
+  assert.equal(byName.active.l, 9990);
+  assert.equal(byName.active.st, "Active");
+  assert.equal(byName.active.ax, 20);
+  assert.equal(byName.stale.st, "Stale");
+  assert.equal(byName.dead.st, "Dead");
+  assert.equal(byName.chartOnly.st, "Dead");
+  assert.equal(byName.chartOnly.c, false);
+  assert.equal(byName.chartOnly.l, 9800);
+});
+
+test("worker list sorting defaults to name and supports list columns", () => {
+  const workers = [
+    { n: "active", st: "Active", xmr: 20, raw: 200, ax: 20, ar: 200, l: 9990, vs: 5, is: 1, th: 1000 },
+    { n: "stale", st: "Stale", xmr: 40, raw: 400, ax: 0, ar: 0, l: 9300, vs: 8, is: 2, th: 2000 },
+    { n: "dead", st: "Dead", xmr: 0, raw: 0, ax: 0, ar: 0, l: 9950, vs: 1, is: 3, th: 3000 },
+    { n: "chartOnly", st: "Dead", xmr: 0, raw: 0, ax: 15, ar: 150, l: 9800, vs: 0, is: 0, th: 0 }
+  ];
+
+  assert.equal(workerListSortMode("bad"), "name");
+  assert.equal(workerListSortMode("status"), "name");
+  assert.deepEqual(sortWorkerListRows(workers).map((worker) => worker.n), ["active", "chartOnly", "dead", "stale"]);
+  assert.deepEqual(sortWorkerListRows(workers, "name", "asc").map((worker) => worker.n), ["active", "chartOnly", "dead", "stale"]);
+  assert.equal(sortWorkerListRows(workers, "xmr")[0].n, "stale");
+  assert.equal(sortWorkerListRows(workers, "raw")[0].n, "stale");
+  assert.equal(sortWorkerListRows(workers, "avg")[0].n, "active");
+  assert.equal(sortWorkerListRows(workers, "avgraw")[0].n, "active");
+  assert.equal(sortWorkerListRows(workers, "last")[0].n, "active");
+  assert.equal(sortWorkerListRows(workers, "valid")[0].n, "stale");
+  assert.equal(sortWorkerListRows(workers, "invalid")[0].n, "dead");
+  assert.equal(sortWorkerListRows(workers, "hashes")[0].n, "dead");
+});
+
+test("worker list omits status column and renders red stale and dead rows", () => {
+  const address = `4${"A".repeat(94)}`;
+  const workers = compactWorkerRows({
+    active: { hsh2: 20, hsh: 200, lastHash: 9990 },
+    stale: { hsh2: 40, hsh: 400, lastHash: 9300 },
+    dead: { hsh2: 0, hsh: 0, lastHash: 9950 }
+  }, {
+    chartOnly: [{ tme: 9800, hsh2: 15, hsh: 150 }]
+  }, 10_000_000);
+  const html = walletWorkersSection(address, workers, {}, "12h", "normalized", "status", "desc", false, "list");
+
+  for (const key of ["name", "xmr", "raw", "avg", "avgraw", "last", "valid", "invalid", "hashes"]) {
+    assert.match(html, new RegExp(`s=${key}`));
+  }
+  assert.doesNotMatch(html, /s=status/);
+  assert.doesNotMatch(html, />Status</);
+  assert.doesNotMatch(html, /<span class="red">Stale<\/span>/);
+  assert.doesNotMatch(html, /<span class="red">Dead<\/span>/);
+  assert.match(html, /<span class="red">stale<\/span>/);
+  assert.match(html, /<span class="red">dead<\/span>/);
+  assert.match(html, /aria-current='page'>Dead<\/a><a class="cp" href="[^"]*c=list[^"]*" aria-current='page'>List<\/a>/);
+  assert.match(html, /c=list/);
+
+  const hiddenHtml = walletWorkersSection(address, workers, {}, "12h", "normalized", "name", "asc", false, "list", false);
+  assert.match(hiddenHtml, />Dead<\/a><a class="cp" href="[^"]*c=list[^"]*" aria-current='page'>List<\/a>/);
+  assert.match(hiddenHtml, /<span class="red">stale<\/span>/);
+  assert.doesNotMatch(hiddenHtml, /<span class="red">dead<\/span>/);
+  assert.doesNotMatch(hiddenHtml, /<span class="red">chartOnly<\/span>/);
+  assert.match(hiddenHtml, /e=0/);
+});
+
+test("worker graph modes mark stale and dead worker names red", () => {
+  const address = `4${"A".repeat(94)}`;
+  const workers = compactWorkerRows({
+    active: { hsh2: 20, hsh: 200, lastHash: 9990 },
+    stale: { hsh2: 40, hsh: 400, lastHash: 9300 },
+    dead: { hsh2: 0, hsh: 0, lastHash: 9950 }
+  }, {
+    active: [{ tme: 9990, hsh2: 20 }],
+    stale: [{ tme: 9300, hsh2: 40 }],
+    dead: [{ tme: 9950, hsh2: 0 }],
+    chartOnly: [{ tme: 9800, hsh2: 15 }]
+  }, 10_000_000);
+  const charts = {
+    active: [{ tme: 9990, hsh2: 20 }],
+    stale: [{ tme: 9300, hsh2: 40 }],
+    dead: [{ tme: 9950, hsh2: 0 }],
+    chartOnly: [{ tme: 9800, hsh2: 15 }]
+  };
+  const html = walletWorkersSection(address, workers, charts, "12h", "normalized", "h", "desc", false, 2);
+
+  assert.doesNotMatch(html, /Dead\/stale:/);
+  assert.match(html, /<h3>active/);
+  assert.match(html, /<h3><span class="red" title="Stale">stale<\/span>/);
+  assert.match(html, /<h3><span class="red" title="Dead">dead<\/span>/);
+  assert.match(html, /<h3><span class="red" title="Dead">chartOnly<\/span>/);
+  assert.match(html, /<div class="wch red"><h3><span class="red" title="Dead">chartOnly<\/span> <span class=lsa/);
+  assert.match(html, /<div class="wch red"><h3><span class="red" title="Dead">dead<\/span> <span class=lsa/);
+  assert.match(html, /<span class=red title="Dead">0 H\/s<\/span>/);
+
+  const hiddenHtml = walletWorkersSection(address, workers, charts, "12h", "normalized", "h", "desc", false, 2, false);
+  assert.match(hiddenHtml, /<h3><span class="red" title="Stale">stale<\/span>/);
+  assert.doesNotMatch(hiddenHtml, /<h3><span class="red" title="Dead">dead<\/span>/);
+  assert.doesNotMatch(hiddenHtml, /<h3><span class="red" title="Dead">chartOnly<\/span>/);
+  assert.match(hiddenHtml, /e=0/);
 });
 
 test("block payout stage keeps unlock and pay-stage detail", () => {
