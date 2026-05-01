@@ -6,14 +6,14 @@ const XMRIG_RELEASE_API = "https://api.github.com/repos/MoneroOcean/xmrig/releas
 const SRBMINER_RELEASE_API = "https://api.github.com/repos/doktor83/SRBMiner-Multi/releases/latest";
 const META_MINER_RELEASE_API = "https://api.github.com/repos/MoneroOcean/meta-miner/releases/latest";
 const XMRIG_PROXY_RELEASE_API = "https://api.github.com/repos/MoneroOcean/xmrig-proxy/releases/latest";
-const TOR_MINING_HOST = "mo2tor2amawhphlrgyaqlrqx7o27jaj7yldnx3t6jip3ow4bujlwz6id.onion";
+export const TOR_MINING_HOST = "mo2tor2amawhphlrgyaqlrqx7o27jaj7yldnx3t6jip3ow4bujlwz6id.onion";
 
 const SETUP_PROFILES = [
-  ["xmrig-mo", "CPU multi", "MoneroOcean XMRig benchmarks CPU algorithms and lets the pool switch to the best XMR payout route."],
-  ["srb-gpu", "GPU fixed", "SRBMiner-Multi is used for AMD, NVIDIA, and Intel GPU algorithms."],
-  ["meta-miner", "GPU multi", "Advanced wrapper that lets fixed-algo GPU miners switch when the pool changes algorithms."],
-  ["xmrig-proxy", "xmrig-proxy", "Recommended for many XMRig CPU workers behind one local proxy connection."],
-  ["xmr-node-proxy", "xmr-node-proxy", "Recommended for larger CPU farms or many workers; keep GPU miners direct or behind meta-miner."]
+  ["xmrig-mo", "CPU multi", "MoneroOcean XMRig benchmarks CPU algos for XMR payout."],
+  ["srb-gpu", "GPU fixed", "SRBMiner-Multi for AMD, NVIDIA, and Intel GPUs."],
+  ["meta-miner", "GPU multi", "Wrapper that lets fixed-algo GPU miners switch with pool conditions."],
+  ["xmrig-proxy", "xmrig-proxy", "Many XMRig CPU workers behind one local proxy."],
+  ["xmr-node-proxy", "xmr-node-proxy", "Larger CPU farms; keep GPU miners direct or behind meta-miner."]
 ];
 
 export const SETUP_OS = [
@@ -56,15 +56,17 @@ const META_MINER_ALGOS = [
   ["cn/gpu", "cryptonight_gpu", ""]
 ];
 const WINDOWS_POWERSHELL_BKM = "Open Windows PowerShell first. From cmd.exe, run: powershell -NoProfile";
-const PORT_METADATA_UNAVAILABLE = "Pool port metadata is unavailable from the API.";
-const TLS_MODE_NOTE = "TLS encrypts the miner-to-pool connection and is preferred for normal internet mining. Use the plain port only when TLS is blocked or unsupported.";
-const PLAIN_MODE_NOTE = "Plain mode uses the non-TLS mining port. Use it for local testing or restricted networks where TLS is blocked or unsupported.";
-const TOR_MODE_NOTE = "Tor mode uses MoneroOcean's onion host through a local SOCKS5 listener and the selected non-TLS setup port. Use 127.0.0.1:9050 for the system Tor service or 127.0.0.1:9150 for Tor Browser. TLS does not improve security over Tor here.";
-const SRB_RUN_NOTE = "Use --list-devices first if GPU 0 is not the card you want. Intel Alchemist/Battlemage, NVIDIA Pascal or newer, and supported AMD GPUs are handled by SRBMiner-Multi.";
+const PORT_METADATA_UNAVAILABLE = "Pool port metadata unavailable from API.";
+const TLS_MODE_NOTE = "TLS encrypts miner-to-pool traffic. Use plain only when TLS is blocked or unsupported.";
+const PLAIN_MODE_NOTE = "Plain mode uses the non-TLS mining port for tests or restricted networks.";
+const TOR_MODE_NOTE = "Tor mode uses MoneroOcean's onion host via local SOCKS5 and the selected non-TLS setup port. Use 127.0.0.1:9050 for system Tor or 127.0.0.1:9150 for Tor Browser. TLS does not improve security over Tor.";
+const SRB_RUN_NOTE = "Use --list-devices first if GPU 0 is wrong. Intel Alchemist/Battlemage, NVIDIA Pascal+, and supported AMD GPUs work.";
 const XMRIG_MAC_DOWNLOAD_NOTE = "MoneroOcean XMRig macOS release assets are currently arm64 only. Use Linux/Windows or build XMRig from source on Intel macOS.";
 const XMRIG_PROXY_MAC_DOWNLOAD_NOTE = "MoneroOcean xmrig-proxy macOS release assets are currently arm64 only. Use Linux/Windows or build xmrig-proxy from source on Intel macOS.";
 const PROXY_HOSTS_PORT_3333 = "workers connect to this host on port 3333.";
 const REPLACE_PROXY_HOST = "Replace PROXY_HOST with the proxy machine hostname or address.";
+const XMRIG_AUTO_SWITCH_NOTE = "MoneroOcean XMRig benchmarks/switches CPU algos for XMR payout; first run may benchmark for several minutes before pool jobs appear.";
+const SMALL_PROXY_NOTE = "For small proxy setups, start with 64-128 KH/s.";
 
 export function setupAddress({ queryAddress = "", activeAddress = "", watchlist = [] } = {}) {
   return queryAddress || activeAddress || watchlist.find((row) => row?.address)?.address || "YOUR_XMR_ADDRESS";
@@ -174,8 +176,8 @@ function xmrigPlan({ os, address, worker, pool, portRow }) {
     : macos
       ? macXmrigDownload()
     : `${linuxReleaseDownload("moneroocean", XMRIG_RELEASE_API, "grep -E 'lin64-compat|lin64\\.tar\\.gz'", "xmrig.tar.gz")} && tar xf xmrig.tar.gz && chmod +x xmrig`;
-  const directRun = `${binary} -o ${pool} -u ${address} --rig-id ${worker} --keepalive`;
-  const tlsRun = portRow.t ? `${binary} -o ${POOL_HOST}:${portRow.t} -u ${address} --rig-id ${worker} --keepalive --tls` : "";
+  const directRun = xmrigRun(binary, pool, address, worker);
+  const tlsRun = portRow.t ? xmrigRun(binary, `${POOL_HOST}:${portRow.t}`, address, worker, true) : "";
   return {
     sm: `${pool} is derived from ${portRow.h}.`,
     d,
@@ -189,8 +191,8 @@ function xmrigPlan({ os, address, worker, pool, portRow }) {
     l: "",
     ln: "",
     nt: macos
-      ? "Best first setup for CPU mining on modern Apple Silicon Macs. Intel macOS is not supported by this download. The MoneroOcean XMRig fork can benchmark and switch supported CPU algorithms for XMR payout; first run may benchmark for several minutes before pool jobs appear. If macOS Gatekeeper blocks the binary, remove the quarantine attribute in the download step and run it again."
-      : "Best first setup for CPU mining. The MoneroOcean XMRig fork can benchmark and switch supported CPU algorithms for XMR payout; first run may benchmark for several minutes before pool jobs appear."
+      ? `Best first CPU setup on Apple Silicon Macs. Intel macOS is not supported by this download. ${XMRIG_AUTO_SWITCH_NOTE} If Gatekeeper blocks it, remove quarantine and retry.`
+      : `Best first setup for CPU mining. ${XMRIG_AUTO_SWITCH_NOTE}`
   };
 }
 
@@ -207,9 +209,9 @@ function srbPlan({ os, gpu, algo, address, worker, password, pool, portRow }) {
     sm: `${pool} is derived from ${portRow.h}.`,
     d,
     dn: windows ? WINDOWS_POWERSHELL_BKM : "",
-    rt: portRow.t ? `${binary} --disable-cpu ${disable} --algorithm ${srbAlgo} --pool ${POOL_HOST}:${portRow.t} --wallet ${address} --password ${password} --worker ${worker} --tls true --gpu-id 0 --keepalive true${ethExtra}` : "",
+    rt: portRow.t ? srbRun(binary, disable, srbAlgo, `${POOL_HOST}:${portRow.t}`, address, password, worker, true, ethExtra) : "",
     rtn: `${TLS_MODE_NOTE} ${SRB_RUN_NOTE}`,
-    r: `${binary} --disable-cpu ${disable} --algorithm ${srbAlgo} --pool ${pool} --wallet ${address} --password ${password} --worker ${worker} --tls false --gpu-id 0 --keepalive true${ethExtra}`,
+    r: srbRun(binary, disable, srbAlgo, pool, address, password, worker, false, ethExtra),
     rn: PLAIN_MODE_NOTE,
     l: "",
     ln: "",
@@ -233,7 +235,7 @@ function metaMinerPlan({ os, gpu, address, worker, pool, portRow }) {
     rn: "",
     l: "",
     ln: "",
-    nt: "Use this only when you want GPU algo switching. Fixed GPU setup is simpler. First run benchmarks/autotunes configured algorithms and can take a while before normal mining output appears."
+    nt: "Use this only for GPU algo switching; fixed GPU setup is simpler. First run benchmarks/autotunes configured algorithms before normal mining output appears."
   };
 }
 
@@ -241,6 +243,18 @@ function gpuDisableFlags(gpu) {
   if (gpu === "intel") return "--disable-gpu-amd --disable-gpu-nvidia";
   if (gpu === "nvidia") return "--disable-gpu-amd --disable-gpu-intel";
   return "--disable-gpu-nvidia --disable-gpu-intel";
+}
+
+function xmrigRun(binary, pool, address, worker, tls = false) {
+  return `${binary} -o ${pool} -u ${address} --rig-id ${worker} --keepalive${tls ? " --tls" : ""}`;
+}
+
+function srbRun(binary, disable, algo, pool, address, password, worker, tls, extra = "") {
+  return `${binary} ${srbCommon(disable, pool, address, worker)} --algorithm ${algo} --password ${password} --tls ${tls}${extra}`;
+}
+
+function srbCommon(disable, pool, address, worker, binary = "") {
+  return `${binary ? `${binary} ` : ""}--disable-cpu ${disable} --pool ${pool} --wallet ${address} --worker ${worker} --gpu-id 0 --keepalive true`;
 }
 
 function metaMinerAlgoArgs(common, worker, lineContinuation) {
@@ -256,7 +270,7 @@ POOL='${pool}'
 LOCAL_PROXY='${LOCAL_PROXY}'
 SRB='./SRBMiner-MULTI'
 GPU_FLAGS='${disable}'
-COMMON="$SRB --disable-cpu $GPU_FLAGS --pool $LOCAL_PROXY --wallet $WALLET --worker $WORKER --tls false --gpu-id 0 --keepalive true"
+COMMON="${srbCommon("$GPU_FLAGS", "$LOCAL_PROXY", "$WALLET", "$WORKER", "$SRB")} --tls false"
 
 node ./mm.js --no-config-save --pool="$POOL" --user="$WALLET" --algo_min_time=60 \\
 ${metaMinerAlgoArgs("$COMMON", "$WORKER", "\\")}`;
@@ -269,7 +283,7 @@ $Pool="${pool}"
 $LocalProxy="${LOCAL_PROXY}"
 $Srb="SRBMiner-MULTI.exe"
 $GpuFlags="${disable}"
-$Common="$Srb --disable-cpu $GpuFlags --pool $LocalProxy --wallet $Wallet --worker $Worker --tls false --gpu-id 0 --keepalive true"
+$Common="${srbCommon("$GpuFlags", "$LocalProxy", "$Wallet", "$Worker", "$Srb")} --tls false"
 
 mm.exe --no-config-save --pool="$Pool" --user="$Wallet" --algo_min_time=60 \`
 ${metaMinerAlgoArgs("$Common", "$Worker", "`")}`;
@@ -295,7 +309,7 @@ function xmrigProxyPlan({ os, address, worker, pool, portRow }) {
     rn: "",
     l: `${windows ? "xmrig.exe" : "./xmrig"} -o PROXY_HOST:3333 -u ${worker} --nicehash --donate-over-proxy 1 --keepalive`,
     ln: `Worker miners connect to this proxy on port 3333 using NiceHash-compatible mode. ${REPLACE_PROXY_HOST}`,
-    nt: `${macos ? "Intel macOS is not supported by this download. " : ""}Use this when many XMRig CPU workers should share one upstream pool connection. For small proxy setups, start with 64-128 KH/s. Increase this only after the proxy has enough workers. The MoneroOcean fork is used here so proxy setup matches MoneroOcean algo switching. Keep fixed GPU miners direct or behind meta-miner because their protocols and algorithms differ.`
+    nt: `${macos ? "Intel macOS is not supported by this download. " : ""}Use when many XMRig CPU workers share one upstream pool connection. ${SMALL_PROXY_NOTE} MoneroOcean fork keeps proxy aligned with algo switching. Keep fixed GPU miners direct or behind meta-miner.`
   };
 }
 
@@ -315,7 +329,7 @@ function xmrNodeProxyPlan({ os, address, worker, port, portRow }) {
     rn: "",
     l: `./xmrig -o PROXY_HOST:3333 -u ${worker}`,
     ln: `Worker miners connect to xmr-node-proxy on port 3333. ${REPLACE_PROXY_HOST}`,
-    nt: "Use when running many CPU workers on XMR-style algorithms. For small proxy setups, start with 64-128 KH/s. Increase this only after the proxy has enough workers. The generated xmr-node-proxy config is an rx/0 starter config. Add real algo_perf values for full algo-aware switching. It is not for Etchash, KawPow, Autolykos2, or XTM/Tari c29 mining."
+    nt: `Use for many CPU workers on XMR-style algorithms. ${SMALL_PROXY_NOTE} Generated xmr-node-proxy config is an rx/0 starter config. Add real algo_perf for full switching. Not for Etchash, KawPow, Autolykos2, or XTM/Tari c29.`
   };
 }
 
@@ -399,10 +413,7 @@ function workerName(value) {
 }
 
 function macXmrigDownload() {
-  return `mkdir -p ~/moneroocean && cd ~/moneroocean
-url=$(curl -fsSL ${XMRIG_RELEASE_API} | grep browser_download_url | grep 'mac64\\.tar\\.gz' | head -1 | cut -d '"' -f 4)
-curl -L "$url" -o xmrig.tar.gz && tar xf xmrig.tar.gz && chmod +x xmrig
-xattr -d com.apple.quarantine xmrig 2>/dev/null || true`;
+  return macTarDownload("moneroocean", XMRIG_RELEASE_API, "xmrig.tar.gz", "xmrig");
 }
 
 function srbLinuxDownload(includeCurl = true) {
@@ -437,11 +448,7 @@ function xmrigProxyLinuxDownload() {
 }
 
 function xmrigProxyMacDownload() {
-  return `mkdir -p ~/xmrig-proxy && cd ~/xmrig-proxy
-if [ "$(uname -m)" != "arm64" ]; then echo "${XMRIG_PROXY_MAC_DOWNLOAD_NOTE}"; exit 1; fi
-url=$(curl -fsSL ${XMRIG_PROXY_RELEASE_API} | grep browser_download_url | grep 'mac64\\.tar\\.gz' | head -1 | cut -d '"' -f 4)
-curl -L "$url" -o xmrig-proxy.tar.gz && tar xf xmrig-proxy.tar.gz && chmod +x xmrig-proxy
-xattr -d com.apple.quarantine xmrig-proxy 2>/dev/null || true`;
+  return macTarDownload("xmrig-proxy", XMRIG_PROXY_RELEASE_API, "xmrig-proxy.tar.gz", "xmrig-proxy", `if [ "$(uname -m)" != "arm64" ]; then echo "${XMRIG_PROXY_MAC_DOWNLOAD_NOTE}"; exit 1; fi`);
 }
 
 function xmrigProxyWindowsDownload() {
@@ -465,6 +472,13 @@ New-Item -ItemType Directory -Force ${dir} | Out-Null
 Expand-Archive ${file} -DestinationPath .\\${dir} -Force
 $dir=Get-ChildItem .\\${dir} -Directory | Select-Object -First 1
 if ($dir) { Set-Location $dir.FullName } else { Set-Location .\\${dir} }`;
+}
+
+function macTarDownload(dir, api, file, binary, precheck = "") {
+  return `mkdir -p ~/${dir} && cd ~/${dir}
+${precheck ? `${precheck}\n` : ""}url=$(curl -fsSL ${api} | grep browser_download_url | grep 'mac64\\.tar\\.gz' | head -1 | cut -d '"' -f 4)
+curl -L "$url" -o ${file} && tar xf ${file} && chmod +x ${binary}
+xattr -d com.apple.quarantine ${binary} 2>/dev/null || true`;
 }
 
 function windowsAssetDownload(api, pattern, file) {

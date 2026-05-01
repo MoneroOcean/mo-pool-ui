@@ -21,8 +21,8 @@ export function errorPanel(error) {
   return `<section class="pn"><div class="cd"><h2>Data unavailable</h2><p class="red">${escapeHtml(error.message || error)}</p></div></section>`;
 }
 
-export function settledValue(result, fallback) {
-  return result.status === "fulfilled" ? result.value : fallback;
+export function recover(promise, fallback) {
+  return promise.catch(() => fallback);
 }
 
 export function kpi(label, value, explain) {
@@ -87,7 +87,7 @@ function explorerHeightUrl(port, height) {
 export function blockHashLink(hash) {
   if (!hash) return "--";
   const href = `${BLOCK_SHARE_DUMP_BASE}/${encodeURIComponent(hash)}.cvs.xz`;
-  return { html: `<span class="hcell"><a href="${href}" rel="noopener" target="_blank" title="Download block reward shares CVS">${escapeHtml(hash)}</a></span>` };
+  return { html: `<span class="hcell"><a href="${href}" rel="noopener" target="_blank" title="Download share dump CSV">${escapeHtml(hash)}</a></span>` };
 }
 
 export function paymentHashLink(hash) {

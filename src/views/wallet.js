@@ -11,17 +11,17 @@ import { sortWorkerRows, workerGraphColumns, workerSortDirection, workerSortMode
 import { MAX_ROUTE_PAGE, blockPageSize, pageCountFor, routePageNumber } from "../paging.js";
 import { nextSortDirection } from "../table-sort.js";
 import { attr, on, qs, qsa, tog } from "../dom.js";
-import { activeAttr, blockHashLink, chipLink, coinCell, dateCell, escapeHtml, formatAtomicXmrValue, graphControls, kpi, linkLabel, pageSizeSelect, pagerNav, paymentHashLink, settledValue, tablePage } from "./common.js";
+import { activeAttr, blockHashLink, chipLink, coinCell, dateCell, escapeHtml, formatAtomicXmrValue, graphControls, kpi, linkLabel, pageSizeSelect, pagerNav, paymentHashLink, recover, tablePage } from "./common.js";
 import { chartHtml, hashrateChart, normalizeGraph } from "./charts.js";
 import { poolDashboard } from "./pool-dashboard.js";
 
-const BLOCK_REWARD_HELP = "Per-block wallet rewards from the PPLNS window. Block hashes link to MoneroOcean share dump CSV files.";
-const EMAIL_ALERTS_HELP = "Use the status button to enable or disable alerts. Use Change email with Current email and New email when replacing an existing alert address.";
+const BLOCK_REWARD_HELP = "Per-block PPLNS rewards. Hashes link to share dump CSVs.";
+const EMAIL_ALERTS_HELP = "Toggle alerts; replace with Current/New email.";
 let workerCols = 0;
 
 export async function walletView(route) {
   const address = route.a;
-  if (!isXmrAddress(address)) return `<section class="pn"><div class="cd"><h1>Invalid wallet address</h1><p class="mt">Paste a complete XMR address. Wallets are Monero payout addresses.</p></div></section>`;
+  if (!isXmrAddress(address)) return `<section class="pn"><div class="cd"><h1>Invalid wallet address</h1><p class="mt">Paste a complete XMR payout address.</p></div></section>`;
   state.a = address;
   state.w = saveWallet(address);
   const graphWindow = route.q?.w || state.gw;
@@ -69,25 +69,24 @@ async function fetchWalletPanels(address, dataTab, pages) {
   const needsWithdrawals = dataTab === "withdrawals";
   const needsSettings = dataTab === "payment-threshold" || dataTab === "email-alerts";
   const needsWalletStats = needsOverview || needsWithdrawals;
-  const [poolResult, networkResult, uptimeResult, configResult, walletStats, userSettings, chart, workers, workerCharts, payments, blockPayments] = await Promise.allSettled([
-    api.poolStats(),
-    api.networkStats(),
-    api.uptimeStatus(),
-    needsSettings ? api.config() : Promise.resolve({}),
-    needsWalletStats ? api.wallet(address) : Promise.resolve({}),
-    needsSettings ? api.userSettings(address) : Promise.resolve({}),
-    needsOverview ? api.walletChart(address) : Promise.resolve([]),
-    needsOverview ? api.walletWorkers(address) : Promise.resolve({}),
-    needsOverview ? api.walletWorkerCharts(address) : Promise.resolve({}),
-    needsWithdrawals ? api.walletPayments(address, pages.wp - 1, pages.wl) : Promise.resolve([]),
-    dataTab === "block-rewards" ? api.walletBlockPayments(address, pages.bp - 1, pages.bl) : Promise.resolve([])
+  const [poolData, networkData, uptimeData, configData, walletStats, userSettings, chartRows, workers, workerCharts, payments, blockPayments] = await Promise.all([
+    recover(api.poolStats(), null),
+    recover(api.networkStats(), null),
+    recover(api.uptimeStatus(), null),
+    needsSettings ? recover(api.config(), {}) : {},
+    needsWalletStats ? recover(api.wallet(address), {}) : {},
+    needsSettings ? recover(api.userSettings(address), {}) : {},
+    needsOverview ? recover(api.walletChart(address), []) : [],
+    needsOverview ? recover(api.walletWorkers(address), {}) : {},
+    needsOverview ? recover(api.walletWorkerCharts(address), {}) : {},
+    needsWithdrawals ? recover(api.walletPayments(address, pages.wp - 1, pages.wl), []) : [],
+    dataTab === "block-rewards" ? recover(api.walletBlockPayments(address, pages.bp - 1, pages.bl), []) : []
   ]);
-  const poolStats = settledValue(poolResult, {});
-  const networkStats = settledValue(networkResult, {});
-  const chartRows = settledValue(chart, []);
-  const graphPoints = normalizeGraph(chartRows.length ? chartRows : settledValue(walletStats, {}));
-  const poolBlock = poolResult.status === "fulfilled" && networkResult.status === "fulfilled"
-    ? poolDashboardWithWindow(poolStats, networkStats, uptimeResult)
+  const poolStats = poolData || {};
+  const networkStats = networkData || {};
+  const graphPoints = normalizeGraph(chartRows.length ? chartRows : walletStats);
+  const poolBlock = poolData && networkData
+    ? poolDashboardWithWindow(poolStats, networkStats, uptimeData)
     : `<section class="pn"><div class="cd mt">Pool dashboard temporarily unavailable.</div></section>`;
   return {
     // Private wallet panel bundle: pb pool dashboard block, ps pool stats,
@@ -95,21 +94,21 @@ async function fetchWalletPanels(address, dataTab, pages) {
     // pr withdrawals, br block rewards, gp graph points.
     pb: poolBlock,
     ps: poolStats,
-    pp: payoutPolicyFromConfig(settledValue(configResult, {})),
-    st: settledValue(walletStats, {}),
-    se: settledValue(userSettings, {}),
-    wr: workerList(settledValue(workers, {})),
-    wc: settledValue(workerCharts, {}),
-    pr: settledValue(payments, []),
-    br: settledValue(blockPayments, []),
+    pp: payoutPolicyFromConfig(configData),
+    st: walletStats,
+    se: userSettings,
+    wr: workerList(workers),
+    wc: workerCharts,
+    pr: payments,
+    br: blockPayments,
     gp: graphPoints
   };
 }
 
-function poolDashboardWithWindow(poolStats, networkStats, uptimeResult) {
+function poolDashboardWithWindow(poolStats, networkStats, uptimeData) {
   state.p = Number(poolStats.pplnsWindowTime) || 0;
-  const uptime = uptimeResult.status === "fulfilled"
-    ? summarizeUptimeRobot(uptimeResult.value)
+  const uptime = uptimeData
+    ? summarizeUptimeRobot(uptimeData)
     : { tone: "yellow", label: "Unknown", detail: "UptimeRobot status unavailable" };
   return poolDashboard(poolStats, networkStats, uptime);
 }
@@ -125,11 +124,11 @@ function walletDetailBody(tab, data, address, graphWindow, graphMode, workerSort
 
 function walletDetailTabs(address, activeTab, graphWindow, graphMode, workerSort, workerDir, graphDetails) {
   const tabs = [
-    ["overview", "Overview", "Wallet balance, pool-side hashrate estimate, total wallet graph, and worker graphs."],
+    ["overview", "Overview", "Wallet balance, pool-side hashrate, total graph, worker graphs."],
     ["block-rewards", "Block rewards", BLOCK_REWARD_HELP],
     ["withdrawals", "XMR withdrawals", EXPLANATIONS.py],
     ["payment-threshold", "Payment threshold", EXPLANATIONS.py],
-    ["email-alerts", "Email alerts", "Set, change, enable, or disable wallet email notifications."]
+    ["email-alerts", "Email alerts", "Manage email notices."]
   ];
   const active = activeTab;
   // The magnifier is visually paired with Overview because the extra total
@@ -150,7 +149,7 @@ function walletOverview(stats, workers, graph, address, graphWindow, graphMode, 
       ${walletKpis(stats, workers.length, stats.hash2 || stats.hash || graph.a, linkLabel("XMR total due", walletRouteWithGraph(address, "payment-threshold", graphWindow, graphMode, workerSort, workerDir, graphDetails)), linkLabel("XMR paid", walletRouteWithGraph(address, "withdrawals", graphWindow, graphMode, workerSort, workerDir, graphDetails)))}
     </div>
     <div class="cd">
-      ${graph.p.length ? chartHtml(graph.m, graph.l, graph.r, graph.a, "Wallet hashrate chart", graphDetails ? miningStatsLine(stats) : "") : `<p class="mt">Graph appears after shares are submitted. Backend samples are written every 2 minutes, and each point reflects a 10-minute hashrate window.</p>`}
+      ${graph.p.length ? chartHtml(graph.m, graph.l, graph.r, graph.a, "Wallet hashrate chart", graphDetails ? miningStatsLine(stats) : "") : `<p class="mt">Graph appears after submitted shares. Backend samples every 2 minutes; points use a 10-minute window.</p>`}
     </div>
   </section>`;
 }
@@ -160,9 +159,9 @@ function walletGraphControls(address, graphWindow, graphMode, workerSort, worker
 }
 
 export function walletKpis(stats, workerCount, currentHashrate, dueLabel = "XMR total due", paidLabel = "XMR paid") {
-  return `${kpi(dueLabel, formatAtomicXmrValue(stats.amtDue ?? stats.due ?? 0), "Payment threshold is available in wallet settings.")}
+  return `${kpi(dueLabel, formatAtomicXmrValue(stats.amtDue ?? stats.due ?? 0), "Payment threshold is in wallet settings.")}
       ${kpi(paidLabel, formatAtomicXmrValue(stats.amtPaid ?? stats.paid ?? 0), "Historical wallet payouts.")}
-      ${kpi("Workers", formatNumber(workerCount), "A worker is an individual miner device.")}
+      ${kpi("Workers", formatNumber(workerCount), "Individual miner devices.")}
       ${kpi("Current pool estimate", formatHashrate(currentHashrate), EXPLANATIONS.c)}`;
 }
 
@@ -209,7 +208,7 @@ function walletBlockRewardsPanel(address, pool, graphWindow, graphMode, workerSo
 }
 
 const BLOCK_REWARD_DETAIL_RETENTION_SECONDS = 2 * 24 * 60 * 60;
-const STALE_BLOCK_REWARD_TITLE = "Likely old block detail: this pay time is older than the pool's retained block-balance detail window and no later non-zero wallet reward appears on this page. Per-wallet block-balance records are removed to save database space; credited rewards are OK.";
+const STALE_BLOCK_REWARD_TITLE = "Old block detail likely DB-pruned; credited rewards are OK.";
 
 function annotateBlockRewards(blockRewards, now = Date.now()) {
   // Backend block-balance detail is retained for a short period. A trailing run
@@ -311,7 +310,7 @@ function paymentThresholdPanel(address, settings, pp) {
         <input id="wpi" inputmode="decimal" autocomplete="off" value="${escapeHtml(thresholdText)}" aria-describedby="wfee">
         <button id="wps" type="submit">Update</button>
       </div>
-      <p id="wfee" class="mt" title="Estimated XMR transaction fee using the pool payout policy. Higher thresholds reduce the relative payout transaction fee.">${escapeHtml(payoutFeeText(threshold, policy))}</p>
+      <p id="wfee" class="mt" title="Estimated XMR tx fee from pool policy. Higher thresholds reduce relative fee.">${escapeHtml(payoutFeeText(threshold, policy))}</p>
       <p class="mt ex dx">Minimum threshold is ${minimumThreshold} XMR. ${EXPLANATIONS.py}</p>
       <p id="wpst" class="sst mt" role="status"></p>
     </form>

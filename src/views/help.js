@@ -3,84 +3,83 @@ import { DISCORD_URL, DONATION_XMR, EXPLANATIONS, supportEmail, UPTIME_URL } fro
 import { formatHashrate } from "../format.js";
 import { localHistoryEnabled } from "../privacy.js";
 import { payoutFeeText, payoutPolicyFromConfig, formatPayoutThresholdInput } from "../settings.js";
-import { POOL_HOST } from "../setup.js";
-import { escapeHtml, settledValue } from "./common.js";
+import { POOL_HOST, TOR_MINING_HOST } from "../setup.js";
+import { escapeHtml, recover } from "./common.js";
 
 const CALC_MO_CVS_URL = "https://github.com/MoneroOcean/nodejs-pool/blob/master/block_share_dumps/calc_mo_cvs.js";
 const XMRCHAIN_URL = "https://xmrchain.net";
 const DEFAULT_REFERENCE_PORTS = [80, 10001, 10002, 10004, 10008, 10016, 10032, 10064, 10128, 10256, 10512, 11024, 12048, 14096, 18192];
 
 export async function helpView() {
-  const configResult = await api.config().then((value) => ({ status: "fulfilled", value })).catch((reason) => ({ status: "rejected", reason }));
-  const policy = payoutPolicyFromConfig(settledValue(configResult, {}));
+  const policy = payoutPolicyFromConfig(await recover(api.config(), {}));
   const thresholdText = (value) => formatPayoutThresholdInput(value, policy);
   const historyEnabled = localHistoryEnabled();
   const ppCopy = policy
     ? [
-      `${EXPLANATIONS.py} Current limits: ${thresholdText(policy.m)} XMR minimum, ${thresholdText(policy.d)} XMR default.`,
-      `Estimated minimum-threshold fee: ${payoutFeeText(policy.m, policy)}. Higher thresholds reduce relative fee; ${thresholdText(policy.f.z)} XMR or more is zero-fee by the pool formula.`
+      `${EXPLANATIONS.py} Limits: ${thresholdText(policy.m)} XMR min, ${thresholdText(policy.d)} XMR default.`,
+      `Min fee: ${payoutFeeText(policy.m, policy)}. ${thresholdText(policy.f.z)} XMR or more is zero-fee.`
     ]
-    : ["Payout policy is currently unavailable from the API."];
+    : ["Payout policy is unavailable from API."];
   const rows = [
-    ["First checks when mining looks broken", [
-      "Use the Setup page commands, then look for accepted shares in the miner. Wallet and worker pages update from accepted shares, not just connections.",
-      "Use the same XMR wallet address here and in the miner. If shares accept but the worker never appears, check for another wallet, subaddress, or saved config.",
-      "Pool hashrate is estimated from backend share windows. Short tests, spikes, and very low hashrate can look flat while mining still works.",
-      "Give each machine a stable worker or rig id. Too many unique worker names can be collapsed into all_other_workers to protect stats."
+    ["First checks", [
+      "Use Setup commands, then look for accepted shares. Wallet/worker pages use shares, not connections.",
+      "Use the same XMR wallet here and in the miner. If shares accept but no worker appears, check wallet/subaddress/config.",
+      "Pool hashrate uses share windows; short or low tests can look flat.",
+      "Stable worker ids prevent all_other_workers."
     ], true],
-    ["Raw, pay, and normalized hashrate", [
+    ["Hashrate and pay", [
       `${EXPLANATIONS.r} ${EXPLANATIONS.n}`,
-      "Raw hashrate is algorithm-specific; a larger raw number can still earn less XMR than a lower number on another algorithm.",
-      "Judge payout with XMR-normalized view, wallet block rewards, and Coins hash scalar, not miner raw hashrate alone."
+      "Raw is algorithm-specific; bigger raw can earn less XMR on another algo.",
+      "Judge payout with XMR-normalized view, wallet block rewards, and Coins hash scalar."
     ], true],
-    ["PPLNS, luck, and why rewards arrive unevenly", [
+    ["PPLNS and luck", [
       EXPLANATIONS.p,
-      "Your block share is based on XMR-normalized work still inside the PPLNS window when the pool finds that block. Small miners can see quiet periods before a reward.",
+      "Block share uses XMR-normalized work still in PPLNS when a block is found; small miners may see quiet periods.",
       EXPLANATIONS.l,
-      `Share-dump links are on wallet Block rewards hashes. Use ${helpLink(CALC_MO_CVS_URL, "calc_mo_cvs.js")} to audit a reward file.`
+      `Wallet Block reward hashes link to share dumps. Use ${helpLink(CALC_MO_CVS_URL, "calc_mo_cvs.js")} to audit a reward file.`
     ], true],
-    ["Payments, thresholds, and wallet sync", [
+    ["Payments and wallet sync", [
       ...ppCopy,
-      `If the pool shows a withdrawal but your wallet is empty, refresh or rescan against a synced Monero node from height 0 through the current height on ${helpLink(XMRCHAIN_URL, "xmrchain.net")}.`,
-      "If total due is below threshold, keep mining or lower it in wallet settings. A sent amount below threshold is usually due to transaction fee."
+      `If the pool shows a withdrawal but your wallet is empty, refresh/rescan from height 0 to current height on ${helpLink(XMRCHAIN_URL, "xmrchain.net")}.`,
+      "If total due is below threshold, keep mining or lower it in wallet settings. Below-threshold sends are usually fee-related."
     ], true],
-    ["XMR-only payouts and altcoin mining", [
+    ["XMR payouts and altcoins", [
       EXPLANATIONS.x,
-      "Algo switching can mine supported coins when better for XMR payout, but balances and withdrawals stay XMR-denominated.",
-      "Coins marked inactive or no exchange configured are not useful for payout switching until pool exchange support returns."
+      "Algo switching can mine supported coins when better for XMR; balances/withdrawals stay XMR-denominated.",
+      "Inactive/no-exchange coins are not useful for payout switching until exchange support returns."
     ]],
-    ["How MoneroOcean chooses algorithms", [
-      "MoneroOcean's XMRig fork benchmarks supported algorithms and reports speeds to the pool, which combines them with profitability and effort to choose XMR payout work.",
-      "The selected algorithm can change as pool conditions change. That is normal unless the miner log says it restarted.",
-      "Fixed-algorithm miners can use the pool but do not provide the same auto-switching signal. Setup covers exact miner and proxy commands."
+    ["Algorithm choice", [
+      "MoneroOcean XMRig benchmarks speeds; the pool combines them with profitability and effort.",
+      "Selected algorithm can change with pool conditions. That is normal unless miner logs say it restarted.",
+      "Fixed-algorithm miners work too but lack the same auto-switch signal. Setup covers commands."
     ]],
     ["High XMRig ping", [
-      "XMRig pool ping includes more than round-trip time and can include share validation, so it may exceed ICMP ping.",
-      `Judge the connection by accepted shares, stale/rejected rate, and disconnects. If rejects spike, try a nearby host, firewall-friendly port, or check ${helpLink(UPTIME_URL, "status")} and ${helpLink(DISCORD_URL, "Discord")}.`
+      "XMRig pool ping can include share validation, so it may exceed ICMP ping.",
+      `Judge by accepted shares, stale/rejected rate, and disconnects. If rejects spike, try a nearby host, web-friendly port, or check ${helpLink(UPTIME_URL, "status")} and ${helpLink(DISCORD_URL, "Discord")}.`
     ]],
-    ["Rejected, low difficulty, or throttled shares", [
-      "Throttled down share submission usually means too many low-difficulty shares. Use a higher difficulty port or a proxy for many workers.",
-      "Low difficulty share means a result did not meet assigned difficulty. If it repeats on one device, update the miner and check clocks, memory, thermals, and algorithm.",
-      `If many miners report the same reject pattern, check ${helpLink(UPTIME_URL, "status")} or ${helpLink(DISCORD_URL, "Discord")} before making large local changes.`
+    ["Rejected/throttled shares", [
+      "Throttled shares usually mean too many low-difficulty shares. Use a higher difficulty port or proxy.",
+      "Low difficulty share means a result missed assigned difficulty. If one device repeats it, check miner, clocks, memory, thermals, and algo.",
+      `If many miners report the same reject pattern, check ${helpLink(UPTIME_URL, "status")} or ${helpLink(DISCORD_URL, "Discord")} before large local changes.`
     ]],
-    ["Pool hosts, ports, and Tor", [
+    ["Hosts, ports, Tor", [
       `Use ${POOL_HOST}; it routes miners to a nearby healthy node. Check ${helpLink(UPTIME_URL, "status")} or ${helpLink(DISCORD_URL, "Discord")} during incidents.`,
-      `The Setup page selects a port from your estimated hashrate. Reference ports: ${referencePortSummary()}.`,
-      "Ports 80 and 443 help on web-only networks. Tor onion for non-TLS mining: mo2tor2amawhphlrgyaqlrqx7o27jaj7yldnx3t6jip3ow4bujlwz6id.onion."
+      `Setup selects a port from estimated hashrate. Reference ports: ${referencePortSummary()}.`,
+      `Ports 80 and 443 help on web-only networks. Tor onion for non-TLS mining: ${TOR_MINING_HOST}.`
     ]],
-    ["Many workers and proxies", [
-      "A proxy reduces pool connections and share spam for larger CPU fleets. Miners use NiceHash-compatible mode toward the proxy.",
-      "Do not add a proxy just for a few machines. It is mainly for fleets, one upstream per site, or throttled direct connections.",
+    ["Workers and proxies", [
+      "A proxy reduces pool connections/share spam for larger CPU fleets. Miners use NiceHash-compatible mode.",
+      "Do not add a proxy for a few machines; it is mainly for fleets, one upstream per site, or throttled direct connections.",
       "GPU fixed-algorithm miners and meta-miner switch differently, so keep routing aligned with Setup."
     ]],
-    ["Privacy and support", [
-      `${EXPLANATIONS.pv} Use the trash button on a saved wallet to clear local history.`,
-      `Local history stores only recently opened XMR wallet addresses in this browser, up to 10 for 180 days, so they appear as saved wallets. It does not store keys, seeds, passwords, balances, payouts, or worker data. When disabled, only the no-history choice is saved.<div class="br hhc"><button type="button" data-lh aria-pressed="${historyEnabled}">${historyEnabled ? "Disable" : "Enable"} local wallet history</button></div>`,
-      `For pool-side deletion, email ${helpLink(`mailto:${supportEmail()}`, supportEmail())}. For config questions and outages, ${helpLink(DISCORD_URL, "MoneroOcean Discord")} is usually faster.`,
+    ["Privacy/support", [
+      `${EXPLANATIONS.pv} Use trash on a saved wallet to clear local history.`,
+      `Local history stores up to 10 recent XMR addresses here for 180 days. It stores no keys, seeds, passwords, balances, payouts, or worker data. Disabling saves only that choice.<div class="br hhc"><button type="button" data-lh aria-pressed="${historyEnabled}">${historyEnabled ? "Disable" : "Enable"} local wallet history</button></div>`,
+      `For pool-side deletion, email ${helpLink(`mailto:${supportEmail()}`, supportEmail())}. For config questions/outages, ${helpLink(DISCORD_URL, "MoneroOcean Discord")} is usually faster.`,
       "Use a mining-only address or subaddress if you do not want mining linked to other wallet activity."
     ]],
-    ["How you can help the pool", [
-      `Report broken explorers, confusing UI, bad setup output, and incidents in ${helpLink(DISCORD_URL, "Discord")} or by email. Donation address:<div class="cbx hdn"><button class="cpy" data-c="#da">Copy</button><pre id="da">${DONATION_XMR}</pre></div>`
+    ["Help the pool", [
+      `Report broken explorers, confusing UI/setup output, and incidents in ${helpLink(DISCORD_URL, "Discord")} or by email. Donation address:<div class="cbx hdn"><button class="cpy" data-c="#da">Copy</button><pre id="da">${DONATION_XMR}</pre></div>`
     ]]
   ];
   return `<section class="pn"><div class="ph"><h1>Help</h1></div><div class="cd gd hg">${rows.map(([q, a, open]) => helpEntry(q, a, open)).join("")}</div></section>`;

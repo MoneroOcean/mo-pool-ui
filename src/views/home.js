@@ -6,7 +6,7 @@ import { state } from "../state.js";
 import { localHistoryEnabled, saveWallet } from "../privacy.js";
 import { summarizeUptimeRobot } from "../uptime.js";
 import { chartHtml, hashrateChart } from "./charts.js";
-import { chipLink, escapeHtml, graphControls, settledValue } from "./common.js";
+import { chipLink, escapeHtml, graphControls, recover } from "./common.js";
 import { poolDashboard } from "./pool-dashboard.js";
 import { walletRouteWithGraph, lastShareAgeSuffix, walletKpis, workerList } from "./wallet.js";
 
@@ -21,21 +21,16 @@ export async function homeView(route = state.r) {
   const graphMode = route.q?.m || state.gm;
   state.gw = graphWindow;
   state.gm = graphMode;
-  const [poolResult, networkResult, uptimeResult, poolChartResult, motdResult] = await Promise.allSettled([
+  const [pool, network, uptimeData, poolChartRows, motdData] = await Promise.all([
     api.poolStats(),
     api.networkStats(),
-    api.uptimeStatus(),
-    api.poolChart(),
-    api.motd()
+    recover(api.uptimeStatus(), null),
+    recover(api.poolChart(), []),
+    recover(api.motd(), {})
   ]);
-  if (poolResult.status !== "fulfilled") throw poolResult.reason;
-  if (networkResult.status !== "fulfilled") throw networkResult.reason;
-  const pool = poolResult.value;
   state.p = Number(pool.pplnsWindowTime) || 0;
-  const network = networkResult.value;
-  const uptime = uptimeResult.status === "fulfilled" ? summarizeUptimeRobot(uptimeResult.value) : { tone: "yellow", label: "Unknown", detail: "UptimeRobot status unavailable" };
-  const poolChartRows = settledValue(poolChartResult, []);
-  const motd = normalizeMotd(settledValue(motdResult, {}));
+  const uptime = uptimeData ? summarizeUptimeRobot(uptimeData) : { tone: "yellow", label: "Unknown", detail: "UptimeRobot status unavailable" };
+  const motd = normalizeMotd(motdData);
 
   return `
     <div class="gd">
@@ -103,14 +98,12 @@ function motdCard(motd) {
 }
 
 async function walletSummaryCard(address) {
-  const [walletStats, chart, workers] = await Promise.allSettled([
-    api.wallet(address),
-    api.walletChart(address),
-    api.walletWorkers(address)
+  const [stats, chartRows, workers] = await Promise.all([
+    recover(api.wallet(address), {}),
+    recover(api.walletChart(address), []),
+    recover(api.walletWorkers(address), {})
   ]);
-  const stats = settledValue(walletStats, {});
-  const chartRows = settledValue(chart, []);
-  const workerRows = workerList(settledValue(workers, {}));
+  const workerRows = workerList(workers);
   const key = state.gm === "raw" ? "hsh" : "hsh2";
   const graph = hashrateChart(chartRows, state.gw, key);
   return `

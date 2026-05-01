@@ -162,14 +162,14 @@ function syncPreferenceButtons() {
   if (themeToggle) {
     const light = preferences.theme === "light";
     themeToggle.textContent = light ? "☀" : "☾";
-    themeToggle.title = light ? "Light theme. Switch to dark theme" : "Dark theme. Switch to light theme";
-    attr(themeToggle, "aria-label", light ? "Light theme. Switch to dark theme" : "Dark theme. Switch to light theme");
+    themeToggle.title = light ? "Light theme; switch dark" : "Dark theme; switch light";
+    attr(themeToggle, "aria-label", themeToggle.title);
     attr(themeToggle, "aria-pressed", String(light));
   }
   if (commentsToggle) {
     const enabled = preferences.explanations !== "off";
     attr(commentsToggle, "aria-pressed", String(enabled));
-    commentsToggle.title = enabled ? "Hide explanatory comments" : "Show explanatory comments";
+    commentsToggle.title = enabled ? "Hide comments" : "Show comments";
   }
 }
 
@@ -181,7 +181,7 @@ function maybeShowConsent() {
   // The prompt copy must stay explicit about what is local browser history and
   // what requires server-side support. supportEmail() obfuscates the address in
   // source while still rendering a usable contact in the browser.
-  panel.innerHTML = `<h2>Local wallet history</h2><p class="mt">This dashboard can store up to 10 recent XMR wallet addresses in this browser for 180 days. They are not sent anywhere except when you open that active wallet. Use the trash button on a saved wallet to clear it. For server-side wallet deletion, email ${email}.</p><div class="br"><button id="cok">Allow local history</button><button id="cno">Do not store</button></div>`;
+  panel.innerHTML = `<h2>Local wallet history</h2><p class="mt">Store up to 10 recent XMR addresses here for 180 days. They are sent only when opened. Use trash to clear saved wallets. For server-side deletion, email ${email}.</p><div class="br"><button id="cok">Allow local history</button><button id="cno">Do not store</button></div>`;
   document.body.append(panel);
   on(qs("#cok", panel), "click", () => {
     setConsent(true);

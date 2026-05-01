@@ -4,56 +4,56 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>MoneroOcean Pool Dashboard | XMR Mining Pool</title>
-  <meta name="description" content="Mine the most profitable coins and receive Monero payouts on MoneroOcean. Track wallets, workers, blocks, payments, coins, and setup.">
+  <meta name="description" content="Mine profitable coins for Monero payouts. Track wallets, workers, blocks, payments, coins, and setup.">
   <meta name="theme-color" content="#050706">
   <meta name="robots" content="index,follow">
   <link rel="canonical" href="https://moneroocean.stream/">
   <meta property="og:type" content="website">
   <meta property="og:title" content="MoneroOcean Pool Dashboard">
-  <meta property="og:description" content="Mine profitable coins and receive Monero payouts on MoneroOcean.">
+  <meta property="og:description" content="Mine profitable coins for Monero payouts on MoneroOcean.">
   <meta property="og:url" content="https://moneroocean.stream/">
   <meta name="twitter:card" content="summary">
   <meta name="twitter:title" content="MoneroOcean Pool Dashboard">
-  <meta name="twitter:description" content="Mine profitable coins and get paid in Monero.">
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Cpath d='M13.8 6.4 C17.8 19.5 34.6 33.5 62.6 37.5 C75.6 41.5 83.2 48.6 90 54.6 C96.8 48.6 104.4 41.5 117.4 37.5 C145.4 33.5 162.2 19.5 166.2 6.4 C167.2 51.4 144.5 70.4 119.6 79.4 C105.2 84.4 101 90.4 101 97.9 C102 112.8 107.7 141 121 171 C103.4 164.8 98.2 164.8 90 171 C81.8 164.8 76.6 164.8 59 171 C72.3 141 78 112.8 79 97.9 C79 90.4 74.8 84.4 60.4 79.4 C35.5 70.4 12.8 51.4 13.8 6.4 Z' fill='%236aff7f'/%3E%3C/svg%3E" type="image/svg+xml">
+  <meta name="twitter:description" content="Mine profitable coins for Monero payouts.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Cpath d='M14 6c4 14 21 28 49 32 13 4 20 11 27 17 7-6 14-13 27-17 28-4 45-18 49-32 1 45-21 64-46 73-15 5-19 11-19 19 1 15 7 43 20 73-18-6-23-6-31 0-8-6-13-6-31 0 13-30 19-58 20-73 0-8-4-14-19-19-24-9-47-28-46-73z' fill='%2300d9ff'/%3E%3C/svg%3E" type="image/svg+xml">
   <link rel="stylesheet" href="style.css">
   <!-- If this JSON-LD changes, build.sh updates the nginx script-src hash from build/index.html. For manual updates, run ./csp-hash.sh build/index.html after npm run build. -->
   <script type="application/ld+json">
-    {"@context":"https://schema.org","@type":"WebApplication","name":"MoneroOcean Pool Dashboard","url":"https://moneroocean.stream/","applicationCategory":"FinanceApplication","operatingSystem":"Any","description":"Mine profitable coins and receive Monero payouts on MoneroOcean."}
+    {"@context":"https://schema.org","@type":"WebApplication","name":"MoneroOcean Pool Dashboard","url":"https://moneroocean.stream/","applicationCategory":"FinanceApplication","operatingSystem":"Any","description":"Mine profitable coins for Monero payouts on MoneroOcean."}
   </script>
 </head>
 <body>
-  <a class="skl" href="#app">Skip to dashboard</a>
+  <a class="skl" href="#app">Skip to app</a>
   <header class="tp">
-    <a class="bd" href="#/" aria-label="MoneroOcean home">
+    <a class="bd" href="#/" aria-label="MoneroOcean">
       <svg class="bm" viewBox="0 0 180 180" aria-hidden="true">
-        <path class="bt" d="M13.8 6.4 C17.8 19.5 34.6 33.5 62.6 37.5 C75.6 41.5 83.2 48.6 90 54.6 C96.8 48.6 104.4 41.5 117.4 37.5 C145.4 33.5 162.2 19.5 166.2 6.4 C167.2 51.4 144.5 70.4 119.6 79.4 C105.2 84.4 101 90.4 101 97.9 C102 112.8 107.7 141 121 171 C103.4 164.8 98.2 164.8 90 171 C81.8 164.8 76.6 164.8 59 171 C72.3 141 78 112.8 79 97.9 C79 90.4 74.8 84.4 60.4 79.4 C35.5 70.4 12.8 51.4 13.8 6.4 Z"></path>
+        <path class="bt" d="M14 6c4 14 21 28 49 32 13 4 20 11 27 17 7-6 14-13 27-17 28-4 45-18 49-32 1 45-21 64-46 73-15 5-19 11-19 19 1 15 7 43 20 73-18-6-23-6-31 0-8-6-13-6-31 0 13-30 19-58 20-73 0-8-4-14-19-19-24-9-47-28-46-73z"></path>
       </svg>
       <span>MoneroOcean</span>
     </a>
     <nav class="nv" aria-label="Primary">
-      <a href="#/" title="Track wallets and view pool hashrate.">Wallets</a>
-      <a href="#/coins" title="Coin profitability, effort, pool hashrate, world hashrate, and PPLNS share.">Coins</a>
-      <a href="#/blocks" title="Recent XMR and altcoin blocks with live effort and luck context.">Blocks</a>
-      <a href="#/payments" title="Pool payout batches and XMR payout timing.">Payments</a>
-      <a href="#/calc" title="Estimate XMR and fiat mining profit from current pool profitability.">Calc</a>
-      <a href="#/setup" title="Generate miner commands and choose pool ports.">Setup</a>
-      <a href="#/help" title="Pool terms, privacy, support links, and donation address.">Help</a>
+      <a href="#/">Wallets</a>
+      <a href="#/coins">Coins</a>
+      <a href="#/blocks">Blocks</a>
+      <a href="#/payments">Payments</a>
+      <a href="#/calc">Calc</a>
+      <a href="#/setup">Setup</a>
+      <a href="#/help">Help</a>
     </nav>
     <div class="ta">
       <button id="rnw" class="rb" title="Refresh visible data" aria-label="Refresh visible data">
         <span class="rk" aria-hidden="true">↻</span>
         <span id="rst" class="sro" aria-live="polite">Starting</span>
       </button>
-      <button id="th" class="ib" title="Switch light/dark theme" aria-label="Switch light/dark theme">☾</button>
-      <button id="ct" class="ib" title="Toggle explanatory comments" aria-label="Toggle explanatory comments" aria-pressed="true">?</button>
+      <button id="th" class="ib" title="Switch theme" aria-label="Switch theme">☾</button>
+      <button id="ct" class="ib" title="Toggle comments" aria-label="Toggle comments" aria-pressed="true">?</button>
     </div>
   </header>
 
   <main id="app" class="sh" tabindex="-1">
     <section class="ccp">
       <h1>MoneroOcean XMR Mining Pool Dashboard</h1>
-      <p>MoneroOcean lets miners mine profitable coins while receiving payouts in Monero. Use this dashboard to paste an XMR wallet address, review workers, find ports, copy setup commands, and check blocks or payments.</p>
+      <p>Track MoneroOcean wallets, workers, ports, setup, blocks, payments, coins, and XMR payouts.</p>
     </section>
     <section id="view" aria-live="polite"></section>
   </main>
@@ -61,12 +61,12 @@
   <footer class="ft">
     <a href="https://x.com/MoneroOcean" rel="noopener" target="_blank">X</a>
     <a href="https://discordapp.com/invite/jXaR2kA" rel="noopener" target="_blank">Discord</a>
-    <span class="fc">Based on work of <a href="https://github.com/MoneroOcean" rel="noopener" target="_blank">MoneroOcean</a>, <a href="https://github.com/Thunderosa" rel="noopener" target="_blank">Thunderosa</a>, and <a href="https://github.com/mesh0000" rel="noopener" target="_blank">mesh0000</a>.</span>
+    <span class="fc">Credits: <a href="https://github.com/MoneroOcean" rel="noopener" target="_blank">MoneroOcean</a>, <a href="https://github.com/Thunderosa" rel="noopener" target="_blank">Thunderosa</a>, and <a href="https://github.com/mesh0000" rel="noopener" target="_blank">mesh0000</a>.</span>
     <a href="https://old.moneroocean.stream" rel="noopener">Old UI</a>
   </footer>
 
   <noscript>
-    <div class="ns">This dashboard needs JavaScript to load live pool data. You can still mine using gulf.moneroocean.stream and receive XMR payouts with your Monero address.</div>
+    <div class="ns">JavaScript required for pool data. Mine at gulf.moneroocean.stream with a Monero address for XMR payouts.</div>
   </noscript>
   <script src="script.js" type="module"></script>
 </body>

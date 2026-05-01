@@ -6,9 +6,9 @@ import { attr, on, qs, qsa } from "../dom.js";
 
 export function chartHtml(model, line, raw, average, label, detail = "") {
   // The chart is plain SVG plus a small data-pts payload so hover works without
-  // shipping a charting library. Points are escaped JSON because they live in an
-  // HTML attribute and are read back by bindChartHover().
-  const pointData = escapeHtml(JSON.stringify(model.r.map((row) => ({ x: row.x, y: row.y, z: row.z, t: row.tme, v: row.v }))));
+  // shipping a charting library. Hover points keep named fields because the
+  // cursor math below is easy to break when these are anonymous array indexes.
+  const pointData = escapeHtml(JSON.stringify(model.r.map((row) => ({ x: row.x, y: row.z, t: row.tme, v: row.v }))));
   const pplns = pplnsWindowRect(model, state.p);
   const pplnsRect = pplns ? `<rect class="pw" x="${pplns.x.toFixed(1)}" width="${pplns.width.toFixed(1)}" height="${pplns.height}"></rect>` : "";
   const detailLine = (Array.isArray(detail) ? detail : detail ? [detail] : []).map((line) => `<small>${escapeHtml(line)}</small>`).join("");
@@ -69,8 +69,8 @@ export function bindChartHover() {
       const point = points.reduce((best, item) => Math.abs(item.x - x) < Math.abs(best.x - x) ? item : best, points[0]);
       attr(vertical, "x1", point.x);
       attr(vertical, "x2", point.x);
-      attr(horizontal, "y1", point.z);
-      attr(horizontal, "y2", point.z);
+      attr(horizontal, "y1", point.y);
+      attr(horizontal, "y2", point.y);
       chart.classList.add("has-cursor");
       const pplns = isWithinPplnsWindow(point.t, maxTime, state.p) ? " · PPLNS" : "";
       if (readout) readout.textContent = `${formatDate(point.t)} · ${formatHashrate(point.v)}${pplns}`;
