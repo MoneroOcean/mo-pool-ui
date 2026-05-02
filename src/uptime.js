@@ -1,7 +1,7 @@
 const DOWN_CLASSES = new Set(["danger", "down", "error"]);
 const UP_CLASSES = new Set(["success", "up"]);
 export const UNKNOWN_UPTIME = { tone: "gray", label: "Unknown", detail: "UptimeRobot status unavailable" };
-export const uptimeToneClass = (tone) => ({ green: "sgn", yellow: "syo", red: "srd", gray: "sgu" })[tone] || "syo";
+export const uptimeToneClass = (tone) => ({ green: "status-green", yellow: "status-yellow", red: "status-red", gray: "status-unknown" })[tone] || "status-yellow";
 
 export function summarizeUptimeRobot(payload = {}) {
   const monitors = Array.isArray(payload.data) ? payload.data : [];

@@ -51,9 +51,8 @@ export function chartModel(points, key) {
   });
   let z = rows[0]?.y || 0;
   for (const row of rows) row.z = z += (row.y - z) * 0.2;
-  // Chart models are internal and carried through every graph render, so they
-  // use compact keys: n/x min/max value, s/e start/end time, r rendered rows,
-  // and row.v value. Public API point names remain untouched.
+  // Public API point names remain untouched; chart rendering adds only the SVG
+  // coordinates it needs for path and hover math.
   return { n: bounds.min, x: bounds.max, s: bounds.minTime, e: bounds.maxTime, r: rows };
 }
 

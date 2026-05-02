@@ -7,7 +7,7 @@ import { uptimeToneClass } from "../uptime.js";
 const EXTERNAL_LINK = "rel=noopener target=_blank";
 
 export function skel(label = "Loading") {
-  return `<div class=sk role=status aria-label="${escapeHtml(label)}"><span class=skx aria-hidden=true>${glyphLines()}</span></div>`;
+  return `<div class=skeleton role=status aria-label="${escapeHtml(label)}"><span class=skeleton-text aria-hidden=true>${glyphLines()}</span></div>`;
 }
 
 function glyphLines() {
@@ -21,7 +21,7 @@ function glyphLines() {
 }
 
 export function errorPanel(error) {
-  return `<section class=pn><div class=cd><h2>Data unavailable</h2><p class=red>${escapeHtml(error.message || error)}</p></div></section>`;
+  return `<section class=panel><div class=card><h2>Data unavailable</h2><p class=red>${escapeHtml(error.message || error)}</p></div></section>`;
 }
 
 export function recover(promise, fallback) {
@@ -29,7 +29,7 @@ export function recover(promise, fallback) {
 }
 
 export function kpi(label, value, explain) {
-  return `<div title="${escapeHtml(explain)}"><span class=vl>${escapeHtml(value)}</span><span class=lb>${cellHtml(label)}</span><p class="ex dx">${escapeHtml(explain)}</p></div>`;
+  return `<div title="${escapeHtml(explain)}"><span class=value>${escapeHtml(value)}</span><span class=label>${cellHtml(label)}</span><p class="explanation comments-controlled">${escapeHtml(explain)}</p></div>`;
 }
 
 export function linkLabel(label, href) {
@@ -41,23 +41,23 @@ export function activeAttr(active) {
 }
 
 export function chipLink(label, href, active = false, attrs = "") {
-  return `<a class=cp href="${href}"${activeAttr(active)}${attrs ? ` ${attrs}` : ""}>${escapeHtml(label)}</a>`;
+  return `<a class=chip href="${href}"${activeAttr(active)}${attrs ? ` ${attrs}` : ""}>${escapeHtml(label)}</a>`;
 }
 
-export function graphControls(routeFor, graphWindow, graphMode, className = "br sbr") {
-  return `<div class="${className}"><div class="br">${GRAPH_WINDOWS.map((win) => chipLink(win[1], routeFor(win[0], graphMode), graphWindow === win[0])).join("")}</div><div class="br brr">${chipLink("XMR", routeFor(graphWindow, "normalized"), graphMode === "normalized")}${chipLink("Raw", routeFor(graphWindow, "raw"), graphMode === "raw")}</div></div>`;
+export function graphControls(routeFor, graphWindow, graphMode, className = "bar sbr") {
+  return `<div class="${className}"><div class="bar">${GRAPH_WINDOWS.map((win) => chipLink(win[1], routeFor(win[0], graphMode), graphWindow === win[0])).join("")}</div><div class="bar bar-right">${chipLink("XMR", routeFor(graphWindow, "xmr"), graphMode === "xmr")}${chipLink("Raw", routeFor(graphWindow, "raw"), graphMode === "raw")}</div></div>`;
 }
 
 export function uptimeLabel(label, uptime) {
-  // summarizeUptimeRobot returns semantic tones for tests and business logic;
-  // the DOM uses short private class hooks documented in style.css.
-  return { html: `<a id=up class="ks ${uptimeToneClass(uptime.tone)}" href="${UPTIME_URL}" ${EXTERNAL_LINK} title="${escapeHtml(uptime.detail)}"><span class=sdot aria-hidden=true></span><span>${escapeHtml(label)}</span></a>` };
+  // summarizeUptimeRobot returns semantic tones; this view maps them to status
+  // dot classes so tests can stay focused on the tone contract.
+  return { html: `<a id=up class="status-link ${uptimeToneClass(uptime.tone)}" href="${UPTIME_URL}" ${EXTERNAL_LINK} title="${escapeHtml(uptime.detail)}"><span class=status-dot aria-hidden=true></span><span>${escapeHtml(label)}</span></a>` };
 }
 
 export function tablePage(title, intro, headings, rows, controls = "", tableLabel = "", emptyText = "") {
-  const header = title ? `<div class=ph><div><h1>${title}</h1>${intro ? `<p class=mt>${intro}</p>` : ""}</div></div>` : "";
-  const emptyRow = emptyText ? `<tr><td colspan=${headings.length} class=mt>${escapeHtml(emptyText)}</td></tr>` : "";
-  return `<section class=pn>${header}${controls ? `<div class=cd>${controls}</div>` : ""}<div class="cd tw"><table${tableLabel ? ` aria-label="${escapeHtml(tableLabel)}"` : ""}><thead><tr>${headings.map((h) => `<th class="${hashHeadingClass(h)}">${cellHtml(h)}</th>`).join("")}</tr></thead><tbody>${rows.map((row) => `<tr>${row.map((cell) => `<td>${cellHtml(cell)}</td>`).join("")}</tr>`).join("") || emptyRow}</tbody></table></div></section>`;
+  const header = title ? `<div class=panel-header><div><h1>${title}</h1>${intro ? `<p class=muted>${intro}</p>` : ""}</div></div>` : "";
+  const emptyRow = emptyText ? `<tr><td colspan=${headings.length} class=muted>${escapeHtml(emptyText)}</td></tr>` : "";
+  return `<section class=panel>${header}${controls ? `<div class=card>${controls}</div>` : ""}<div class="card table-wrap"><table${tableLabel ? ` aria-label="${escapeHtml(tableLabel)}"` : ""}><thead><tr>${headings.map((h) => `<th class="${hashHeadingClass(h)}">${cellHtml(h)}</th>`).join("")}</tr></thead><tbody>${rows.map((row) => `<tr>${row.map((cell) => `<td>${cellHtml(cell)}</td>`).join("")}</tr>`).join("") || emptyRow}</tbody></table></div></section>`;
 }
 
 export function cellHtml(cell) {
@@ -66,11 +66,11 @@ export function cellHtml(cell) {
 
 function hashHeadingClass(heading) {
   const text = typeof heading === "string" ? heading : "";
-  return /^(hash|block hash|tx hash|transaction|transaction or block)$/i.test(text) ? "hh" : "";
+  return /^(hash|block hash|tx hash|transaction|transaction or block)$/i.test(text) ? "hash-heading" : "";
 }
 
 export function coinCell(value) {
-  return { html: `<span class=ccell>${cellHtml(value)}</span>` };
+  return { html: `<span class=coin-cell>${cellHtml(value)}</span>` };
 }
 
 export function explorerHeightLink(port, height) {
@@ -89,12 +89,12 @@ function explorerHeightUrl(port, height) {
 export function blockHashLink(hash) {
   if (!hash) return "--";
   const href = `${BLOCK_SHARE_DUMP_BASE}/${encodeUrlPart(hash)}.cvs.xz`;
-  return { html: `<span class=hcell><a href="${href}" ${EXTERNAL_LINK} title="Download share dump CSV">${escapeHtml(hash)}</a></span>` };
+  return { html: `<span class=hash-cell><a href="${href}" ${EXTERNAL_LINK} title="Download share dump CSV">${escapeHtml(hash)}</a></span>` };
 }
 
 export function paymentHashLink(hash) {
   if (!hash) return "--";
-  return { html: `<span class=hcell><a href="https://xmrchain.net/tx/${encodeUrlPart(hash)}" ${EXTERNAL_LINK} title="Open transaction on xmrchain">${escapeHtml(hash)}</a></span>` };
+  return { html: `<span class=hash-cell><a href="https://xmrchain.net/tx/${encodeUrlPart(hash)}" ${EXTERNAL_LINK} title="Open transaction on xmrchain">${escapeHtml(hash)}</a></span>` };
 }
 
 export function dateCell(timestamp) {
@@ -111,21 +111,21 @@ function pagePicker(id, page, pageCount = 0) {
   // The page input is intentionally capped only when the backend gives a known
   // total. Wallet block rewards can have an unknown/stale tail, so those views
   // use non-editable page text or an open-ended next arrow instead.
-  return `<label class=pp><span class=mt>Page</span><input id="${id}" type=number min=1 ${hasTotal ? `max=${pageCount}` : ""} value="${value}" inputmode=numeric autocomplete=off>${hasTotal ? `<span class=mt>of ${formatNumber(pageCount)}</span>` : ""}</label>`;
+  return `<label class=page-picker><span class=muted>Page</span><input id="${id}" type=number min=1 ${hasTotal ? `max=${pageCount}` : ""} value="${value}" inputmode=numeric autocomplete=off>${hasTotal ? `<span class=muted>of ${formatNumber(pageCount)}</span>` : ""}</label>`;
 }
 
 export function pageSizeSelect(id, limit) {
-  return `<label class=fd>Rows<select id="${id}">${PAGE_SIZES.map((size) => `<option value=${size} ${size === limit ? "selected" : ""}>${size}</option>`).join("")}</select></label>`;
+  return `<label class=field>Rows<select id="${id}">${PAGE_SIZES.map((size) => `<option value=${size} ${size === limit ? "selected" : ""}>${size}</option>`).join("")}</select></label>`;
 }
 
 function pagerArrow(label, href, enabled, ariaLabel) {
-  return `<a class="cp pa" aria-label="${ariaLabel}" ${enabled ? `href="${href}"` : `aria-disabled=true`}>${label}</a>`;
+  return `<a class="chip pager-arrow" aria-label="${ariaLabel}" ${enabled ? `href="${href}"` : `aria-disabled=true`}>${label}</a>`;
 }
 
 export function pagerNav(ariaLabel, inputId, page, pageCount, hasNext, routeFor, limit, canEditPage = true) {
-  return `<nav class=br aria-label="${ariaLabel}">
+  return `<nav class=bar aria-label="${ariaLabel}">
         ${pagerArrow("‹", routeFor(page - 1, limit), page > 1, "Previous page")}
-        ${canEditPage ? pagePicker(inputId, page, pageCount) : `<span class=mt>Page ${formatNumber(page)}</span>`}
+        ${canEditPage ? pagePicker(inputId, page, pageCount) : `<span class=muted>Page ${formatNumber(page)}</span>`}
         ${pagerArrow("›", routeFor(page + 1, limit), hasNext, "Next page")}
       </nav>`;
 }

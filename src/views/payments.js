@@ -5,8 +5,8 @@ import { atomicXmr, formatNumber } from "../format.js";
 import { dateCell, pageSizeSelect, pagerNav, paymentHashLink, tablePage } from "./common.js";
 
 export async function paymentsView(route = state.r) {
-  let page = routePageNumber(route.q?.p);
-  const limit = blockPageSize(route.q?.s);
+  let page = routePageNumber(route.q?.page);
+  const limit = blockPageSize(route.q?.limit);
   const pool = await api.poolStats();
   page = Math.min(page, pageCountFor(Number(pool.totalPayments) || 0, limit));
   const payments = await api.payments(page - 1, limit);
@@ -23,9 +23,9 @@ export async function paymentsView(route = state.r) {
 function paymentControls(page, limit, rowCount, totalCount = 0) {
   const pageCount = pageCountFor(totalCount, limit);
   const hasNext = page < pageCount || (!totalCount && rowCount >= limit);
-  return `<div class=bc>
+  return `<div class=block-controls>
     <span></span>
-    <div class="bpt">
+    <div class="page-tools">
       ${pageSizeSelect("pps", limit)}
       ${pagerNav("payments pages", "ppi", page, pageCount, hasNext, paymentRoute, limit)}
     </div>

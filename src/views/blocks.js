@@ -1,5 +1,5 @@
 import { PAGE_SIZES, blockPageSize, pageCountFor, pageQuery, routePageNumber } from "../paging.js";
-import { averageBlockEffort, blockCoinPort, blockEffortPercent, coinAtomicUnits, coinBlockCount, coinName, coinStatsRows, effortTone, hasBlockHistory } from "../pool.js";
+import { averageBlockEffort, blockCoinPort, blockEffortPercent, coinAtomicUnits, coinBlockCount, coinName, coinStatsRows, coinSymbol, effortTone, hasBlockHistory } from "../pool.js";
 import { routeCoinId } from "../routes.js";
 import { api } from "../api.js";
 import { EXPLANATIONS, XMR_PORT } from "../constants.js";
@@ -7,8 +7,8 @@ import { atomicXmr, encodeUrlPart, formatNumber, formatPercent, isFiniteNumber }
 import { blockHashLink, blockRewardAmountCell, dateCell, escapeHtml, explorerHeightLink, pageSizeSelect, pagerNav, tablePage } from "./common.js";
 
 export async function blocksView(route) {
-  let page = routePageNumber(route.q?.p);
-  const limit = blockPageSize(route.q?.s);
+  let page = routePageNumber(route.q?.page);
+  const limit = blockPageSize(route.q?.limit);
   const [pool, network] = await Promise.all([api.poolStats(), api.networkStats()]);
   const coin = blockCoinPort(pool, route.c || route.q?.coin || "");
   page = Math.min(page, pageCountFor(coinBlockCount(pool, coin), limit));
@@ -41,21 +41,21 @@ function blockControls(pool, coin, coins, page, limit, rowCount, blocks = []) {
   const totalCount = coinBlockCount(pool, coin);
   const pageCount = pageCountFor(totalCount, limit);
   const hasNext = page < pageCount || (!totalCount && rowCount >= limit);
-  return `<div class="bc bf">
-    <div class="bcl">
-      <label class=fd>Coin<select id=bcx>${coins.map((item) => `<option value="${item.port}" ${String(item.port) === String(coin) ? "selected" : ""}>${escapeHtml(item.name)}</option>`).join("")}</select></label>
+  return `<div class="block-controls block-filters">
+    <div class="block-controls-left">
+      <label class=field>Coin<select id=blocks-coin-filter>${coins.map((item) => `<option value="${escapeHtml(item.symbol)}" ${String(item.port) === String(coin) ? "selected" : ""}>${escapeHtml(item.name)}</option>`).join("")}</select></label>
       ${blockLuck(blocks)}
     </div>
-    <div class="bpt">
+    <div class="page-tools">
       ${pageSizeSelect("bps", limit)}
-      ${pagerNav("blocks pages", "bpi", page, pageCount, hasNext, (nextPage, nextLimit) => blockRoute(coin, nextPage, nextLimit), limit)}
+      ${pagerNav("blocks pages", "bpi", page, pageCount, hasNext, (nextPage, nextLimit) => blockRoute(coin, nextPage, nextLimit, pool), limit)}
     </div>
   </div>`;
 }
 
 function blockLuck(blocks) {
   const effort = averageBlockEffort(blocks);
-  return `<div class="bl" title="${escapeHtml(EXPLANATIONS.l)}"><strong>Block effort here</strong><span class="${effortTone(effort)}">${formatPercent(effort)}</span><p class="ex dx">${EXPLANATIONS.l}</p></div>`;
+  return `<div class="block-summary" title="${escapeHtml(EXPLANATIONS.luck)}"><strong>Block effort here</strong><span class="${effortTone(effort)}">${formatPercent(effort)}</span><p class="explanation comments-controlled">${EXPLANATIONS.luck}</p></div>`;
 }
 
 function blockEffortCell(block) {
@@ -110,8 +110,8 @@ function formatCoinReward(value, port, pool) {
   return formatNumber(number / divisor, 8);
 }
 
-export function blockRoute(coin, page = 1, pageSize = PAGE_SIZES[0]) {
-  const suffix = `/${encodeUrlPart(routeCoinId(coin))}`;
+export function blockRoute(coin, page = 1, pageSize = PAGE_SIZES[0], pool) {
+  const suffix = `/${encodeUrlPart(routeCoinId(coin, pool))}`;
   return `#/blocks${suffix}?${pageQuery(page, pageSize)}`;
 }
 
@@ -120,6 +120,6 @@ function blockCoinOptions(pool, selectedCoin) {
   if (Number(pool.totalBlocksFound) > 0) ports.add(String(XMR_PORT));
   return [...ports]
     .filter((port) => hasBlockHistory(pool, port))
-    .map((port) => ({ port, name: coinName(pool, port) }))
+    .map((port) => ({ port, name: coinName(pool, port), symbol: coinSymbol(pool, port) }))
     .sort((a, b) => a.name.localeCompare(b.name));
 }

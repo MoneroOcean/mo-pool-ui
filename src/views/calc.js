@@ -10,28 +10,28 @@ import { normalizeGraph } from "./charts.js";
 
 export async function calcView(route = state.r) {
   const pool = await api.poolStats();
-  const defaultHashrate = route.q?.h ? null : await trackedWalletHashrate();
+  const defaultHashrate = route.q?.rate ? null : await trackedWalletHashrate();
   const defaultInput = hashrateInputFromHashrate(defaultHashrate);
-  const unit = HASHRATE_UNITS.some((row) => row[0] === route.q?.u) ? route.q.u : defaultInput.unit;
-  const value = route.q?.h ? calcInputValue(route.q.h) : defaultInput.value;
+  const unit = HASHRATE_UNITS.some((row) => row[0] === route.q?.unit) ? route.q.unit : defaultInput.unit;
+  const value = route.q?.rate ? calcInputValue(route.q.rate) : defaultInput.value;
   const rows = calcProfitRows(value, unit, pool);
   const fiat = fiatForTimezone();
   const price = Number(pool.price?.[fiat.code]);
   const phDay = coinProfitValue(pool, XMR_PORT);
-  return `<section class=pn>
-    <div class="cd gd cg">
-      <form id="cfm" class="cfm" data-ph="${escapeHtml(phDay)}" data-price="${escapeHtml(isFiniteNumber(price) ? price : "")}" data-fc="${escapeHtml(fiat.label)}">
+  return `<section class=panel>
+    <div class="card grid calc-grid">
+      <form id="calc-form" class="calc-form" data-profit-per-hash="${escapeHtml(phDay)}" data-price="${escapeHtml(isFiniteNumber(price) ? price : "")}" data-fiat-code="${escapeHtml(fiat.label)}">
         <label>Hashrate<input id=ch inputmode=decimal autocomplete=off value="${escapeHtml(value)}"></label>
         <label>Unit<select id="cu">${HASHRATE_UNITS.map(([id, label]) => `<option value="${id}" ${id === unit ? "selected" : ""}>${label}</option>`).join("")}</select></label>
       </form>
-      <div class="crs">
-        ${rows.map((row) => `<article class="crc" title="${escapeHtml(row.label)} estimate">
-          <span class="lb">${escapeHtml(row.label)}</span>
-          <span class="vl cx" data-p="${row.days}">${escapeHtml(formatXmr(row.xmr, 8))}</span>
-          <span class="mt cfi" data-p="${row.days}">${escapeHtml(formatFiat(row.fiat, row.fc))}</span>
+      <div class="calc-results">
+        ${rows.map((row) => `<article class="calc-result-card" title="${escapeHtml(row.label)} estimate">
+          <span class="label">${escapeHtml(row.label)}</span>
+          <span class="value xmr-output" data-period="${row.days}">${escapeHtml(formatXmr(row.xmr, 8))}</span>
+          <span class="muted fiat-output" data-period="${row.days}">${escapeHtml(formatFiat(row.fiat, row.fiatLabel))}</span>
         </article>`).join("")}
       </div>
-      <p class="mt cf">XMR ${isFiniteNumber(price) ? `${fiat.label} price ${formatFiat(price, fiat.label)}.` : `${fiat.label} price unavailable from API.`}</p>
+      <p class="muted calc-footnote">XMR ${isFiniteNumber(price) ? `${fiat.label} price ${formatFiat(price, fiat.label)}.` : `${fiat.label} price unavailable from API.`}</p>
     </div>
   </section>`;
 }
@@ -61,7 +61,7 @@ async function trackedWalletAverage(address) {
 }
 
 export function calcRoute(value, unit) {
-  return `#/calc?h=${encodeUrlPart(calcInputValue(value))}&u=${HASHRATE_UNITS.some((row) => row[0] === unit) ? unit : "kh"}`;
+  return `#/calc?rate=${encodeUrlPart(calcInputValue(value))}&unit=${HASHRATE_UNITS.some((row) => row[0] === unit) ? unit : "kh"}`;
 }
 
 function calcInputValue(value) {

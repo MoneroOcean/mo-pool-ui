@@ -18,10 +18,10 @@ import { poolDashboard } from "./pool-dashboard.js";
 const BLOCK_REWARD_HELP = "Per-block PPLNS rewards. Hashes link to share dump CSVs.";
 const EMAIL_ALERTS_HELP = "Toggle alerts; replace with Current/New email.";
 const OVERVIEW_TAB = "overview";
-const BLOCK_REWARDS_TAB = "block-rewards";
+const BLOCK_REWARDS_TAB = "rewards";
 const WITHDRAWALS_TAB = "withdrawals";
-const THRESHOLD_TAB = "payment-threshold";
-const EMAIL_ALERTS_TAB = "email-alerts";
+const THRESHOLD_TAB = "payout";
+const EMAIL_ALERTS_TAB = "alerts";
 const WORKER_COLUMNS = [
   ["Worker", "name"],
   ["XMR", "xmr"],
@@ -38,35 +38,35 @@ let workerShowDead = true;
 
 export async function walletView(route) {
   const address = route.a;
-  if (!isXmrAddress(address)) return `<section class=pn><div class=cd><h1>Invalid wallet address</h1><p class=mt>Paste a complete XMR payout address.</p></div></section>`;
+  if (!isXmrAddress(address)) return `<section class=panel><div class=card><h1>Invalid wallet address</h1><p class=muted>Paste a complete XMR payout address.</p></div></section>`;
   state.a = address;
   state.w = saveWallet(address);
-  const graphWindow = route.q?.w || state.gw;
-  const graphMode = route.q?.m || state.gm;
+  const graphWindow = route.q?.window || state.gw;
+  const graphMode = route.q?.mode || state.gm;
   state.gw = graphWindow;
   state.gm = graphMode;
-  workerMode = workerDisplayMode(route.q?.c);
-  workerShowDead = route.q?.e !== "0";
-  const workerSort = workerMode === "list" ? workerListSortMode(route.q?.s) : workerSortMode(route.q?.s);
-  const workerDir = workerMode === "list" && workerSort === "name" && !route.q?.d ? "asc" : workerSortDirection(route.q?.d);
-  const graphDetails = route.q?.x === "1";
+  workerMode = workerDisplayMode(route.q?.view);
+  workerShowDead = route.q?.dead !== "0";
+  const workerSort = workerMode === "list" ? workerListSortMode(route.q?.sort) : workerSortMode(route.q?.sort);
+  const workerDir = workerMode === "list" && workerSort === "name" && !route.q?.dir ? "asc" : workerSortDirection(route.q?.dir);
+  const graphDetails = route.q?.stats === "1";
   const pages = walletPages(route.q || {});
   const activeTab = route.t || OVERVIEW_TAB;
   const results = await fetchWalletPanels(address, activeTab, pages);
   const detailBody = walletDetailBody(activeTab, results, address, graphWindow, graphMode, workerSort, workerDir, graphDetails, pages);
   const overviewExtras = activeTab === OVERVIEW_TAB
-    ? `<div class="cd gs">${walletGraphControls(address, graphWindow, graphMode, workerSort, workerDir, graphDetails)}</div>${walletWorkersSection(address, results.wr, results.wc, graphWindow, graphMode, workerSort, workerDir, graphDetails)}`
+    ? `<div class="card graph-switches">${walletGraphControls(address, graphWindow, graphMode, workerSort, workerDir, graphDetails)}</div>${walletWorkersSection(address, results.workers, results.workerCharts, graphWindow, graphMode, workerSort, workerDir, graphDetails)}`
     : "";
   return `
-    <div class="gd">
-      ${results.pb}
-      <section class="wb pn" id="wallet-${escapeHtml(address)}" data-w="${escapeHtml(address)}">
-        <div class="ph wh">
+    <div class="grid">
+      ${results.poolBlock}
+      <section class="wallet-block panel" id="wallet-${escapeHtml(address)}" data-wallet-address="${escapeHtml(address)}">
+        <div class="panel-header wallet-header">
           <div>
-            <h1>${shortAddress(address)}${lastShareAgeSuffix(results.st)}</h1>
+            <h1>${shortAddress(address)}${lastShareAgeSuffix(results.walletStats)}</h1>
           </div>
-          <div class="wa">
-            <nav class="tb it" aria-label="Wallet detail views">
+          <div class="wallet-actions">
+            <nav class="tabs inline-tabs" aria-label="Wallet detail views">
               ${walletDetailTabs(address, route.t || OVERVIEW_TAB, graphWindow, graphMode, workerSort, workerDir, graphDetails)}
             </nav>
           </div>
@@ -79,7 +79,12 @@ export async function walletView(route) {
 }
 
 function walletPages(query) {
-  return { wp: routePageNumber(query.wp), wl: blockPageSize(query.wl), bp: routePageNumber(query.bp), bl: blockPageSize(query.bl) };
+  return {
+    withdrawalPage: routePageNumber(query.wpage),
+    withdrawalLimit: blockPageSize(query.wlimit),
+    blockRewardPage: routePageNumber(query.rpage),
+    blockRewardLimit: blockPageSize(query.rlimit)
+  };
 }
 
 async function fetchWalletPanels(address, dataTab, pages) {
@@ -97,29 +102,26 @@ async function fetchWalletPanels(address, dataTab, pages) {
     needsOverview ? recover(api.walletChart(address), []) : [],
     needsOverview ? recover(api.walletWorkers(address), {}) : {},
     needsOverview ? recover(api.walletWorkerCharts(address), {}) : {},
-    needsWithdrawals ? recover(api.walletPayments(address, pages.wp - 1, pages.wl), []) : [],
-    dataTab === BLOCK_REWARDS_TAB ? recover(api.walletBlockPayments(address, pages.bp - 1, pages.bl), []) : []
+    needsWithdrawals ? recover(api.walletPayments(address, pages.withdrawalPage - 1, pages.withdrawalLimit), []) : [],
+    dataTab === BLOCK_REWARDS_TAB ? recover(api.walletBlockPayments(address, pages.blockRewardPage - 1, pages.blockRewardLimit), []) : []
   ]);
   const poolStats = poolData || {};
   const networkStats = networkData || {};
   const graphPoints = normalizeGraph(chartRows.length ? chartRows : walletStats);
   const poolBlock = poolData && networkData
     ? poolDashboardWithWindow(poolStats, networkStats, uptimeData)
-    : `<section class=pn><div class="cd mt">Pool dashboard temporarily unavailable.</div></section>`;
+    : `<section class=panel><div class="card muted">Pool dashboard temporarily unavailable.</div></section>`;
   return {
-    // Private wallet panel bundle: pb pool dashboard block, ps pool stats,
-    // st wallet stats, se settings, wr worker rows, wc worker chart map,
-    // pr withdrawals, br block rewards, gp graph points.
-    pb: poolBlock,
-    ps: poolStats,
-    pp: payoutPolicyFromConfig(configData),
-    st: walletStats,
-    se: userSettings,
-    wr: workerList(workers, workerCharts),
-    wc: workerCharts,
-    pr: payments,
-    br: blockPayments,
-    gp: graphPoints
+    poolBlock,
+    poolStats,
+    payoutPolicy: payoutPolicyFromConfig(configData),
+    walletStats,
+    userSettings,
+    workers: workerList(workers, workerCharts),
+    workerCharts,
+    payments,
+    blockPayments,
+    graphPoints
   };
 }
 
@@ -132,25 +134,25 @@ function poolDashboardWithWindow(poolStats, networkStats, uptimeData) {
 }
 
 function walletDetailBody(tab, data, address, graphWindow, graphMode, workerSort, workerDir, graphDetails, pages) {
-  if (tab === WITHDRAWALS_TAB) return walletWithdrawalsPanel(address, data.st, graphWindow, graphMode, workerSort, workerDir, graphDetails, data.pr, pages.wp, pages.wl, pages.bp, pages.bl);
-  if (tab === BLOCK_REWARDS_TAB) return walletBlockRewardsPanel(address, data.ps, graphWindow, graphMode, workerSort, workerDir, graphDetails, data.br, pages.bp, pages.bl, pages.wp, pages.wl);
-  if (tab === THRESHOLD_TAB) return paymentThresholdPanel(address, data.se, data.pp);
-  if (tab === EMAIL_ALERTS_TAB) return emailAlertsPanel(address, data.se);
-  const graph = hashrateChart(data.gp, graphWindow, graphMode === "raw" ? "hsh" : "hsh2");
-  return walletOverview(data.st, data.wr, graph, address, graphWindow, graphMode, workerSort, workerDir, graphDetails);
+  if (tab === WITHDRAWALS_TAB) return walletWithdrawalsPanel(address, data.walletStats, graphWindow, graphMode, workerSort, workerDir, graphDetails, data.payments, pages.withdrawalPage, pages.withdrawalLimit, pages.blockRewardPage, pages.blockRewardLimit);
+  if (tab === BLOCK_REWARDS_TAB) return walletBlockRewardsPanel(address, data.poolStats, graphWindow, graphMode, workerSort, workerDir, graphDetails, data.blockPayments, pages.blockRewardPage, pages.blockRewardLimit, pages.withdrawalPage, pages.withdrawalLimit);
+  if (tab === THRESHOLD_TAB) return paymentThresholdPanel(address, data.userSettings, data.payoutPolicy);
+  if (tab === EMAIL_ALERTS_TAB) return emailAlertsPanel(address, data.userSettings);
+  const graph = hashrateChart(data.graphPoints, graphWindow, graphMode === "raw" ? "hsh" : "hsh2");
+  return walletOverview(data.walletStats, data.workers, graph, address, graphWindow, graphMode, workerSort, workerDir, graphDetails);
 }
 
 function walletDetailTabs(address, activeTab, graphWindow, graphMode, workerSort, workerDir, graphDetails) {
   const tabs = [
     [OVERVIEW_TAB, "Overview", "Wallet balance, pool-side hashrate, total graph, worker graphs."],
-    [BLOCK_REWARDS_TAB, "Block rewards", BLOCK_REWARD_HELP],
-    [WITHDRAWALS_TAB, "XMR withdrawals", EXPLANATIONS.py],
-    [THRESHOLD_TAB, "Payment threshold", EXPLANATIONS.py],
-    [EMAIL_ALERTS_TAB, "Email alerts", "Manage email notices."]
+    [BLOCK_REWARDS_TAB, "Rewards", BLOCK_REWARD_HELP],
+    [WITHDRAWALS_TAB, "Withdrawals", EXPLANATIONS.payoutPolicy],
+    [THRESHOLD_TAB, "Payout", EXPLANATIONS.payoutPolicy],
+    [EMAIL_ALERTS_TAB, "Alerts", "Manage email notices."]
   ];
   const active = activeTab;
   // The magnifier is visually paired with Overview because the extra total
-  // hashes/share lines only exist on overview graphs. On other wallet tabs it
+  // hashes/share lines only exist on overview graphs. On other wallet tabs inline-tabs
   // still links back to Overview with details enabled, instead of implying that
   // table views have a hidden detail mode.
   const targetDetails = active === OVERVIEW_TAB ? !graphDetails : true;
@@ -162,12 +164,12 @@ function walletDetailTabs(address, activeTab, graphWindow, graphMode, workerSort
 }
 
 function walletOverview(stats, workers, graph, address, graphWindow, graphMode, workerSort, workerDir, graphDetails) {
-  return `<section class=pn>
-    <div class="cd gd kg">
+  return `<section class=panel>
+    <div class="card grid kpi-grid wallet-kpi-grid">
       ${walletKpis(stats, workers.length, stats.hash2 || stats.hash || graph.a, linkLabel("XMR total due", walletRouteWithGraph(address, THRESHOLD_TAB, graphWindow, graphMode, workerSort, workerDir, graphDetails)), linkLabel("XMR paid", walletRouteWithGraph(address, WITHDRAWALS_TAB, graphWindow, graphMode, workerSort, workerDir, graphDetails)))}
     </div>
-    <div class=cd>
-      ${graph.p.length ? chartHtml(graph.m, graph.l, graph.r, graph.a, "Wallet hashrate chart", graphDetails ? miningStatsLine(stats) : "") : `<p class=mt>Graph appears after submitted shares. Backend samples every 2 minutes; points use a 10-minute window.</p>`}
+    <div class=card>
+      ${graph.p.length ? chartHtml(graph.m, graph.l, graph.r, graph.a, "Wallet hashrate chart", graphDetails ? miningStatsLine(stats) : "") : `<p class=muted>Graph appears after submitted shares. Backend samples every 2 minutes; points use a 10-minute window.</p>`}
     </div>
   </section>`;
 }
@@ -177,42 +179,42 @@ function walletGraphControls(address, graphWindow, graphMode, workerSort, worker
 }
 
 export function walletKpis(stats, workerCount, currentHashrate, dueLabel = "XMR total due", paidLabel = "XMR paid") {
-  return `${kpi(dueLabel, formatAtomicXmrValue(stats.amtDue ?? stats.due ?? 0), "Payment threshold is in wallet settings.")}
-      ${kpi(paidLabel, formatAtomicXmrValue(stats.amtPaid ?? stats.paid ?? 0), "Historical wallet payouts.")}
+  return `${kpi(dueLabel, formatAtomicXmrValue(stats.amtDue ?? stats.due ?? 0, 6), "Payment threshold is in wallet settings.")}
+      ${kpi(paidLabel, formatAtomicXmrValue(stats.amtPaid ?? stats.paid ?? 0, 6), "Historical wallet payouts.")}
       ${kpi("Workers", formatNumber(workerCount), "Individual miner devices.")}
-      ${kpi("Current pool estimate", formatHashrate(currentHashrate), EXPLANATIONS.c)}`;
+      ${kpi("Hashrate", formatHashrate(currentHashrate), EXPLANATIONS.currentHashrate)}`;
 }
 
 export function walletWorkersSection(address, workers, workerCharts, graphWindow, graphMode, workerSort, workerDir, graphDetails, displayMode = workerMode, showDead = workerShowDead) {
-  const visibleWorkers = showDead ? workers : workers.filter((worker) => worker.st !== "Dead");
+  const visibleWorkers = showDead ? workers : workers.filter((worker) => worker.status !== "Dead");
   if (displayMode === "list") return walletWorkerTable(address, visibleWorkers, graphWindow, graphMode, workerSort, workerDir, graphDetails, displayMode, showDead);
   const sorted = sortWorkerRows(visibleWorkers, workerSort, workerDir);
   const chartKey = graphMode === "raw" ? "hsh" : "hsh2";
   const nameDir = nextSortDirection(workerSort, workerDir, "name");
   const hashrateDir = nextSortDirection(workerSort, workerDir, "h");
   const cols = typeof displayMode === "number" ? displayMode : workerGraphColumns();
-  const controls = `<div class=bc><div class=br>${workerModeLinks(address, graphWindow, graphMode, workerSort, workerDir, graphDetails, cols, showDead)}</div><div class=br>${chipLink(`Name${workerSort === "name" ? (workerDir === "asc" ? " ↑" : " ↓") : ""}`, walletRouteWithGraph(address, OVERVIEW_TAB, graphWindow, graphMode, "name", nameDir, graphDetails, cols, showDead), workerSort === "name")}${chipLink(`Hashrate${workerSort === "h" ? (workerDir === "asc" ? " ↑" : " ↓") : ""}`, walletRouteWithGraph(address, OVERVIEW_TAB, graphWindow, graphMode, "h", hashrateDir, graphDetails, cols, showDead), workerSort === "h")}</div></div>`;
-  return `<section class=pn><div class=cd>${controls}<div class="wgg w${cols}">${sorted.map((worker) => workerGraphCard(worker, workerCharts?.[worker.n], chartKey, graphWindow, graphDetails)).join("") || `<div class=mt>No workers.</div>`}</div></div></section>`;
+  const controls = `<div class=block-controls><div class=bar>${workerModeLinks(address, graphWindow, graphMode, workerSort, workerDir, graphDetails, cols, showDead)}</div><div class=bar>${chipLink(`Name${workerSort === "name" ? (workerDir === "asc" ? " ↑" : " ↓") : ""}`, walletRouteWithGraph(address, OVERVIEW_TAB, graphWindow, graphMode, "name", nameDir, graphDetails, cols, showDead), workerSort === "name")}${chipLink(`Hashrate${workerSort === "h" ? (workerDir === "asc" ? " ↑" : " ↓") : ""}`, walletRouteWithGraph(address, OVERVIEW_TAB, graphWindow, graphMode, "h", hashrateDir, graphDetails, cols, showDead), workerSort === "h")}</div></div>`;
+  return `<section class=panel><div class=card>${controls}<div class="worker-graph-grid w${cols}">${sorted.map((worker) => workerGraphCard(worker, workerCharts?.[worker.n], chartKey, graphWindow, graphDetails)).join("") || `<div class=muted>No workers.</div>`}</div></div></section>`;
 }
 
 function walletWorkerTable(address, workers, graphWindow, graphMode, workerSort, workerDir, graphDetails, displayMode = workerMode, showDead = workerShowDead) {
-  const sort = workerListSortMode(workerSort);
-  const direction = sort === "name" && workerSort !== "name" ? "asc" : workerDir;
-  const sorted = sortWorkerListRows(workers, sort, direction);
-  return tablePage("", "", workerTableHeadings(address, graphWindow, graphMode, sort, direction, graphDetails, showDead), sorted.map(workerTableRow), workerModeControls(address, graphWindow, graphMode, sort, direction, graphDetails, displayMode, showDead), "Workers", "No workers.");
+  const sortable = workerListSortMode(workerSort);
+  const direction = sortable === "name" && workerSort !== "name" ? "asc" : workerDir;
+  const sorted = sortWorkerListRows(workers, sortable, direction);
+  return tablePage("", "", workerTableHeadings(address, graphWindow, graphMode, sortable, direction, graphDetails, showDead), sorted.map(workerTableRow), workerModeControls(address, graphWindow, graphMode, sortable, direction, graphDetails, displayMode, showDead), "Workers", "No workers.");
 }
 
 function workerModeControls(address, graphWindow, graphMode, workerSort, workerDir, graphDetails, activeMode, showDead = workerShowDead) {
-  return `<div class=bc><div class=br>${workerModeLinks(address, graphWindow, graphMode, workerSort, workerDir, graphDetails, activeMode, showDead)}</div></div>`;
+  return `<div class=block-controls><div class=bar>${workerModeLinks(address, graphWindow, graphMode, workerSort, workerDir, graphDetails, activeMode, showDead)}</div></div>`;
 }
 
 function workerModeLinks(address, graphWindow, graphMode, workerSort, workerDir, graphDetails, activeMode, showDead = workerShowDead) {
   const mode = activeMode || workerMode || workerGraphColumns();
   const deadLink = chipLink("Dead", walletRouteWithGraph(address, OVERVIEW_TAB, graphWindow, graphMode, workerSort, workerDir, graphDetails, mode, !showDead), showDead);
   return deadLink + ["list", 1, 2, 3].map((value) => {
-    const sort = value === "list" ? workerListSortMode(workerSort) : workerSortMode(workerSort);
-    const direction = value === "list" && sort === "name" && workerSort !== "name" ? "asc" : workerDir;
-    return chipLink(value === "list" ? "List" : value, walletRouteWithGraph(address, OVERVIEW_TAB, graphWindow, graphMode, sort, direction, graphDetails, value, showDead), mode === value);
+    const sortable = value === "list" ? workerListSortMode(workerSort) : workerSortMode(workerSort);
+    const direction = value === "list" && sortable === "name" && workerSort !== "name" ? "asc" : workerDir;
+    return chipLink(value === "list" ? "List" : value, walletRouteWithGraph(address, OVERVIEW_TAB, graphWindow, graphMode, sortable, direction, graphDetails, value, showDead), mode === value);
   }).join("");
 }
 
@@ -225,7 +227,7 @@ function sortableWorkerHeading(label, key, address, graphWindow, graphMode, acti
   const firstDirection = { name: "asc" };
   const next = nextSortDirectionForKey(active, direction, key, firstDirection);
   const arrow = selected ? (direction === "asc" ? " ↑" : " ↓") : "";
-  return { html: `<a class="sort" href="${walletRouteWithGraph(address, OVERVIEW_TAB, graphWindow, graphMode, key, next, graphDetails, "list", showDead)}">${escapeHtml(label)}${escapeHtml(arrow)}</a>` };
+  return { html: `<a class="sortable" href="${walletRouteWithGraph(address, OVERVIEW_TAB, graphWindow, graphMode, key, next, graphDetails, "list", showDead)}">${escapeHtml(label)}${escapeHtml(arrow)}</a>` };
 }
 
 function workerTableRow(worker) {
@@ -238,9 +240,9 @@ function workerTableRow(worker) {
     dateCell(worker.l),
     formatNumber(worker.vs),
     formatNumber(worker.is),
-    formatNumber(worker.th)
+    formatNumber(worker.totalHashes)
   ];
-  return worker.st === "Active" ? row : row.map(redCell);
+  return worker.status === "Active" ? row : row.map(redCell);
 }
 
 function redCell(cell) {
@@ -250,18 +252,19 @@ function redCell(cell) {
 function workerGraphCard(worker, chartRows, chartKey, graphWindow, graphDetails) {
   const graph = hashrateChart(chartRows || [], graphWindow, chartKey);
   const zeroHashrate = Number(worker.r) <= 0;
-  const inactive = worker.st !== "Active" || zeroHashrate;
-  const statusTitle = worker.st;
+  const inactive = worker.status !== "Active" || zeroHashrate;
+  const statusTitle = worker.status;
   const workerName = inactive ? `<span class=red title="${escapeHtml(statusTitle)}">${escapeHtml(worker.n)}</span>` : escapeHtml(worker.n);
-  const rate = `<span class=${inactive ? "red" : "mt"}${inactive ? ` title="${escapeHtml(statusTitle)}"` : ""}>${formatHashrate(worker.r)}</span>`;
-  return `<article class=cd><div class="wch${zeroHashrate ? " red" : ""}"><h3>${workerName}${lastShareAgeSuffix(worker.l)}</h3>${rate}</div>${graph.p.length ? chartHtml(graph.m, graph.l, graph.r, graph.a, `${worker.n} worker hashrate chart`, graphDetails ? miningStatsLine(worker) : "") : `<p class=mt>No worker chart points.</p>`}</article>`;
+  const rate = `<span class=${inactive ? "red" : "muted"}${inactive ? ` title="${escapeHtml(statusTitle)}"` : ""}>${formatHashrate(worker.r)}</span>`;
+  return `<article class=card><div class="worker-chart-header${zeroHashrate ? " red" : ""}"><h3>${workerName}${lastShareAgeSuffix(worker.l)}</h3>${rate}</div>${graph.p.length ? chartHtml(graph.m, graph.l, graph.r, graph.a, `${worker.n} worker hashrate chart`, graphDetails ? miningStatsLine(worker) : "") : `<p class=muted>No worker chart points.</p>`}</article>`;
 }
 
 export function walletRouteWithGraph(address, tab, window, mode, workerSort = "h", workerDir = "desc", graphDetails = false, cols = workerMode || workerGraphColumns(), showDead = workerShowDead) {
   const displayMode = workerDisplayMode(cols);
-  const sort = displayMode === "list" ? workerListSortMode(workerSort) : workerSortMode(workerSort);
-  const direction = displayMode === "list" && sort === "name" && workerSort !== "name" ? "asc" : workerSortDirection(workerDir);
-  return `${walletRoute(address, tab)}?w=${window}&m=${mode}&c=${displayMode}&s=${sort}&d=${direction}${showDead ? "" : "&e=0"}${graphDetails ? "&x=1" : ""}`;
+  const sortable = displayMode === "list" ? workerListSortMode(workerSort) : workerSortMode(workerSort);
+  const direction = displayMode === "list" && sortable === "name" && workerSort !== "name" ? "asc" : workerSortDirection(workerDir);
+  const graphMode = mode === "raw" ? "raw" : "xmr";
+  return `${walletRoute(address, tab)}?window=${window}&mode=${graphMode}&view=${displayMode}&sort=${sortable}&dir=${direction}${showDead ? "" : "&dead=0"}${graphDetails ? "&stats=1" : ""}`;
 }
 
 function walletWithdrawalsPanel(address, stats, graphWindow, graphMode, workerSort, workerDir, graphDetails, withdrawals, withdrawalPage, withdrawalLimit, blockRewardPage, blockRewardLimit) {
@@ -271,7 +274,7 @@ function walletWithdrawalsPanel(address, stats, graphWindow, graphMode, workerSo
     formatNumber(atomicXmr(pay.amount ?? pay.value ?? 0), 8),
     paymentHashLink(pay.txnHash || pay.hash || pay.txHash)
   ]);
-  return walletPaymentTable("XMR withdrawals", ["Sent time","Amount (XMR)","Tx hash"], withdrawalRows, walletWithdrawalControls(address, graphWindow, graphMode, workerSort, workerDir, graphDetails, withdrawalPage, withdrawalLimit, withdrawals.length, withdrawalCount, blockRewardPage, blockRewardLimit));
+  return walletPaymentTable("Withdrawals", ["Sent time","Amount (XMR)","Tx hash"], withdrawalRows, walletWithdrawalControls(address, graphWindow, graphMode, workerSort, workerDir, graphDetails, withdrawalPage, withdrawalLimit, withdrawals.length, withdrawalCount, blockRewardPage, blockRewardLimit));
 }
 
 function walletBlockRewardsPanel(address, pool, graphWindow, graphMode, workerSort, workerDir, graphDetails, blockRewards, blockRewardPage, blockRewardLimit, withdrawalPage, withdrawalLimit) {
@@ -285,18 +288,17 @@ function walletBlockRewardsPanel(address, pool, graphWindow, graphMode, workerSo
     blockHashLink(row.p.hash || row.p.hash_pay)
   ]);
   const hasStaleTail = annotatedRewards.some((row) => row.s);
-  return walletPaymentTable("Block rewards", ["Pay time","Found time","Amount (XMR)","Block share (%)","Coin","Block hash"], blockRewardRows, walletBlockRewardControls(address, graphWindow, graphMode, workerSort, workerDir, graphDetails, blockRewardPage, blockRewardLimit, blockRewards.length, hasStaleTail, withdrawalPage, withdrawalLimit));
+  return walletPaymentTable("Rewards", ["Pay time","Found time","Amount (XMR)","Block share (%)","Coin","Block hash"], blockRewardRows, walletBlockRewardControls(address, graphWindow, graphMode, workerSort, workerDir, graphDetails, blockRewardPage, blockRewardLimit, blockRewards.length, hasStaleTail, withdrawalPage, withdrawalLimit));
 }
 
 const BLOCK_REWARD_DETAIL_RETENTION_SECONDS = 2 * 24 * 60 * 60;
 const STALE_BLOCK_REWARD_TITLE = "Old block detail likely DB-pruned; credited rewards are OK.";
 
 function annotateBlockRewards(blockRewards, now = Date.now()) {
-  // Backend block-balance detail is retained for a short period. A trailing run
-  // of old zero rows can mean detail was pruned rather than that the wallet got
-  // exactly zero reward; mark only that stale tail so fresh zero rewards remain
-  // normal table values. Short keys keep this temporary annotation compact:
-  // p payment row, n non-zero reward, o old enough for pruning, s stale-pruned.
+  // Backend block-balance detail is retained briefly. A trailing run of old
+  // zero rows can mean detail was pruned rather than that the wallet got exactly
+  // zero reward; mark only that stale tail so fresh zero rewards remain normal
+  // table values.
   const annotated = blockRewards.map((pay) => {
     const amount = Number(pay.value ?? pay.xmr ?? 0);
     const share = Number(pay.value_percent ?? pay.percent ?? 0);
@@ -328,7 +330,7 @@ function walletPaymentTable(title, headings, rows, controls) {
 function walletWithdrawalControls(address, graphWindow, graphMode, workerSort, workerDir, graphDetails, page, limit, rowCount, totalCount, blockRewardPage, blockRewardLimit) {
   const pageCount = pageCountFor(totalCount, limit);
   const hasNext = page < pageCount || (!totalCount && rowCount >= limit);
-  return walletPager("ww", page, limit, pageCount, hasNext, (nextPage, nextLimit) => walletPaymentRouteFor(address, WITHDRAWALS_TAB, graphWindow, graphMode, workerSort, workerDir, graphDetails, nextPage, nextLimit, blockRewardPage, blockRewardLimit), true, EXPLANATIONS.py);
+  return walletPager("ww", page, limit, pageCount, hasNext, (nextPage, nextLimit) => walletPaymentRouteFor(address, WITHDRAWALS_TAB, graphWindow, graphMode, workerSort, workerDir, graphDetails, nextPage, nextLimit, blockRewardPage, blockRewardLimit), true, EXPLANATIONS.payoutPolicy);
 }
 
 function walletBlockRewardControls(address, graphWindow, graphMode, workerSort, workerDir, graphDetails, page, limit, rowCount, hasStaleTail, withdrawalPage, withdrawalLimit) {
@@ -337,9 +339,9 @@ function walletBlockRewardControls(address, graphWindow, graphMode, workerSort, 
 }
 
 function walletPager(kind, page, limit, pageCount, hasNext, routeFor, canEditPage = true, explanation = "") {
-  return `<div class="wpto"${explanation ? ` title="${escapeHtml(explanation)}"` : ""}>
-    ${explanation ? `<p class="wpe ex dx">${escapeHtml(explanation)}</p>` : ""}
-    <div class="bpt wpt">
+  return `<div class="wallet-pager-top"${explanation ? ` title="${escapeHtml(explanation)}"` : ""}>
+    ${explanation ? `<p class="wallet-pager-note explanation comments-controlled">${escapeHtml(explanation)}</p>` : ""}
+    <div class="page-tools wallet-pager-tools">
       ${pageSizeSelect(`${kind}-page-size`, limit)}
       ${pagerNav(`${kind} pages`, `${kind}-page-input`, page, pageCount, hasNext, routeFor, limit, canEditPage)}
     </div>
@@ -348,16 +350,14 @@ function walletPager(kind, page, limit, pageCount, hasNext, routeFor, canEditPag
 
 function walletPaymentRouteFor(address, tab, graphWindow, graphMode, workerSort, workerDir, graphDetails, withdrawalPage, withdrawalLimit, blockRewardPage, blockRewardLimit) {
   // Wallet table paging shares one route so switching between withdrawals and
-  // block rewards preserves the other table's page size. Query names stay long
-  // and readable because users can see/bookmark them; only private DOM hooks are
-  // abbreviated for build size.
-  let params = `w=${graphWindow}&m=${graphMode}&c=${workerMode || workerGraphColumns()}&s=${workerSort}&d=${workerDir}`;
-  if (!workerShowDead) params += "&e=0";
-  if (graphDetails) params += "&x=1";
-  if (withdrawalPage > 1) params += `&wp=${withdrawalPage}`;
-  params += `&wl=${blockPageSize(withdrawalLimit)}`;
-  if (blockRewardPage > 1) params += `&bp=${blockRewardPage}`;
-  params += `&bl=${blockPageSize(blockRewardLimit)}`;
+  // block rewards preserves the other table's page size.
+  let params = `window=${graphWindow}&mode=${graphMode}&view=${workerMode || workerGraphColumns()}&sort=${workerSort}&dir=${workerDir}`;
+  if (!workerShowDead) params += "&dead=0";
+  if (graphDetails) params += "&stats=1";
+  if (withdrawalPage > 1) params += `&wpage=${withdrawalPage}`;
+  params += `&wlimit=${blockPageSize(withdrawalLimit)}`;
+  if (blockRewardPage > 1) params += `&rpage=${blockRewardPage}`;
+  params += `&rlimit=${blockPageSize(blockRewardLimit)}`;
   return `${walletRoute(address, tab)}?${params}`;
 }
 
@@ -367,54 +367,54 @@ export function walletPaymentRoute(overrides = {}) {
   return walletPaymentRouteFor(
     route.a,
     route.t === BLOCK_REWARDS_TAB ? BLOCK_REWARDS_TAB : WITHDRAWALS_TAB,
-    query.w || state.gw,
-    query.m || state.gm,
-    workerSortMode(query.s),
-    workerSortDirection(query.d),
-    query.x === "1",
-    overrides.withdrawalPage ?? routePageNumber(query.wp),
-    overrides.withdrawalLimit ?? blockPageSize(query.wl),
-    overrides.blockRewardPage ?? routePageNumber(query.bp),
-    overrides.blockRewardLimit ?? blockPageSize(query.bl)
+    query.window || state.gw,
+    query.mode || state.gm,
+    workerSortMode(query.sort),
+    workerSortDirection(query.dir),
+    query.stats === "1",
+    overrides.withdrawalPage ?? routePageNumber(query.wpage),
+    overrides.withdrawalLimit ?? blockPageSize(query.wlimit),
+    overrides.blockRewardPage ?? routePageNumber(query.rpage),
+    overrides.blockRewardLimit ?? blockPageSize(query.rlimit)
   );
 }
 
-function paymentThresholdPanel(address, settings, pp) {
-  const policy = normalizePayoutPolicy(pp);
-  if (!policy) return `<section class="pn sgd"><div class="cd sgc"><p class="sst red">Payout policy unavailable from API.</p></div></section>`;
+function paymentThresholdPanel(address, settings, payoutPolicy) {
+  const policy = normalizePayoutPolicy(payoutPolicy);
+  if (!policy) return `<section class="panel settings-grid"><div class="card settings-card"><p class="settings-status red">Payout policy unavailable from API.</p></div></section>`;
   const threshold = payoutThresholdFromAtomic(settings.payout_threshold, policy);
   const thresholdText = formatPayoutThresholdInput(threshold, policy);
-  const minimumThreshold = formatPayoutThresholdInput(policy.m, policy);
-  return `<section class="pn sgd">
-    <form id="wpf" class="cd sgc" data-a="${escapeHtml(address)}" data-pp="${escapeHtml(JSON.stringify(policy))}" title="${escapeHtml(`Minimum threshold is ${minimumThreshold} XMR. ${EXPLANATIONS.py}`)}">
-      <label class="sft" for="wpi">Current payment threshold (XMR)</label>
-      <div class="sgr spr">
-        <input id=wpi inputmode=decimal autocomplete=off value="${escapeHtml(thresholdText)}" aria-describedby=wfee>
-        <button id=wps type=submit>Update</button>
+  const minimumThreshold = formatPayoutThresholdInput(policy.minimumThreshold, policy);
+  return `<section class="panel settings-grid">
+    <form id="payout-form" class="card settings-card" data-wallet-address="${escapeHtml(address)}" data-payout-policy="${escapeHtml(JSON.stringify(policy))}" title="${escapeHtml(`Minimum threshold is ${minimumThreshold} XMR. ${EXPLANATIONS.payoutPolicy}`)}">
+      <label class="settings-field-title" for="payout-input">Current payment threshold (XMR)</label>
+      <div class="settings-row payout-row">
+        <input id=payout-input inputmode=decimal autocomplete=off value="${escapeHtml(thresholdText)}" aria-describedby=payout-fee>
+        <button id=payout-submit type=submit>Update</button>
       </div>
-      <p id=wfee class=mt title="Estimated XMR tx fee from pool policy. Higher thresholds reduce relative fee.">${escapeHtml(payoutFeeText(threshold, policy))}</p>
-      <p class="mt ex dx">Minimum threshold is ${minimumThreshold} XMR. ${EXPLANATIONS.py}</p>
-      <p id=wpst class="sst mt" role=status></p>
+      <p id=payout-fee class=muted title="Estimated XMR tx fee from pool policy. Higher thresholds reduce relative fee.">${escapeHtml(payoutFeeText(threshold, policy))}</p>
+      <p class="muted explanation comments-controlled">Minimum threshold is ${minimumThreshold} XMR. ${EXPLANATIONS.payoutPolicy}</p>
+      <p id=payout-status class="settings-status muted" role=status></p>
     </form>
   </section>`;
 }
 
 function emailAlertsPanel(address, settings) {
   const ee = Number(settings.email_enabled) === 1;
-  return `<section class="pn sgd">
-    <form id="wef" class="cd sgc" data-a="${escapeHtml(address)}" title="${EMAIL_ALERTS_HELP}">
-      <div class="sgr spr">
-        <button id=wet class=sb type=submit data-ea=toggle data-ee="${ee ? "0" : "1"}" aria-pressed="${ee}" title="${ee ? "Disable email alerts" : "Enable email alerts"}">Email alerts: ${ee ? "Enabled" : "Disabled"}</button>
+  return `<section class="panel settings-grid">
+    <form id="email-form" class="card settings-card" data-wallet-address="${escapeHtml(address)}" title="${EMAIL_ALERTS_HELP}">
+      <div class="settings-row payout-row">
+        <button id=email-toggle class=state-button type=submit data-email-action=toggle data-email-enabled="${ee ? "0" : "1"}" aria-pressed="${ee}" title="${ee ? "Disable email alerts" : "Enable email alerts"}">Email alerts: ${ee ? "Enabled" : "Disabled"}</button>
       </div>
-      <label for="wefr">Current email</label>
-      <input id=wefr type=email autocomplete=email placeholder=old@example.com>
-      <label for="weto">New email</label>
-      <input id=weto type=email autocomplete=email placeholder=new@example.com>
-      <div class=br>
-        <button type=submit data-ea=change data-ee=1>Change email</button>
+      <label for="email-current">Current email</label>
+      <input id=email-current type=email autocomplete=email placeholder=old@example.com>
+      <label for="email-new">New email</label>
+      <input id=email-new type=email autocomplete=email placeholder=new@example.com>
+      <div class=bar>
+        <button type=submit data-email-action=change data-email-enabled=1>Change email</button>
       </div>
-      <p class="mt ex dx">${EMAIL_ALERTS_HELP}</p>
-      <p id=west class="sst mt" role=status></p>
+      <p class="muted explanation comments-controlled">${EMAIL_ALERTS_HELP}</p>
+      <p id=email-status class="settings-status muted" role=status></p>
     </form>
   </section>`;
 }
@@ -426,26 +426,26 @@ export function workerList(data, charts = {}, now = Date.now()) {
 export function lastShareAgeSuffix(source, now = Date.now()) {
   const ts = normalizeTimestampSeconds(source && typeof source === "object" ? source.lastHash ?? source.lastShare ?? source.lts ?? source.last ?? source.l : source);
   if (!ts || now / 1000 - ts <= 180) return "";
-  return ` <span class=lsa title="${escapeHtml(formatDate(ts))}">(${escapeHtml(formatAge(ts, now))})</span>`;
+  return ` <span class=last-share-age title="${escapeHtml(formatDate(ts))}">(${escapeHtml(formatAge(ts, now))})</span>`;
 }
 
 function miningStatsLine(stats = {}) {
-  const total = stats.th ?? stats.totalHashes ?? stats.totalHash ?? stats.hashes ?? 0;
+  const total = stats.totalHashes ?? stats.th ?? stats.totalHash ?? stats.hashes ?? 0;
   const valid = stats.vs ?? stats.validShares ?? stats.valid ?? stats.shares ?? stats.s ?? 0;
   const invalid = stats.is ?? stats.invalidShares ?? stats.invalid ?? stats.badShares ?? stats.bad_shares ?? 0;
   return [`Total hashes ${formatNumber(total)}`, `Valid shares ${formatNumber(valid)}`, `Invalid shares ${formatNumber(invalid)}`];
 }
 
 export function bindSettingsForms() {
-  const thresholdForm = qs("#wpf");
-  const thresholdInput = qs("#wpi");
-  const thresholdButton = qs("#wps");
-  const feeLabel = qs("#wfee");
-  const thresholdStatus = qs("#wpst");
-  const pp = thresholdForm?.dataset.pp ? normalizePayoutPolicy(JSON.parse(thresholdForm.dataset.pp)) : null;
+  const thresholdForm = qs("#payout-form");
+  const thresholdInput = qs("#payout-input");
+  const thresholdButton = qs("#payout-submit");
+  const feeLabel = qs("#payout-fee");
+  const thresholdStatus = qs("#payout-status");
+  const payoutPolicy = thresholdForm?.dataset.payoutPolicy ? normalizePayoutPolicy(JSON.parse(thresholdForm.dataset.payoutPolicy)) : null;
   const updateFee = () => {
-    if (feeLabel && thresholdInput) feeLabel.textContent = payoutFeeText(thresholdInput.value, pp);
-    const validation = validatePayoutThreshold(thresholdInput?.value, pp);
+    if (feeLabel && thresholdInput) feeLabel.textContent = payoutFeeText(thresholdInput.value, payoutPolicy);
+    const validation = validatePayoutThreshold(thresholdInput?.value, payoutPolicy);
     if (thresholdButton) thresholdButton.disabled = !validation.valid;
     if (thresholdStatus) {
       setSettingsStatus(thresholdStatus, validation.valid ? "" : validation.message, validation.valid ? "muted" : "red");
@@ -453,20 +453,20 @@ export function bindSettingsForms() {
   };
   on(thresholdInput, "input", updateFee);
   updateFee();
-  on(thresholdForm, "submit", async (event) => saveThreshold(event, thresholdForm, thresholdInput, thresholdStatus, pp, updateFee));
+  on(thresholdForm, "submit", async (event) => saveThreshold(event, thresholdForm, thresholdInput, thresholdStatus, payoutPolicy, updateFee));
   bindEmailForm();
 }
 
-async function saveThreshold(event, thresholdForm, thresholdInput, thresholdStatus, pp, updateFee) {
+async function saveThreshold(event, thresholdForm, thresholdInput, thresholdStatus, payoutPolicy, updateFee) {
   event.preventDefault();
-  const address = thresholdForm.dataset.a;
-  const validation = validatePayoutThreshold(thresholdInput?.value, pp);
+  const address = thresholdForm.dataset.walletAddress;
+  const validation = validatePayoutThreshold(thresholdInput?.value, payoutPolicy);
   const threshold = validation.threshold;
   if (!validation.valid) {
     setSettingsStatus(thresholdStatus, validation.message, "red");
     return;
   }
-  thresholdInput.value = formatPayoutThresholdInput(threshold, pp);
+  thresholdInput.value = formatPayoutThresholdInput(threshold, payoutPolicy);
   updateFee();
   setSettingsStatus(thresholdStatus, "Saving threshold...");
   try {
@@ -479,16 +479,16 @@ async function saveThreshold(event, thresholdForm, thresholdInput, thresholdStat
 }
 
 function bindEmailForm() {
-  const emailForm = qs("#wef");
-  const emailStatus = qs("#west");
+  const emailForm = qs("#email-form");
+  const emailStatus = qs("#email-status");
   on(emailForm, "submit", async (event) => {
     event.preventDefault();
     const submitter = event.submitter;
-    const enabled = submitter?.dataset.ee === "1" ? 1 : 0;
-    const action = submitter?.dataset.ea || "change";
-    const address = emailForm.dataset.a;
-    const from = action === "toggle" ? "" : qs("#wefr")?.value.trim() || "";
-    const to = action === "toggle" ? "" : qs("#weto")?.value.trim() || "";
+    const enabled = submitter?.dataset.emailEnabled === "1" ? 1 : 0;
+    const action = submitter?.dataset.emailAction || "change";
+    const address = emailForm.dataset.walletAddress;
+    const from = action === "toggle" ? "" : qs("#email-current")?.value.trim() || "";
+    const to = action === "toggle" ? "" : qs("#email-new")?.value.trim() || "";
     setSettingsStatus(emailStatus, "Saving email preferences...");
     try {
       const result = await api.subscribeEmail(address, enabled, from, to);
@@ -503,14 +503,14 @@ function bindEmailForm() {
 
 function setSettingsStatus(node, message, tone = "muted") {
   node.textContent = message;
-  node.className = `sst ${tone === "muted" ? "mt" : tone}`;
+  node.className = `settings-status ${tone === "muted" ? "muted" : tone}`;
 }
 
 function syncEmailToggle(enabled) {
-  const toggle = qs("#wet");
+  const toggle = qs("#email-toggle");
   if (!toggle) return;
   toggle.textContent = `Email alerts: ${enabled ? "Enabled" : "Disabled"}`;
-  toggle.dataset.ee = enabled ? "0" : "1";
+  toggle.dataset.emailEnabled = enabled ? "0" : "1";
   attr(toggle, "aria-pressed", String(Boolean(enabled)));
   attr(toggle, "title", enabled ? "Disable email alerts" : "Enable email alerts");
 }

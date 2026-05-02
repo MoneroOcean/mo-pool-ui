@@ -4,7 +4,7 @@ import { coinProfitValue } from "./pool.js";
 
 export { HASHRATE_UNITS };
 
-export const CALC_PERIODS = [
+const CALC_PERIODS = [
   ["Day", 1],
   ["Week", 7],
   ["Month", 30],
@@ -36,13 +36,10 @@ export function calcProfitRows(value, unit, poolStats = {}, timezone) {
   const fiat = fiatForTimezone(timezone);
   const phDay = coinProfitValue(poolStats, XMR_PORT);
   const price = Number(poolStats.price?.[fiat.code]);
-  // HASHRATE_UNITS and CALC_PERIODS use tuples to avoid shipping repeated
-  // object property names; calculator display rows expand them back to named
-  // fields because the rest of the view is easier to read that way.
   return calcRowsForDisplay(value, unit, phDay, price, fiat.label);
 }
 
-export function calcRowsForDisplay(value, unit, phDay, price, fc) {
+export function calcRowsForDisplay(value, unit, phDay, price, fiatLabel) {
   const hashrate = hashrateFromInput(value, unit);
   return CALC_PERIODS.map(([label, days]) => {
     const xmr = hashrate * phDay * days;
@@ -51,7 +48,7 @@ export function calcRowsForDisplay(value, unit, phDay, price, fc) {
       days,
       xmr: isFiniteNumber(xmr) ? xmr : 0,
       fiat: isFiniteNumber(xmr) && isFiniteNumber(price) ? xmr * price : null,
-      fc
+      fiatLabel
     };
   });
 }

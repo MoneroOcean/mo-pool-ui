@@ -3,7 +3,6 @@ import { clearPreferenceStorage } from "./preferences.js";
 import { isXmrAddress } from "./routes.js";
 
 const KEY = "mo.wallets.v1";
-const OLD_KEY = "mo.accounts.v1";
 const CONSENT = "mo.consent.v1";
 const MAX = 10;
 const MAX_AGE = 180 * 24 * 60 * 60 * 1000;
@@ -36,9 +35,6 @@ export function setConsent(value) {
 
 export function loadWatchlist() {
   if (!canStoreHistory()) return [];
-  // OLD_KEY is removed opportunistically so renamed terminology does not keep
-  // stale "account" storage around after the UI switched to "wallet".
-  clearLegacyWalletHistoryStorage();
   try {
     const rows = JSON.parse(localStorage.getItem(KEY) || "[]");
     return rows.filter((row) => isXmrAddress(row.address) && Date.now() - row.time < MAX_AGE).slice(0, MAX);
@@ -72,11 +68,6 @@ function saveWatchlist(next) {
 
 function clearWalletHistoryStorage() {
   localStorage.removeItem(KEY);
-  clearLegacyWalletHistoryStorage();
-}
-
-function clearLegacyWalletHistoryStorage() {
-  localStorage.removeItem(OLD_KEY);
 }
 
 function canStoreHistory() { return readConsent() !== false; }

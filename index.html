@@ -24,15 +24,15 @@
   </script>
 </head>
 <body>
-  <a class="skl" href="#app">Skip to app</a>
-  <header class="tp">
-    <a class="bd" href="#/" aria-label="MoneroOcean">
-      <svg class="bm" viewBox="0 0 180 180" aria-hidden="true">
-        <path class="bt" d="M14 6c4 14 21 28 49 32 13 4 20 11 27 17 7-6 14-13 27-17 28-4 45-18 49-32 1 45-21 64-46 73-15 5-19 11-19 19 1 15 7 43 20 73-18-6-23-6-31 0-8-6-13-6-31 0 13-30 19-58 20-73 0-8-4-14-19-19-24-9-47-28-46-73z"></path>
+  <a class="skip-link" href="#app">Skip to app</a>
+  <header class="topbar">
+    <a class="brand" href="#/" aria-label="MoneroOcean">
+      <svg class="brand-mark" viewBox="0 0 180 180" aria-hidden="true">
+        <path class="brand-path" d="M14 6c4 14 21 28 49 32 13 4 20 11 27 17 7-6 14-13 27-17 28-4 45-18 49-32 1 45-21 64-46 73-15 5-19 11-19 19 1 15 7 43 20 73-18-6-23-6-31 0-8-6-13-6-31 0 13-30 19-58 20-73 0-8-4-14-19-19-24-9-47-28-46-73z"></path>
       </svg>
       <span>MoneroOcean</span>
     </a>
-    <nav class="nv" aria-label="Primary">
+    <nav class="nav" aria-label="Primary">
       <a href="#/">Wallets</a>
       <a href="#/coins">Coins</a>
       <a href="#/blocks">Blocks</a>
@@ -41,33 +41,29 @@
       <a href="#/setup">Setup</a>
       <a href="#/help">Help</a>
     </nav>
-    <div class="ta">
-      <button id="rnw" class="rb" title="Refresh visible data" aria-label="Refresh visible data">
-        <span class="rk" aria-hidden="true">↻</span>
-        <span id="rst" class="sro" aria-live="polite">Starting</span>
-      </button>
-      <button id="th" class="ib" title="Switch theme" aria-label="Switch theme">☾</button>
-      <button id="ct" class="ib" title="Toggle comments" aria-label="Toggle comments" aria-pressed="true">?</button>
+    <div class="top-actions">
+      <button id="theme-toggle" class="icon-button" title="Switch theme" aria-label="Switch theme">☾</button>
+      <button id="comments-toggle" class="icon-button" title="Toggle comments" aria-label="Toggle comments" aria-pressed="true">?</button>
     </div>
   </header>
 
-  <main id="app" class="sh" tabindex="-1">
-    <section class="ccp">
+  <main id="app" class="shell" tabindex="-1">
+    <section class="crawl-copy">
       <h1>MoneroOcean XMR Mining Pool Dashboard</h1>
       <p>Track MoneroOcean wallets, workers, ports, setup, blocks, payments, coins, and XMR payouts.</p>
     </section>
     <section id="view" aria-live="polite"></section>
   </main>
 
-  <footer class="ft">
+  <footer class="footer">
     <a href="https://x.com/MoneroOcean" rel="noopener" target="_blank">X</a>
     <a href="https://discordapp.com/invite/jXaR2kA" rel="noopener" target="_blank">Discord</a>
-    <span class="fc">Credits: <a href="https://github.com/MoneroOcean" rel="noopener" target="_blank">MoneroOcean</a>, <a href="https://github.com/Thunderosa" rel="noopener" target="_blank">Thunderosa</a>, and <a href="https://github.com/mesh0000" rel="noopener" target="_blank">mesh0000</a>.</span>
+    <span class="footer-credit">Credits: <a href="https://github.com/MoneroOcean" rel="noopener" target="_blank">MoneroOcean</a>, <a href="https://github.com/Thunderosa" rel="noopener" target="_blank">Thunderosa</a>, and <a href="https://github.com/mesh0000" rel="noopener" target="_blank">mesh0000</a>.</span>
     <a href="https://old.moneroocean.stream" rel="noopener">Old UI</a>
   </footer>
 
   <noscript>
-    <div class="ns">JavaScript required for pool data. Mine at gulf.moneroocean.stream with a Monero address for XMR payouts.</div>
+    <div class="noscript-notice">JavaScript required for pool data. Mine at gulf.moneroocean.stream with a Monero address for XMR payouts.</div>
   </noscript>
   <script src="script.js" type="module"></script>
 </body>

@@ -19,8 +19,8 @@ export async function helpView() {
   const statusOrDiscord = `${statusLink} or ${discordLink}`;
   const ppCopy = policy
     ? [
-      `${EXPLANATIONS.py} Limits: ${thresholdText(policy.m)} XMR min, ${thresholdText(policy.d)} XMR default.`,
-      `Min fee: ${payoutFeeText(policy.m, policy)}. ${thresholdText(policy.f.z)} XMR or more is zero-fee.`
+      `${EXPLANATIONS.payoutPolicy} Limits: ${thresholdText(policy.minimumThreshold)} XMR min, ${thresholdText(policy.defaultThreshold)} XMR default.`,
+      `Min fee: ${payoutFeeText(policy.minimumThreshold, policy)}. ${thresholdText(policy.feeFormula.zeroFeeThreshold)} XMR or more is zero-fee.`
     ]
     : ["Payout policy is unavailable from API."];
   const rows = [
@@ -31,14 +31,14 @@ export async function helpView() {
       "Stable worker ids prevent all_other_workers."
     ], true],
     ["Hashrate and pay", [
-      `${EXPLANATIONS.r} ${EXPLANATIONS.n}`,
+      `${EXPLANATIONS.rawHashrate} ${EXPLANATIONS.normalizedHashrate}`,
       "Raw is algorithm-specific; bigger raw can earn less XMR on another algo.",
       "Judge payout with XMR-normalized view, wallet block rewards, and Coins hash scalar."
     ], true],
     ["PPLNS and luck", [
-      EXPLANATIONS.p,
+      EXPLANATIONS.pplns,
       "Block share uses XMR-normalized work still in PPLNS when a block is found; small miners may see quiet periods.",
-      EXPLANATIONS.l,
+      EXPLANATIONS.luck,
       `Wallet Block reward hashes link to share dumps. Use ${helpLink(CALC_MO_CVS_URL, "calc_mo_cvs.js")} to audit a reward file.`
     ], true],
     ["Payments and wallet sync", [
@@ -47,7 +47,7 @@ export async function helpView() {
       "If total due is below threshold, keep mining or lower it in wallet settings. Below-threshold sends are usually fee-related."
     ], true],
     ["XMR payouts and altcoins", [
-      EXPLANATIONS.x,
+      EXPLANATIONS.xmrPayouts,
       "Algo switching can mine supported coins when better for XMR; balances/withdrawals stay XMR-denominated.",
       "Inactive/no-exchange coins are not useful for payout switching until exchange support returns."
     ]],
@@ -76,20 +76,20 @@ export async function helpView() {
       "GPU fixed-algorithm miners and meta-miner switch differently, so keep routing aligned with Setup."
     ]],
     ["Privacy/support", [
-      `${EXPLANATIONS.pv} Use trash on a saved wallet to clear local history.`,
-      `Local history stores up to 10 recent XMR addresses here for 180 days. It stores no keys, seeds, passwords, balances, payouts, or worker data. Disabling saves only that choice.<div class="br hhc"><button type="button" data-lh aria-pressed="${historyEnabled}">${historyEnabled ? "Disable" : "Enable"} local wallet history</button></div>`,
+      `${EXPLANATIONS.privacy} Use trash on a saved wallet to clear local history.`,
+      `Local history stores up to 10 recent XMR addresses here for 180 days. It stores no keys, seeds, passwords, balances, payouts, or worker data. Disabling saves only that choice.<div class="bar help-history-controls"><button type="button" data-local-history aria-pressed="${historyEnabled}">${historyEnabled ? "Disable" : "Enable"} local wallet history</button></div>`,
       `For pool-side deletion, email ${helpLink(`mailto:${supportEmail()}`, supportEmail())}. For config questions/outages, ${helpLink(DISCORD_URL, "MoneroOcean Discord")} is usually faster.`,
       "Use a mining-only address or subaddress if you do not want mining linked to other wallet activity."
     ]],
     ["Help the pool", [
-      `Report broken explorers, confusing UI/setup output, and incidents in ${discordLink} or by email. Donation address:<div class="cbx hdn"><button class="cpy" data-c="#da">Copy</button><pre id="da">${DONATION_XMR}</pre></div>`
+      `Report broken explorers, confusing UI/setup output, and incidents in ${discordLink} or by email. Donation address:<div class="code-box help-donation"><button class="copy-button" data-copy-target="#da">Copy</button><pre id="da">${DONATION_XMR}</pre></div>`
     ]]
   ];
-  return `<section class=pn><div class=ph><h1>Help</h1></div><div class="cd gd hg">${rows.map(([q, a, open]) => helpEntry(q, a, open)).join("")}</div></section>`;
+  return `<section class=panel><div class=panel-header><h1>Help</h1></div><div class="card grid help-grid">${rows.map(([q, a, open]) => helpEntry(q, a, open)).join("")}</div></section>`;
 }
 
 function helpEntry(question, answers, open = false) {
-  return `<details ${open ? "open" : ""}><summary>${escapeHtml(question)}</summary><div class="mt he"><ul class="hl">${answers.map((answer) => `<li>${answer}</li>`).join("")}</ul></div></details>`;
+  return `<details ${open ? "open" : ""}><summary>${escapeHtml(question)}</summary><div class="muted help-entry"><ul class="help-list">${answers.map((answer) => `<li>${answer}</li>`).join("")}</ul></div></details>`;
 }
 
 function helpLink(href, label) {

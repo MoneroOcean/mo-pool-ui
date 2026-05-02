@@ -4,6 +4,7 @@ import { encodeUrlPart } from "./format.js";
 const THEME_COOKIE = "mo.theme";
 const EXPLAIN_COOKIE = "mo.explain";
 const MAX_AGE = 180 * 24 * 60 * 60;
+const MULTILINE_KPI_MEDIA = "(max-width: 620px)";
 
 export function parseCookieValue(cookieText = "", key) {
   const prefix = `${key}=`;
@@ -12,8 +13,14 @@ export function parseCookieValue(cookieText = "", key) {
 
 export function readPreferences(cookieText = typeof document === "undefined" ? "" : document.cookie) {
   const theme = parseCookieValue(cookieText, THEME_COOKIE) === "light" ? "light" : "dark";
-  const explanations = parseCookieValue(cookieText, EXPLAIN_COOKIE) === "off" ? "off" : "on";
+  const explainCookie = parseCookieValue(cookieText, EXPLAIN_COOKIE);
+  const explanations = explainCookie === "off" || explainCookie === "on" ? explainCookie : defaultExplanations();
   return { theme, explanations };
+}
+
+function defaultExplanations() {
+  if (typeof window === "undefined" || !window.matchMedia) return "on";
+  return window.matchMedia(MULTILINE_KPI_MEDIA).matches ? "off" : "on";
 }
 
 function writePreference(key, value) {
@@ -43,8 +50,8 @@ export function saveExplanations(explanations, { persist = true } = {}) {
 }
 
 export function applyPreferences(preferences = readPreferences()) {
-  tog(document.body, "tl", preferences.theme === "light");
-  tog(document.body, "cof", preferences.explanations === "off");
+  tog(document.body, "theme-light", preferences.theme === "light");
+  tog(document.body, "comments-off", preferences.explanations === "off");
   return preferences;
 }
 

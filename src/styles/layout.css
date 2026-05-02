@@ -1,76 +1,79 @@
-.gd,
-.sgd,
-.sgc {
+.grid,
+.settings-grid,
+.settings-card {
   display: grid;
   gap: 12px;
 }
-.kg {
+.kpi-grid {
   grid-template-columns: repeat(auto-fit, minmax(min(45%, 260px), 1fr));
 }
-.pkg {
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 10px;
+.pool-kpi-grid {
+  grid-template-columns: repeat(6, minmax(86px, 1fr));
+  gap: 6px;
 }
-.pkg > div {
+.pool-kpi-grid > div {
+  min-width: 0;
+  padding-inline: 2px;
   text-align: center;
 }
-.pkg .ks {
+.pool-kpi-grid .status-link {
   justify-content: center;
 }
-.pn {
-  border: 1px solid var(--l);
-  background: linear-gradient(180deg, rgba(255,255,255,.025), transparent), var(--p);
-  box-shadow: var(--sh);
+.panel {
+  border: 1px solid var(--border-color);
+  background: linear-gradient(180deg, rgba(255,255,255,.025), transparent), var(--panel-bg);
+  box-shadow: var(--shadow-elevation);
   min-width: 0;
 }
-.ph, .cd {
+.panel-header, .card {
   padding: 14px;
   min-width: 0;
 }
-.ph {
+.panel-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  border-bottom: 1px solid var(--l);
+  border-bottom: 1px solid var(--border-color);
 }
 h1, h2, h3, p { margin-top: 0; }
 h1 { font-size: 26px; line-height: 1.1; margin-bottom: 10px; }
-h2 { font-size: 15px; text-transform: uppercase; letter-spacing: .08em; margin: 0; color: var(--g); }
-h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: var(--m); margin-bottom: 8px; }
-.mt { color: var(--m); }
-.red { color: var(--rd); }
-.vl {
+h2 { font-size: 15px; text-transform: uppercase; letter-spacing: .08em; margin: 0; color: var(--accent-color); }
+h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted-color); margin-bottom: 8px; }
+.muted { color: var(--muted-color); }
+.red { color: var(--danger-color); }
+.value {
   display: block;
   font-size: 28px;
   font-weight: 800;
   line-height: 1;
   overflow-wrap: anywhere;
 }
-.lb {
+.label {
   display: block;
   margin-top: 6px;
-  color: var(--m);
+  color: var(--muted-color);
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: .06em;
 }
-.pkg .vl {
-  font-size: 24px;
+.pool-kpi-grid .value {
+  font-size: clamp(17px, 1.55vw, 22px);
 }
-.pkg .lb {
-  font-size: 11px;
+.pool-kpi-grid .label {
+  font-size: 10px;
+  line-height: 1.2;
 }
-.ex {
+.explanation {
   margin: 9px 0 0;
-  color: var(--m);
+  color: var(--muted-color);
   font-size: 12px;
 }
-body.cof .dx {
+body.comments-off .comments-controlled {
   display: none;
 }
-.br,
-.tb {
+.bar,
+.tabs {
   gap: 8px;
   align-items: center;
 }
@@ -78,74 +81,74 @@ body.cof .dx {
   width: 100%;
   justify-content: space-between;
 }
-.brr {
+.bar-right {
   margin-left: auto;
   justify-content: end;
 }
-.bc {
+.block-controls {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
 }
-.bcl {
+.block-controls-left {
   align-items: center;
   gap: 12px;
   min-width: 0;
 }
-.bpt {
+.page-tools {
   align-items: center;
   justify-content: end;
   gap: 8px;
   margin-left: auto;
   min-width: 0;
 }
-.bpt .br {
+.page-tools .bar {
   flex-wrap: nowrap;
 }
-.wpto {
+.wallet-pager-top {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
 }
-.wpe {
+.wallet-pager-note {
   margin: 0;
   min-width: 0;
 }
-.bl {
+.block-summary {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
   gap: 8px;
-  color: var(--m);
+  color: var(--muted-color);
 }
-.bl strong {
-  color: var(--t);
+.block-summary strong {
+  color: var(--text-color);
   text-transform: uppercase;
   letter-spacing: .06em;
   font-size: 12px;
 }
-.bl span { font-weight: 800; }
-.green { color: var(--lg); }
-.bl .ex {
+.block-summary span { font-weight: 800; }
+.green { color: var(--success-color); }
+.block-summary .explanation {
   flex-basis: 100%;
 }
-.fd {
+.field {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  color: var(--m);
+  color: var(--muted-color);
   font-size: 12px;
   white-space: nowrap;
   min-width: 0;
 }
-.fd select {
+.field select {
   width: auto;
   min-width: 0;
 }
-#bcx {
+#blocks-coin-filter {
   min-width: 76px;
   width: auto;
 }

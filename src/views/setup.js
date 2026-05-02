@@ -6,11 +6,11 @@ import { escapeHtml, optionMarkup } from "./common.js";
 import { byId, on, qs, tog } from "../dom.js";
 
 const SETUP_STEPS = [
-  ["Download", "sd", "d", "dn"],
-  ["Run TLS", "srt", "rt", "rtn", "srtw"],
-  ["Run", "sr", "r", "rn", "srw"],
-  ["Tor", "sto", "to", "ton", "stow"],
-  ["Point workers at proxy", "sl", "l", "ln", "slw"]
+  ["Download", "setup-download", "downloadCommand", "downloadNote"],
+  ["Run TLS", "setup-run-tls", "tlsRunCommand", "tlsRunNote", "setup-run-tls-wrap"],
+  ["Run", "setup-run-plain", "plainRunCommand", "plainRunNote", "setup-run-plain-wrap"],
+  ["Tor", "setup-run-tor", "torCommand", "torNote", "setup-run-tor-wrap"],
+  ["Point workers at proxy", "setup-run-local", "localCommand", "localNote", "setup-run-local-wrap"]
 ];
 
 export async function setupView() {
@@ -19,30 +19,30 @@ export async function setupView() {
   state.s = setupConfiguredPorts(await api.poolPorts().catch(() => ({})));
   const plan = setupPlan({
     address,
-    os: query.o,
-    profile: query.p,
-    gpu: query.g,
-    algo: query.al,
-    hashrate: query.h,
-    hashrateUnit: query.u,
+    os: query.os,
+    profile: query.profile,
+    gpu: query.gpu,
+    algo: query.algo,
+    hashrate: query.rate,
+    hashrateUnit: query.unit,
     ports: state.s
   });
-  if (!plan.s.p) return `<section class=pn><div class=cd><h1>${escapeHtml(plan.tt)}</h1><p class=red>${escapeHtml(plan.sm)}</p></div></section>`;
-  const showGpu = setupShowsGpu(plan.s.pr);
-  const showAlgo = setupShowsAlgo(plan.s.pr);
+  if (!plan.selection.port) return `<section class=panel><div class=card><h1>${escapeHtml(plan.title)}</h1><p class=red>${escapeHtml(plan.summary)}</p></div></section>`;
+  const showGpu = setupShowsGpu(plan.selection.profile);
+  const showAlgo = setupShowsAlgo(plan.selection.profile);
   return `
-    <div class="gd spg">
-      <section class="pn scp">
-        <div class="cd sc" title="${escapeHtml(plan.nt)}">
+    <div class="grid setup-page">
+      <section class="panel setup-control-panel">
+        <div class="card setup-controls" title="${escapeHtml(plan.notes)}">
           ${setupTopTabs(plan)}
-          <label class=sw>XMR wallet<input id=sw value="${escapeHtml(address)}" autocomplete=off></label>
-          <div class="sfr">
-            ${setupSelect("sg", "GPU", SETUP_GPU_VENDORS, plan.s.g, `sfg ${showGpu ? "" : "hd"}`)}
-            ${setupSelect("sa", "Algorithm", setupAlgoOptions(plan.s.pr), plan.s.al, `sfa ${showAlgo ? "" : "hd"}`)}
-            <label class=shc>XMR h/r<input id=shr value="${escapeHtml(String(plan.s.hr))}" inputmode=decimal autocomplete=off></label>
-            <label class="su">Unit<select id="shu">${optionMarkup(SETUP_HASHRATE_UNITS.map(([id, label]) => [id, label]), plan.s.hu)}</select></label>
+          <label class=setup-wallet>XMR wallet<input id=setup-wallet value="${escapeHtml(address)}" autocomplete=off></label>
+          <div class="setup-form-row">
+            ${setupSelect("setup-gpu", "GPU", SETUP_GPU_VENDORS, plan.selection.gpu, `setup-gpu-field ${showGpu ? "" : "hidden"}`)}
+            ${setupSelect("setup-algo", "Algorithm", setupAlgoOptions(plan.selection.profile), plan.selection.algo, `setup-algo-field ${showAlgo ? "" : "hidden"}`)}
+            <label class=setup-hashrate>XMR h/r<input id=setup-hashrate-input value="${escapeHtml(String(plan.selection.hashrate))}" inputmode=decimal autocomplete=off></label>
+            <label class="setup-unit">Unit<select id="setup-hashrate-unit">${optionMarkup(SETUP_HASHRATE_UNITS.map(([id, label]) => [id, label]), plan.selection.hashrateUnit)}</select></label>
           </div>
-          <p id="sn" class="ex dx">${escapeHtml(plan.nt)}</p>
+          <p id="setup-notes" class="explanation comments-controlled">${escapeHtml(plan.notes)}</p>
         </div>
       </section>
       ${SETUP_STEPS.map(([title, id, textKey, noteKey, wrapId]) => setupStep(title, id, plan[textKey], plan[noteKey], wrapId, wrapId && !plan[textKey])).join("")}
@@ -51,14 +51,14 @@ export async function setupView() {
 
 function setupWalletAddress() {
   return setupAddress({
-    queryAddress: isXmrAddress(state.r.q?.a) ? state.r.q.a : "",
+    queryAddress: isXmrAddress(state.r.q?.addr) ? state.r.q.addr : "",
     activeAddress: isXmrAddress(state.a) ? state.a : "",
     watchlist: state.w.filter((row) => isXmrAddress(row.address))
   });
 }
 
 function setupStep(tt, id, text, note = "", wrapId = "", hidden = false) {
-  return `<section${wrapId ? ` id="${escapeHtml(wrapId)}"` : ""} class="pn ss ${hidden ? "hd" : ""}"><div class=cd><h2 id="${id}-tt" title="${escapeHtml(note)}">${escapeHtml(tt)}</h2><p id="${id}-note" class="ex dx ${note ? "" : "hd"}">${escapeHtml(note)}</p><div class=cbx><button class=cpy data-c="#${id}">Copy</button><pre id="${id}">${escapeHtml(text || "")}</pre></div></div></section>`;
+  return `<section${wrapId ? ` id="${escapeHtml(wrapId)}"` : ""} class="panel setup-step ${hidden ? "hidden" : ""}"><div class=card><h2 id="${id}-tt" title="${escapeHtml(note)}">${escapeHtml(tt)}</h2><p id="${id}-note" class="explanation comments-controlled ${note ? "" : "hidden"}">${escapeHtml(note)}</p><div class=code-box><button class=copy-button data-copy-target="#${id}">Copy</button><pre id="${id}">${escapeHtml(text || "")}</pre></div></div></section>`;
 }
 
 function setupSelect(id, label, options, selected, className) {
@@ -66,43 +66,43 @@ function setupSelect(id, label, options, selected, className) {
 }
 
 function setupTopTabs(plan) {
-  return `<div class="sf stf">
-    <input id="so" type="hidden" value="${escapeHtml(plan.s.os)}">
-    <input id="sp" type="hidden" value="${escapeHtml(plan.s.pr)}">
-    <div id="stt" class="sts" title="${escapeHtml(plan.nt)}">${setupTopButtons(plan)}</div>
+  return `<div class="setup-field setup-full-field">
+    <input id="setup-os" type="hidden" value="${escapeHtml(plan.selection.os)}">
+    <input id="setup-profile" type="hidden" value="${escapeHtml(plan.selection.profile)}">
+    <div id="setup-tabs-top" class="setup-tabs" title="${escapeHtml(plan.notes)}">${setupTopButtons(plan)}</div>
   </div>`;
 }
 
 function setupTopButtons(plan) {
-  const profileOptions = setupProfileOptions(plan.s.os).map((row) => [
+  const profileOptions = setupProfileOptions(plan.selection.os).map((row) => [
     row[0],
     row[1],
-    row[0] === plan.s.pr ? plan.nt : row[2]
+    row[0] === plan.selection.profile ? plan.notes : row[2]
   ]);
-  return `<span class="stg">${setupTabs("so", SETUP_OS, plan.s.os)}</span><span class="stg">${setupTabs("sp", profileOptions, plan.s.pr)}</span>`;
+  return `<span class="setup-tab-group">${setupTabs("setup-os", SETUP_OS, plan.selection.os)}</span><span class="setup-tab-group">${setupTabs("setup-profile", profileOptions, plan.selection.profile)}</span>`;
 }
 
 function setupTabs(id, options, selected) {
-  return options.map(([value, text, tt = text]) => `<button class="st" data-si="${id}" data-v="${escapeHtml(value)}" aria-pressed="${value === selected ? "true" : "false"}" title="${escapeHtml(tt)}">${escapeHtml(text)}</button>`).join("");
+  return options.map(([value, text, tt = text]) => `<button class="setup-tab" data-setup-input="${id}" data-setup-value="${escapeHtml(value)}" aria-pressed="${value === selected ? "true" : "false"}" title="${escapeHtml(tt)}">${escapeHtml(text)}</button>`).join("");
 }
 
 export function bindSetupEvents() {
-  ["sa", "sw", "shr", "shu"].forEach((id) => {
+  ["setup-algo", "setup-wallet", "setup-hashrate-input", "setup-hashrate-unit"].forEach((id) => {
     on(byId(id), "input", updateSetupCommand);
   });
-  ["sa", "shu"].forEach((id) => {
+  ["setup-algo", "setup-hashrate-unit"].forEach((id) => {
     on(byId(id), "change", updateSetupCommand);
   });
-  on(byId("sg"), "change", () => {
+  on(byId("setup-gpu"), "change", () => {
     resetSetupHashrate();
     updateSetupCommand();
   });
-  on(qs(".sc"), "click", (event) => {
-    const button = event.target.closest("[data-si]");
+  on(qs(".setup-controls"), "click", (event) => {
+    const button = event.target.closest("[data-setup-input]");
     if (!button) return;
-    const input = byId(button.dataset.si);
+    const input = byId(button.dataset.setupInput);
     if (!input) return;
-    input.value = button.dataset.v || "";
+    input.value = button.dataset.setupValue || "";
     resetSetupHashrate();
     updateSetupCommand();
   });
@@ -110,13 +110,13 @@ export function bindSetupEvents() {
 
 function updateSetupCommand() {
   const plan = setupPlan({
-    os: byId("so")?.value,
-    profile: byId("sp")?.value,
-    gpu: byId("sg")?.value,
-    algo: byId("sa")?.value,
-    address: byId("sw")?.value,
-    hashrate: byId("shr")?.value,
-    hashrateUnit: byId("shu")?.value,
+    os: byId("setup-os")?.value,
+    profile: byId("setup-profile")?.value,
+    gpu: byId("setup-gpu")?.value,
+    algo: byId("setup-algo")?.value,
+    address: byId("setup-wallet")?.value,
+    hashrate: byId("setup-hashrate-input")?.value,
+    hashrateUnit: byId("setup-hashrate-unit")?.value,
     ports: state.s
   });
   syncSetupCommand(plan);
@@ -124,13 +124,13 @@ function updateSetupCommand() {
 }
 
 function syncSetupCommand(plan) {
-  const nt = byId("sn");
-  const controls = qs(".sc");
+  const nt = byId("setup-notes");
+  const controls = qs(".setup-controls");
   SETUP_STEPS.forEach(([, id, textKey, noteKey, wrapId]) => syncSetupStep(id, plan[textKey], plan[noteKey], wrapId));
   if (nt) {
-    nt.textContent = plan.nt;
+    nt.textContent = plan.notes;
   }
-  if (controls) controls.title = plan.nt;
+  if (controls) controls.title = plan.notes;
   syncSetupInputs(plan);
 }
 
@@ -142,40 +142,40 @@ function syncSetupStep(id, text = "", note = "", wrapId = "") {
   if (tt) tt.title = note || "";
   if (noteNode) {
     noteNode.textContent = note || "";
-    tog(noteNode, "hd", !note);
+    tog(noteNode, "hidden", !note);
   }
-  if (wrapId) tog(byId(wrapId), "hd", !text);
+  if (wrapId) tog(byId(wrapId), "hidden", !text);
 }
 
 function syncSetupInputs(plan) {
-  const os = byId("so");
-  const profile = byId("sp");
-  const algo = byId("sa");
-  const hashrate = byId("shr");
-  const hashrateUnit = byId("shu");
-  if (os) os.value = plan.s.os;
-  if (profile) profile.value = plan.s.pr;
-  if (hashrate) hashrate.value = String(plan.s.hr);
-  if (hashrateUnit) hashrateUnit.value = plan.s.hu;
+  const os = byId("setup-os");
+  const profile = byId("setup-profile");
+  const algo = byId("setup-algo");
+  const hashrate = byId("setup-hashrate-input");
+  const hashrateUnit = byId("setup-hashrate-unit");
+  if (os) os.value = plan.selection.os;
+  if (profile) profile.value = plan.selection.profile;
+  if (hashrate) hashrate.value = String(plan.selection.hashrate);
+  if (hashrateUnit) hashrateUnit.value = plan.selection.hashrateUnit;
   if (algo) {
-    algo.innerHTML = optionMarkup(setupAlgoOptions(plan.s.pr), plan.s.al);
-    algo.value = plan.s.al;
+    algo.innerHTML = optionMarkup(setupAlgoOptions(plan.selection.profile), plan.selection.algo);
+    algo.value = plan.selection.algo;
   }
-  const tabs = byId("stt");
+  const tabs = byId("setup-tabs-top");
   if (tabs) {
     tabs.innerHTML = setupTopButtons(plan);
-    tabs.title = plan.nt;
+    tabs.title = plan.notes;
   }
-  tog(qs(".sfg"), "hd", !setupShowsGpu(plan.s.pr));
-  tog(qs(".sfa"), "hd", !setupShowsAlgo(plan.s.pr));
+  tog(qs(".setup-gpu-field"), "hidden", !setupShowsGpu(plan.selection.profile));
+  tog(qs(".setup-algo-field"), "hidden", !setupShowsAlgo(plan.selection.profile));
 }
 
 function syncSetupRoute(plan) {
   if (state.r.n !== "setup") return;
-  const query = { o: plan.s.os, p: plan.s.pr, h: String(plan.s.hr), u: plan.s.hu };
-  if (isXmrAddress(plan.s.a)) query.a = plan.s.a;
-  if (setupShowsGpu(plan.s.pr)) query.g = plan.s.g;
-  if (setupShowsAlgo(plan.s.pr)) query.al = plan.s.al;
+  const query = { os: plan.selection.os, profile: plan.selection.profile, rate: String(plan.selection.hashrate), unit: plan.selection.hashrateUnit };
+  if (isXmrAddress(plan.selection.address)) query.addr = plan.selection.address;
+  if (setupShowsGpu(plan.selection.profile)) query.gpu = plan.selection.gpu;
+  if (setupShowsAlgo(plan.selection.profile)) query.algo = plan.selection.algo;
   const params = Object.entries(query).map(([key, value]) => `${key}=${value}`).join("&");
   history.replaceState(null, "", `#/setup?${params}`);
   state.r.q = query;
@@ -191,13 +191,13 @@ function setupShowsAlgo(profile) {
 
 function resetSetupHashrate() {
   const plan = setupPlan({
-    os: byId("so")?.value,
-    profile: byId("sp")?.value,
-    gpu: byId("sg")?.value
+    os: byId("setup-os")?.value,
+    profile: byId("setup-profile")?.value,
+    gpu: byId("setup-gpu")?.value
   });
-  const defaults = setupHashrateDefaults(plan.s.pr, plan.s.g);
-  const hashrate = byId("shr");
-  const unit = byId("shu");
+  const defaults = setupHashrateDefaults(plan.selection.profile, plan.selection.gpu);
+  const hashrate = byId("setup-hashrate-input");
+  const unit = byId("setup-hashrate-unit");
   if (hashrate) hashrate.value = String(defaults.value);
   if (unit) unit.value = defaults.unit;
 }

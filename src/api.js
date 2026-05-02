@@ -25,17 +25,16 @@ export function endpointKey(path) {
   return path.replace(/^\/+/, "");
 }
 
-export async function fetchJson(path, { ttl, force = false } = {}) {
+async function fetchJson(path, { ttl } = {}) {
   const key = endpointKey(path);
   return cachedJsonRequest({
     key,
     ttl: ttl ?? TTL[key] ?? DEFAULT_TTL,
-    force,
     start: () => ({ promise: fetch(`${API_BASE}${key}`, jsonRequestOptions()) })
   });
 }
 
-export async function postJson(path, body = {}) {
+async function postJson(path, body = {}) {
   const key = endpointKey(path);
   state.q.set(key, Date.now());
   const response = await fetch(`${API_BASE}${key}`, {
@@ -54,11 +53,10 @@ function invalidateEndpoint(path) {
   state.c.delete(endpointKey(path));
 }
 
-export async function fetchExternalJson(url, { key = url, ttl = DEFAULT_TTL, force = false, timeout = 5000 } = {}) {
+async function fetchExternalJson(url, { key = url, ttl = DEFAULT_TTL, timeout = 5000 } = {}) {
   return cachedJsonRequest({
     key,
     ttl,
-    force,
     start: () => {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), timeout);
@@ -70,8 +68,8 @@ export async function fetchExternalJson(url, { key = url, ttl = DEFAULT_TTL, for
   });
 }
 
-function cachedJsonRequest({ key, ttl, force, start }) {
-  const cached = freshCacheEntry(key, ttl, force);
+function cachedJsonRequest({ key, ttl, start }) {
+  const cached = freshCacheEntry(key, ttl);
   if (cached.hit) return cached.value;
   if (inflight.has(key)) return inflight.get(key);
   state.q.set(key, Date.now());
@@ -91,8 +89,7 @@ function cachedJsonRequest({ key, ttl, force, start }) {
   return request;
 }
 
-function freshCacheEntry(key, ttl, force) {
-  if (force) return { hit: false };
+function freshCacheEntry(key, ttl) {
   const cached = state.c.get(key);
   if (!cached) return { hit: false };
   return Date.now() - cached.time < ttl ? { hit: true, value: cached.value } : { hit: false };

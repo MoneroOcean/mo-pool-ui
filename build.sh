@@ -158,7 +158,7 @@ sed \
   index.html > build/index.html
 npx html-minifier-terser build/index.html --collapse-whitespace --remove-comments --remove-redundant-attributes --collapse-boolean-attributes --remove-attribute-quotes --remove-optional-tags --use-short-doctype --minify-css true --minify-js true -o build/index.html
 
-node --test
+npm test
 
 SUDO=""
 if [ -d /var/www ] && [ ! -w /var/www ]; then
@@ -173,7 +173,13 @@ CSP_HASH="$(./csp-hash.sh build/index.html)"
 update_nginx_csp_hash "$CSP_HASH"
 
 printf 'Built build/index.html, build/script.js, build/style.css using cache key %s\n' "$SHA"
-printf 'Build byte sizes:\n'
-wc -c build/index.html build/style.css build/script.js
+PACKED_SIZE="$(node - <<'NODE'
+const { readFileSync } = require("node:fs");
+const { gzipSync } = require("node:zlib");
+const parts = ["build/index.html", "build/style.css", "build/script.js"].map((path) => readFileSync(path));
+process.stdout.write(String(gzipSync(Buffer.concat(parts)).byteLength));
+NODE
+)"
+printf 'Build gzip packed size: %s bytes / 40000 byte target\n' "$PACKED_SIZE"
 printf 'Deployed to /var/www/mo-pool-ui\n'
 printf 'Current JSON-LD CSP hash is %s\n' "$CSP_HASH"

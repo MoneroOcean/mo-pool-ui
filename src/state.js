@@ -1,8 +1,6 @@
 export const state = {
-  // Private app singleton keys are compact because state access is hot and
-  // repeated across views: r route, c cache, e endpoint errors, q request times,
-  // w wallet watchlist, a active wallet address, s setup ports, p PPLNS seconds,
-  // gw graph window, gm graph mode.
+  // Shared app state lives here so view modules do not each keep their own
+  // routing, cache, wallet, and graph defaults.
   r: { n: "home", p: "#/" },
   c: new Map(),
   e: new Map(),
@@ -12,7 +10,7 @@ export const state = {
   s: [],
   p: 0,
   gw: typeof matchMedia === "function" && matchMedia("(max-width: 700px)").matches ? "6h" : "12h",
-  gm: "normalized"
+  gm: "xmr"
 };
 
 export function setCache(key, value) {

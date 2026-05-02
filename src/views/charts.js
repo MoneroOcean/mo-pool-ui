@@ -5,14 +5,14 @@ import { escapeHtml } from "./common.js";
 import { attr, on, qs, qsa, tog } from "../dom.js";
 
 export function chartHtml(model, line, raw, average, label, detail = "") {
-  // The chart is plain SVG plus a small data-pts payload so hover works without
+  // The chart is plain SVG plus a small data-chart-points payload so hover works without
   // shipping a charting library. Hover points keep named fields because the
   // cursor math below is easy to break when these are anonymous array indexes.
   const pointData = escapeHtml(JSON.stringify(model.r.map((row) => ({ x: row.x, y: row.z, t: row.tme, v: row.v }))));
   const pplns = pplnsWindowRect(model, state.p);
-  const pplnsRect = pplns ? `<rect class="pw" x="${pplns.x.toFixed(1)}" width="${pplns.width.toFixed(1)}" height="${pplns.height}"></rect>` : "";
+  const pplnsRect = pplns ? `<rect class="pplns-window" x="${pplns.x.toFixed(1)}" width="${pplns.width.toFixed(1)}" height="${pplns.height}"></rect>` : "";
   const detailLine = (Array.isArray(detail) ? detail : detail ? [detail] : []).map((line) => `<small>${escapeHtml(line)}</small>`).join("");
-  return `<div class="cs"><div class="ys">${scaleRows(model.n, model.x).map((value) => `<span>${formatHashrate(value)}</span>`).join("")}</div><div class="ca"><div class="cw"><div class="coo"><span class=csm><span>Average ${formatHashrate(average)} · PPLNS ${formatHashrate(pplnsAverage(model))}</span>${detailLine}</span><span class=cr>Point: move over graph</span></div><svg class="ctt hc" viewBox="0 0 700 220" preserveAspectRatio="none" role="img" aria-label="${escapeHtml(label)}" data-p="${pointData}">${pplnsRect}<path class="rw" d="${raw}"></path><path class="smo" d="${line}"></path><line class="cur cv" x1="0" x2="0" y1="0" y2="220"></line><line class="cur chz" x1="0" x2="700" y1="0" y2="0"></line></svg></div><div class="xs">${timeTicks(model.s, model.e).map((tick) => `<span>${escapeHtml(tick)}</span>`).join("")}</div></div></div>`;
+  return `<div class="chart-shell"><div class="y-axis">${scaleRows(model.n, model.x).map((value) => `<span>${formatHashrate(value)}</span>`).join("")}</div><div class="chart-area"><div class="chart-wrap"><div class="chart-overlay"><span class=chart-summary><span>Average ${formatHashrate(average)} · PPLNS ${formatHashrate(pplnsAverage(model))}</span>${detailLine}</span><span class=chart-readout>Point: move over graph</span></div><svg class="chart-svg hashrate-chart" viewBox="0 0 700 220" preserveAspectRatio="none" role="img" aria-label="${escapeHtml(label)}" data-chart-points="${pointData}">${pplnsRect}<path class="raw-line" d="${raw}"></path><path class="smoothed-line" d="${line}"></path><line class="cursor-line cursor-vertical" x1="0" x2="0" y1="0" y2="220"></line><line class="cursor-line cursor-horizontal" x1="0" x2="700" y1="0" y2="0"></line></svg></div><div class="x-axis">${timeTicks(model.s, model.e).map((tick) => `<span>${escapeHtml(tick)}</span>`).join("")}</div></div></div>`;
 }
 
 export function hashrateChart(rows, graphWindow, key = "hsh2") {
@@ -67,14 +67,14 @@ function timeTicks(minTime, maxTime) {
 }
 
 export function bindChartHover() {
-  qsa(".hc").forEach((chart) => {
-    if (chart.dataset.hb) return;
-    chart.dataset.hb = "1";
-    const points = JSON.parse(chart.dataset.p || "[]");
+  qsa(".hashrate-chart").forEach((chart) => {
+    if (chart.dataset.hoverBound) return;
+    chart.dataset.hoverBound = "1";
+    const points = JSON.parse(chart.dataset.chartPoints || "[]");
     const maxTime = Math.max(...points.map((point) => Number(point.t) || 0));
-    const readout = qs(".cr", chart.closest(".cd"));
-    const vertical = qs(".cv", chart);
-    const horizontal = qs(".chz", chart);
+    const readout = qs(".chart-readout", chart.closest(".card"));
+    const vertical = qs(".cursor-vertical", chart);
+    const horizontal = qs(".cursor-horizontal", chart);
     const update = (event) => {
       if (!points.length) return;
       const rect = chart.getBoundingClientRect();

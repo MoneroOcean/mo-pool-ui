@@ -2,7 +2,7 @@ import { isFiniteNumber, normalizeTimestampSeconds } from "./format.js";
 import { isXmrAddress } from "./routes.js";
 import { compareValues } from "./table-sort.js";
 
-export const STALE_WORKER_SECONDS = 10 * 60;
+const STALE_WORKER_SECONDS = 10 * 60;
 const WORKER_LIST_SORT_KEYS = ["name", "xmr", "raw", "avg", "avgraw", "last", "valid", "invalid", "hashes"];
 
 export function trackWalletState(watchlist, address, now = Date.now()) {
@@ -32,17 +32,17 @@ export function workerListSortMode(value) {
   return WORKER_LIST_SORT_KEYS.includes(value) ? value : "name";
 }
 
-export function sortWorkerRows(workers, sort = "h", direction = "desc") {
+export function sortWorkerRows(workers, sortable = "h", direction = "desc") {
   const rows = [...workers];
   const dir = workerSortDirection(direction) === "asc" ? 1 : -1;
   const name = (row) => row.n ?? row.name;
   const rate = (row) => row.r ?? row.rate;
-  if (workerSortMode(sort) === "name") return rows.sort((a, b) => name(a).localeCompare(name(b)) * dir);
+  if (workerSortMode(sortable) === "name") return rows.sort((a, b) => name(a).localeCompare(name(b)) * dir);
   return rows.sort((a, b) => (rate(a) - rate(b)) * dir || name(a).localeCompare(name(b)));
 }
 
-export function sortWorkerListRows(workers, sort = "name", direction) {
-  const key = workerListSortMode(sort);
+export function sortWorkerListRows(workers, sortable = "name", direction) {
+  const key = workerListSortMode(sortable);
   const defaultDirection = key === "name" ? "asc" : "desc";
   const dir = workerSortDirection(direction || defaultDirection) === "asc" ? 1 : -1;
   return [...workers].sort((a, b) => compareValues(workerListSortValue(a, key), workerListSortValue(b, key)) * dir || compareValues(a.n, b.n));
@@ -81,10 +81,10 @@ function compactWorkerRow(name, stats, chartRows, now) {
     ax: chart.xmr,
     ar: chart.raw,
     l: lastSeen,
-    th: statValue(stat?.row, stats, ["totalHash", "totalHashes", "hashes"]),
+    totalHashes: statValue(stat?.row, stats, ["totalHash", "totalHashes", "hashes"]),
     vs: validShares,
     is: statValue(stat?.row, stats, ["invalid", "invalidShares", "badShares", "bad_shares"]),
-    st: workerStatus(hasCurrent, current, lastSeen, now)
+    status: workerStatus(hasCurrent, current, lastSeen, now)
   };
 }
 
@@ -159,7 +159,7 @@ function workerListSortValue(row, key) {
   if (key === "last") return row.l;
   if (key === "valid") return row.vs;
   if (key === "invalid") return row.is;
-  if (key === "hashes") return row.th;
+  if (key === "hashes") return row.totalHashes;
   return 0;
 }
 

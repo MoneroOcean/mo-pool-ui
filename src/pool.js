@@ -13,15 +13,13 @@ function coinMetadata(poolStats = {}, port) {
   return byPort(poolStats.coins, port) || null;
 }
 
-// Normalized coin rows are private table/sort data, so the keys are short:
-// p port, n name, a algo, ac active, c comment, dr disabled reason,
-// ec exchange configured, h hashrate, m miners, ps PPLNS share.
 function normalizedCoinRow(key, coin = {}) {
   const port = String(coin.port ?? key);
   const name = coin.displayName || coin.symbol || String(port);
   return {
     p: port,
     n: name,
+    s: coin.symbol || name,
     a: coin.algo || "--",
     ac: coin.active === true,
     c: coin.comment || "",
@@ -58,16 +56,39 @@ export function topCoinPort(poolStats = {}) {
 }
 
 export function blockCoinPort(poolStats = {}, requestedPort = "") {
-  if (requestedPort) return String(requestedPort);
+  if (requestedPort) return requestedBlockCoinPort(poolStats, requestedPort);
+  return defaultBlockCoinPort(poolStats);
+}
+
+function defaultBlockCoinPort(poolStats = {}) {
   const top = topCoinPort(poolStats);
   if (hasBlockHistory(poolStats, top)) return top;
   const ports = coinStatsRows(poolStats).map((coin) => coin.p).filter((port) => hasBlockHistory(poolStats, port));
   return ports[0] || top;
 }
 
+function requestedBlockCoinPort(poolStats = {}, requested = "") {
+  const wanted = coinRouteSlug(requested);
+  if (!wanted) return "";
+  const match = coinStatsRows(poolStats).find((coin) => {
+    const metadata = coinMetadata(poolStats, coin.p) || {};
+    return coinRouteSlug(metadata.symbol || coin.s) === wanted;
+  });
+  return match?.p || "";
+}
+
+export function coinRouteSlug(value) {
+  return String(value || "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+}
+
 export function coinName(poolStats = {}, port) {
   const coin = coinMetadata(poolStats, port);
   return coin?.displayName || coin?.symbol || String(port);
+}
+
+export function coinSymbol(poolStats = {}, port) {
+  const coin = coinMetadata(poolStats, port);
+  return coin?.symbol || coin?.displayName || String(port);
 }
 
 export function coinHashScalar(poolStats = {}, port, basePort = XMR_PORT) {

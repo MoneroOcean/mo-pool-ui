@@ -124,21 +124,29 @@ export function setupHashrateToHps(value, unit = "kh") {
 
 export function setupConfiguredPorts(source = []) {
   const rows = Array.isArray(source) ? source : Array.isArray(source?.configured) ? source.configured : [];
-  // Internal configured-port rows are tuples to avoid repeating long backend
-  // field names after normalization: [plain port, TLS port, target H/s, label].
-  // The backend input fields stay descriptive because they are external API
-  // contracts, while setup plan code only needs this compact private shape.
   return rows
     .map((row) => {
-      if (Array.isArray(row)) return [Number(row[0]) || 0, Number(row[1]) || 0, Number(row[2]) || 0, String(row[3] || "").trim()];
+      if (Array.isArray(row)) {
+        return {
+          port: Number(row[0]) || 0,
+          tlsPort: Number(row[1]) || 0,
+          targetHashrate: Number(row[2]) || 0,
+          label: String(row[3] || "").trim()
+        };
+      }
       const port = Number(row.port);
       const tlsPort = Number(row.tlsPort);
       const difficulty = Number(row.difficulty);
       const targetHashrate = Number(row.targetHashrate) || (isFiniteNumber(difficulty) && difficulty > 0 ? difficulty / 30 : 0);
-      return [port > 0 ? port : 0, tlsPort > 0 ? tlsPort : 0, targetHashrate, String(row.description || "").trim()];
+      return {
+        port: port > 0 ? port : 0,
+        tlsPort: tlsPort > 0 ? tlsPort : 0,
+        targetHashrate,
+        label: String(row.label || row.description || "").trim()
+      };
     })
-    .filter((row) => row[0] > 0 && row[2] > 0)
-    .sort((a, b) => a[2] - b[2] || a[0] - b[0]);
+    .filter((row) => row.port > 0 && row.targetHashrate > 0)
+    .sort((a, b) => a.targetHashrate - b.targetHashrate || a.port - b.port);
 }
 
 export function setupPlan(options = {}) {
@@ -154,43 +162,31 @@ export function setupPlan(options = {}) {
   const portRow = portRowForHashrate(hashrateHps, options.ports);
   const address = String(options.address || "YOUR_XMR_ADDRESS").trim() || "YOUR_XMR_ADDRESS";
   const worker = workerName(options.worker);
-  const port = portRow?.p || 0;
+  const port = portRow?.port || 0;
   const pool = `${POOL_HOST}:${port}`;
   const password = profile === XMRIG_MO || algo === AUTO_ALGO[0] ? worker : `${worker}~${algo}`;
 
-  const s = { pr: profile, os, g: gpu, al: algo, a: address, hr: hashrate, hu: hashrateUnit, hh: hashrateHps, p: port };
+  const selection = { profile, os, gpu, algo, address, hashrate, hashrateUnit, hashrateHps, port };
   const planOptions = { os, gpu, algo, address, worker, password, pool, port, portRow };
-  if (!portRow) return withSelection(unavailablePortPlan(), s);
-  if (profile === SRB_GPU) return withSelection(srbPlan(planOptions), s);
-  if (profile === META_MINER) return withSelection(metaMinerPlan(planOptions), s);
-  if (profile === XMRIG_PROXY) return withSelection(xmrigProxyPlan(planOptions), s);
-  if (profile === XMR_NODE_PROXY) return withSelection(xmrNodeProxyPlan(planOptions), s);
-  return withSelection(xmrigPlan(planOptions), s);
+  if (!portRow) return withSelection(unavailablePortPlan(), selection);
+  if (profile === SRB_GPU) return withSelection(srbPlan(planOptions), selection);
+  if (profile === META_MINER) return withSelection(metaMinerPlan(planOptions), selection);
+  if (profile === XMRIG_PROXY) return withSelection(xmrigProxyPlan(planOptions), selection);
+  if (profile === XMR_NODE_PROXY) return withSelection(xmrNodeProxyPlan(planOptions), selection);
+  return withSelection(xmrigPlan(planOptions), selection);
 }
 
-function withSelection(plan, s) {
-  return { ...plan, s };
+function withSelection(plan, selection) {
+  return { ...plan, selection };
 }
 
 function unavailablePortPlan() {
-  return { tt: "Setup unavailable", sm: PORT_METADATA_UNAVAILABLE, nt: `${PORT_METADATA_UNAVAILABLE} Reload after the API returns configured ports.` };
+  return { title: "Setup unavailable", summary: PORT_METADATA_UNAVAILABLE, notes: `${PORT_METADATA_UNAVAILABLE} Reload after the API returns configured ports.` };
 }
 
 function setupPoolSummary(pool, portRow, suffix = ".") {
-  return `${pool} is derived from ${portRow.h}${suffix}`;
+  return `${pool} is derived from ${portRow.label}${suffix}`;
 }
-
-/*
-Private setup-plan keys are short because this object is generated often in the
-setup UI and every property name ships in the raw JS bundle. Visible command
-text, route query parameters, miner flags, and tests stay descriptive. Map:
-  tt title, sm summary, d download command, dn download note,
-  rt TLS run command, rtn TLS run note, r plain run command, rn plain run note,
-  to Tor command, ton Tor note, l local/proxy worker command, ln local note,
-  nt notes, s selection. Selection keys: pr profile, os operating system,
-  g GPU vendor, al algorithm, a address, hr hashrate, hu hashrate unit,
-  hh hashrate in H/s, p selected port.
-*/
 
 function xmrigPlan({ os, address, worker, pool, portRow }) {
   const windows = os === WINDOWS;
@@ -202,18 +198,18 @@ function xmrigPlan({ os, address, worker, pool, portRow }) {
       ? macXmrigDownload()
     : `${linuxReleaseDownload("moneroocean", XMRIG_RELEASE_API, LINUX_XMRIG_ASSET, XMRIG_TAR)} && tar xf ${XMRIG_TAR} && chmod +x ${XMRIG}`;
   const directRun = xmrigRun(binary, pool, address, worker);
-  const tlsRun = portRow.t ? xmrigRun(binary, `${POOL_HOST}:${portRow.t}`, address, worker, true) : "";
+  const tlsRun = portRow.tlsPort ? xmrigRun(binary, `${POOL_HOST}:${portRow.tlsPort}`, address, worker, true) : "";
   return {
-    sm: setupPoolSummary(pool, portRow),
-    d,
-    dn: windows ? WINDOWS_POWERSHELL_BKM : macos ? XMRIG_MAC_DOWNLOAD_NOTE : "",
-    rt: tlsRun,
-    rtn: TLS_MODE_NOTE,
-    r: directRun,
-    rn: PLAIN_MODE_NOTE,
-    to: windows ? "" : xmrigTorRun({ os, address, worker, port: portRow.p }),
-    ton: windows ? "" : TOR_MODE_NOTE,
-    nt: macos
+    summary: setupPoolSummary(pool, portRow),
+    downloadCommand: d,
+    downloadNote: windows ? WINDOWS_POWERSHELL_BKM : macos ? XMRIG_MAC_DOWNLOAD_NOTE : "",
+    tlsRunCommand: tlsRun,
+    tlsRunNote: TLS_MODE_NOTE,
+    plainRunCommand: directRun,
+    plainRunNote: PLAIN_MODE_NOTE,
+    torCommand: windows ? "" : xmrigTorRun({ os, address, worker, port: portRow.port }),
+    torNote: windows ? "" : TOR_MODE_NOTE,
+    notes: macos
       ? `Best first CPU setup on Apple Silicon Macs. Intel macOS is not supported by this download. ${XMRIG_AUTO_SWITCH_NOTE} If Gatekeeper blocks it, remove quarantine and retry.`
       : `Best first setup for CPU mining. ${XMRIG_AUTO_SWITCH_NOTE}`
   };
@@ -229,30 +225,30 @@ function srbPlan({ os, gpu, algo, address, worker, password, pool, portRow }) {
     ? srbWindowsDownload()
     : srbLinuxDownload();
   return {
-    sm: setupPoolSummary(pool, portRow),
-    d,
-    dn: windows ? WINDOWS_POWERSHELL_BKM : "",
-    rt: portRow.t ? srbRun(binary, disable, srbAlgo, `${POOL_HOST}:${portRow.t}`, address, password, worker, true, ethExtra) : "",
-    rtn: `${TLS_MODE_NOTE} ${SRB_RUN_NOTE}`,
-    r: srbRun(binary, disable, srbAlgo, pool, address, password, worker, false, ethExtra),
-    rn: PLAIN_MODE_NOTE,
-    nt: "SRBMiner-Multi is used for fixed algo GPU mining."
+    summary: setupPoolSummary(pool, portRow),
+    downloadCommand: d,
+    downloadNote: windows ? WINDOWS_POWERSHELL_BKM : "",
+    tlsRunCommand: portRow.tlsPort ? srbRun(binary, disable, srbAlgo, `${POOL_HOST}:${portRow.tlsPort}`, address, password, worker, true, ethExtra) : "",
+    tlsRunNote: `${TLS_MODE_NOTE} ${SRB_RUN_NOTE}`,
+    plainRunCommand: srbRun(binary, disable, srbAlgo, pool, address, password, worker, false, ethExtra),
+    plainRunNote: PLAIN_MODE_NOTE,
+    notes: "SRBMiner-Multi is used for fixed algo GPU mining."
   };
 }
 
 function metaMinerPlan({ os, gpu, address, worker, pool, portRow }) {
   const windows = os === WINDOWS;
   const disable = gpuDisableFlags(gpu);
-  const tlsPool = portRow.t ? `${POOL_HOST}:ssl${portRow.t}` : pool;
+  const tlsPool = portRow.tlsPort ? `${POOL_HOST}:ssl${portRow.tlsPort}` : pool;
   return {
-    sm: setupPoolSummary(tlsPool, portRow, `. Meta-miner listens on ${LOCAL_PROXY} for child miners.`),
-    d: windows
+    summary: setupPoolSummary(tlsPool, portRow, `. Meta-miner listens on ${LOCAL_PROXY} for child miners.`),
+    downloadCommand: windows
       ? metaMinerWindowsDownload()
       : metaMinerLinuxDownload(),
-    dn: windows ? WINDOWS_POWERSHELL_BKM : "",
-    rt: windows ? metaMinerWindowsRun({ address, worker, pool: tlsPool, disable }) : metaMinerLinuxRun({ address, worker, pool: tlsPool, disable }),
-    rtn: TLS_MODE_NOTE,
-    nt: "Use this only for GPU algo switching; fixed GPU setup is simpler. First run benchmarks/autotunes configured algorithms before normal mining output appears."
+    downloadNote: windows ? WINDOWS_POWERSHELL_BKM : "",
+    tlsRunCommand: windows ? metaMinerWindowsRun({ address, worker, pool: tlsPool, disable }) : metaMinerLinuxRun({ address, worker, pool: tlsPool, disable }),
+    tlsRunNote: TLS_MODE_NOTE,
+    notes: "Use this only for GPU algo switching; fixed GPU setup is simpler. First run benchmarks/autotunes configured algorithms before normal mining output appears."
   };
 }
 
@@ -310,38 +306,38 @@ function xmrigProxyPlan({ os, address, worker, pool, portRow }) {
   const windows = os === WINDOWS;
   const macos = os === MACOS;
   const binary = windows ? "xmrig-proxy.exe" : "./xmrig-proxy";
-  const tlsPool = portRow.t ? `${POOL_HOST}:${portRow.t}` : pool;
-  const r = `${binary} -o ${tlsPool} -u ${address} --bind 0.0.0.0:3333 --mode nicehash ${KEEPALIVE} --tls`;
+  const tlsPool = portRow.tlsPort ? `${POOL_HOST}:${portRow.tlsPort}` : pool;
+  const proxyRunCommand = `${binary} -o ${tlsPool} -u ${address} --bind 0.0.0.0:3333 --mode nicehash ${KEEPALIVE} --tls`;
   return {
-    sm: setupPoolSummary(tlsPool, portRow, `; ${PROXY_HOSTS_PORT_3333}`),
-    d: windows
+    summary: setupPoolSummary(tlsPool, portRow, `; ${PROXY_HOSTS_PORT_3333}`),
+    downloadCommand: windows
       ? xmrigProxyWindowsDownload()
       : macos
         ? xmrigProxyMacDownload()
         : xmrigProxyLinuxDownload(),
-    dn: windows ? WINDOWS_POWERSHELL_BKM : macos ? XMRIG_PROXY_MAC_DOWNLOAD_NOTE : "",
-    rt: r,
-    rtn: TLS_MODE_NOTE,
-    l: `${windows ? XMRIG_EXE : XMRIG_BIN} -o PROXY_HOST:3333 -u ${worker} --nicehash --donate-over-proxy 1 ${KEEPALIVE}`,
-    ln: `Worker miners connect to this proxy on port 3333 using NiceHash-compatible mode. ${REPLACE_PROXY_HOST}`,
-    nt: `${macos ? "Intel macOS is not supported by this download. " : ""}Use when many XMRig CPU workers share one upstream pool connection. ${SMALL_PROXY_NOTE} MoneroOcean fork keeps proxy aligned with algo switching. Keep fixed GPU miners direct or behind meta-miner.`
+    downloadNote: windows ? WINDOWS_POWERSHELL_BKM : macos ? XMRIG_PROXY_MAC_DOWNLOAD_NOTE : "",
+    tlsRunCommand: proxyRunCommand,
+    tlsRunNote: TLS_MODE_NOTE,
+    localCommand: `${windows ? XMRIG_EXE : XMRIG_BIN} -o PROXY_HOST:3333 -u ${worker} --nicehash --donate-over-proxy 1 ${KEEPALIVE}`,
+    localNote: `Worker miners connect to this proxy on port 3333 using NiceHash-compatible mode. ${REPLACE_PROXY_HOST}`,
+    notes: `${macos ? "Intel macOS is not supported by this download. " : ""}Use when many XMRig CPU workers share one upstream pool connection. ${SMALL_PROXY_NOTE} MoneroOcean fork keeps proxy aligned with algo switching. Keep fixed GPU miners direct or behind meta-miner.`
   };
 }
 
 function xmrNodeProxyPlan({ os, address, worker, port, portRow }) {
   const macos = os === MACOS;
-  const tlsPort = portRow.t || port;
+  const tlsPort = portRow.tlsPort || port;
   const config = xmrNodeProxyConfig({ address, port: tlsPort });
   return {
-    sm: setupPoolSummary(`${POOL_HOST}:${tlsPort}`, portRow, `; ${PROXY_HOSTS_PORT_3333}`),
-    d: macos
+    summary: setupPoolSummary(`${POOL_HOST}:${tlsPort}`, portRow, `; ${PROXY_HOSTS_PORT_3333}`),
+    downloadCommand: macos
       ? "brew install node git\ngit clone https://github.com/MoneroOcean/xmr-node-proxy.git ~/xmr-node-proxy\ncd ~/xmr-node-proxy\nnpm install --no-audit --no-fund"
       : "sudo apt-get install git\ngit clone https://github.com/MoneroOcean/xmr-node-proxy.git ~/xmr-node-proxy\ncd ~/xmr-node-proxy\nbash install.sh",
-    rt: `cat > config.json <<'JSON'\n${config}\nJSON\nnode proxy.js --config config.json`,
-    rtn: TLS_MODE_NOTE,
-    l: `${XMRIG_BIN} -o PROXY_HOST:3333 -u ${worker}`,
-    ln: `Worker miners connect to xmr-node-proxy on port 3333. ${REPLACE_PROXY_HOST}`,
-    nt: `Use for many CPU workers on XMR-style algorithms. ${SMALL_PROXY_NOTE} Generated xmr-node-proxy config is an rx/0 starter config. Add real algo_perf for full switching. Not for Etchash, KawPow, Autolykos2, or XTM/Tari c29.`
+    tlsRunCommand: `cat > config.json <<'JSON'\n${config}\nJSON\nnode proxy.js --config config.json`,
+    tlsRunNote: TLS_MODE_NOTE,
+    localCommand: `${XMRIG_BIN} -o PROXY_HOST:3333 -u ${worker}`,
+    localNote: `Worker miners connect to xmr-node-proxy on port 3333. ${REPLACE_PROXY_HOST}`,
+    notes: `Use for many CPU workers on XMR-style algorithms. ${SMALL_PROXY_NOTE} Generated xmr-node-proxy config is an rx/0 starter config. Add real algo_perf for full switching. Not for Etchash, KawPow, Autolykos2, or XTM/Tari c29.`
   };
 }
 
@@ -370,7 +366,7 @@ function xmrNodeProxyConfig({ address, port }) {
 
 function configuredPortForHashrate(hashrateHps, configuredPorts) {
   const target = Number(hashrateHps) || 0;
-  return configuredPorts.find((row) => row[2] >= target) || configuredPorts[configuredPorts.length - 1];
+  return configuredPorts.find((row) => row.targetHashrate >= target) || configuredPorts[configuredPorts.length - 1];
 }
 
 function portRowForHashrate(hashrateHps, ports = []) {
@@ -378,9 +374,9 @@ function portRowForHashrate(hashrateHps, ports = []) {
   if (!configured.length) return null;
   const row = configuredPortForHashrate(hashrateHps, configured);
   return {
-    p: row[0],
-    t: row[1],
-    h: row[3] || `${formatSetupHashrate(row[2])} configured target`
+    port: row.port,
+    tlsPort: row.tlsPort,
+    label: row.label || `${formatSetupHashrate(row.targetHashrate)} configured target`
   };
 }
 
@@ -435,7 +431,7 @@ function srbWindowsDownload() {
 
 function metaMinerLinuxDownload() {
   return `sudo apt-get install nodejs curl
-mkdir -p ~/meta-miner && cd ~/meta-miner
+mkdir -p ~/meta-miner && card ~/meta-miner
 curl -L https://raw.githubusercontent.com/MoneroOcean/meta-miner/master/mm.js -o mm.js && chmod +x mm.js
 ${srbLinuxDownload(false).replaceAll(`~/${SRBMINER_DIR}`, "~/meta-miner")}`;
 }
@@ -462,7 +458,7 @@ function xmrigProxyWindowsDownload() {
 }
 
 function releaseDownload(dir, api, grepCommand, file) {
-  return `mkdir -p ~/${dir} && cd ~/${dir}
+  return `mkdir -p ~/${dir} && card ~/${dir}
 url=$(curl -fsSL ${api} | grep ${BROWSER_DOWNLOAD_URL} | ${grepCommand} | head -1 | cut -d '"' -f 4)
 curl -L "$url" -o ${file}`;
 }
@@ -485,7 +481,7 @@ if ($dir) { Set-Location $dir.FullName } else { Set-Location .\\${dir} }` : `Set
 }
 
 function macTarDownload(dir, api, file, binary, precheck = "") {
-  return `mkdir -p ~/${dir} && cd ~/${dir}
+  return `mkdir -p ~/${dir} && card ~/${dir}
 ${precheck ? `${precheck}\n` : ""}url=$(curl -fsSL ${api} | grep ${BROWSER_DOWNLOAD_URL} | grep 'mac64\\.tar\\.gz' | head -1 | cut -d '"' -f 4)
 curl -L "$url" -o ${file} && tar xf ${file} && chmod +x ${binary}
 xattr -d com.apple.quarantine ${binary} 2>/dev/null || true`;

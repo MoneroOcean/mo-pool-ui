@@ -10,24 +10,20 @@ const nonNegativeNumber = (value) => boundedNumber(value);
 
 export function normalizePayoutPolicy(policy) {
   const source = policy && typeof policy === "object" ? policy : null;
-  const feeFormula = source?.feeFormula && typeof source.feeFormula === "object" ? source.feeFormula : source?.f && typeof source.f === "object" ? source.f : null;
-  const minimumThreshold = positiveNumber(source?.minimumThreshold ?? source?.m);
-  const defaultThreshold = positiveNumber(source?.defaultThreshold ?? source?.d);
-  const denomination = positiveNumber(source?.denomination ?? source?.u);
-  const maxFee = nonNegativeNumber(feeFormula?.maxFee ?? feeFormula?.m);
-  const zeroFeeThreshold = positiveNumber(feeFormula?.zeroFeeThreshold ?? feeFormula?.z);
+  const feeFormula = source?.feeFormula && typeof source.feeFormula === "object" ? source.feeFormula : null;
+  const minimumThreshold = positiveNumber(source?.minimumThreshold);
+  const defaultThreshold = positiveNumber(source?.defaultThreshold);
+  const denomination = positiveNumber(source?.denomination);
+  const maxFee = nonNegativeNumber(feeFormula?.maxFee);
+  const zeroFeeThreshold = positiveNumber(feeFormula?.zeroFeeThreshold);
   if (minimumThreshold === null || defaultThreshold === null || denomination === null || maxFee === null || zeroFeeThreshold === null) return null;
-  // Normalized payout policies are carried in data-pp and settings helpers, so
-  // compact keys save raw JS and HTML. API input keys above remain long:
-  // m minimum threshold, d default threshold, x exchange minimum, u denomination,
-  // y maturity depth, f.m maximum fee, f.z zero-fee threshold.
   return {
-    m: minimumThreshold,
-    d: defaultThreshold,
-    x: positiveNumber(source.exchangeMinimumThreshold ?? source.x),
-    u: denomination,
-    y: nonNegativeNumber(source.maturityDepth ?? source.y),
-    f: { m: maxFee, z: zeroFeeThreshold }
+    minimumThreshold,
+    defaultThreshold,
+    exchangeMinimumThreshold: positiveNumber(source.exchangeMinimumThreshold),
+    denomination,
+    maturityDepth: nonNegativeNumber(source.maturityDepth),
+    feeFormula: { maxFee, zeroFeeThreshold }
   };
 }
 
@@ -38,7 +34,7 @@ export function payoutPolicyFromConfig(config = {}) {
 function payoutDecimals(policy) {
   const normalized = normalizePayoutPolicy(policy);
   if (!normalized) return 0;
-  const text = String(normalized.u).toLowerCase();
+  const text = String(normalized.denomination).toLowerCase();
   if (text.includes("e-")) return Math.min(12, Math.max(0, Number(text.split("e-")[1]) || 0));
   const decimal = text.split(".")[1] || "";
   return Math.min(12, Math.max(0, decimal.replace(/0+$/, "").length));
@@ -48,7 +44,7 @@ export function payoutThresholdFromAtomic(value, policy) {
   const number = Number(value);
   const normalized = normalizePayoutPolicy(policy);
   if (!normalized) return 0;
-  if (!isFiniteNumber(number) || number <= 0) return normalized.d;
+  if (!isFiniteNumber(number) || number <= 0) return normalized.defaultThreshold;
   return number > 1 ? number / 1_000_000_000_000 : number;
 }
 
@@ -62,7 +58,7 @@ export function payoutFeeEstimate(threshold, policy) {
   const normalized = normalizePayoutPolicy(policy);
   const value = normalizePayoutThreshold(threshold);
   if (!normalized || !value) return { threshold: value, fee: NaN, percent: NaN };
-  const { m: minimumThreshold, f: { m: maxFee, z: zeroFeeThreshold } } = normalized;
+  const { minimumThreshold, feeFormula: { maxFee, zeroFeeThreshold } } = normalized;
   const fee = zeroFeeThreshold <= minimumThreshold
     ? (value >= zeroFeeThreshold ? 0 : maxFee)
     : Math.min(maxFee, Math.max(0, maxFee - ((value - minimumThreshold) * (maxFee / (zeroFeeThreshold - minimumThreshold)))));
@@ -91,6 +87,6 @@ export function validatePayoutThreshold(value, policy) {
   if (!normalized) return { valid: false, threshold: 0, message: "Payout policy unavailable from API." };
   const threshold = normalizePayoutThreshold(value);
   if (!threshold) return { valid: false, threshold, message: "Enter a valid XMR threshold." };
-  if (threshold < normalized.m) return { valid: false, threshold, message: `Payment threshold must be at least ${formatPayoutThresholdInput(normalized.m, normalized)} XMR.` };
+  if (threshold < normalized.minimumThreshold) return { valid: false, threshold, message: `Payment threshold must be at least ${formatPayoutThresholdInput(normalized.minimumThreshold, normalized)} XMR.` };
   return { valid: true, threshold, message: "" };
 }

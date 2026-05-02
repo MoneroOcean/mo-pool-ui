@@ -24,14 +24,14 @@ export function bindViewEvents() {
     }
     else qs("#ai").setCustomValidity("Enter a complete XMR address");
   });
-  qsa("[data-rw]").forEach((button) => on(button, "click", () => {
-    const address = button.dataset.rw;
+  qsa("[data-remove-wallet]").forEach((button) => on(button, "click", () => {
+    const address = button.dataset.removeWallet;
     state.w = rmWallet(address);
     byId(`wallet-${address}`)?.remove();
     if (!state.w.length) {
-      const walletList = byId("wl");
-      if (walletList) walletList.innerHTML = `<div class="cd mt">No wallets tracked yet.</div>`;
-      qs(".gs")?.closest(".cd")?.remove();
+      const walletList = byId("wallet-list");
+      if (walletList) walletList.innerHTML = `<div class="card muted">No wallets tracked yet.</div>`;
+      qs(".graph-switches")?.closest(".card")?.remove();
     }
     if (state.r.n === "wallet" && state.r.a === address) location.hash = "#/";
   }));
@@ -50,10 +50,10 @@ export function bindViewEvents() {
 }
 
 function bindBlockControls() {
-  on(qs("#bcx"), "change", (event) => {
+  on(qs("#blocks-coin-filter"), "change", (event) => {
     location.hash = blockRoute(event.target.value, 1, pageSize("#bps"));
   });
-  bindPagedRoute("#bps", "#bpi", (page, size) => blockRoute(selectedValue("#bcx"), page, size));
+  bindPagedRoute("#bps", "#bpi", (page, size) => blockRoute(selectedValue("#blocks-coin-filter"), page, size));
 }
 
 function bindPaymentControls() {
@@ -80,37 +80,37 @@ function bindWalletPager(kind, pageKey, limitKey) {
 }
 
 function bindCopyButtons() {
-  qsa("[data-c]").forEach((button) => on(button, "click", () => {
-    const target = qs(button.dataset.c);
+  qsa("[data-copy-target]").forEach((button) => on(button, "click", () => {
+    const target = qs(button.dataset.copyTarget);
     navigator.clipboard?.writeText(target?.textContent || "");
   }));
 }
 
 function bindMotdDismiss() {
-  on(qs("[data-dm]"), "click", (event) => {
-    dismissMotd(event.currentTarget.dataset.dm, { persist: localHistoryEnabled() });
-    event.currentTarget.closest(".mc")?.remove();
+  on(qs("[data-dismiss-motd]"), "click", (event) => {
+    dismissMotd(event.currentTarget.dataset.dismissMotd, { persist: localHistoryEnabled() });
+    event.currentTarget.closest(".motd-card")?.remove();
   });
 }
 
 function bindCalcEvents() {
   const hashrate = qs("#ch");
   const unit = qs("#cu");
-  const form = qs("#cfm");
+  const form = qs("#calc-form");
   if (!hashrate || !unit || !form) return;
   on(form, "submit", (event) => event.preventDefault());
   const update = () => {
-    const phDay = Number(form.dataset.ph);
+    const phDay = Number(form.dataset.profitPerHash);
     const price = Number(form.dataset.price);
-    const fc = form.dataset.fc || "USD";
-    const rows = calcRowsForDisplay(hashrate.value, unit.value, phDay, price, fc);
-    qsa(".cx").forEach((node) => {
-      const row = rows.find((item) => String(item.days) === node.dataset.p);
+    const fiatLabel = form.dataset.fiatCode || "USD";
+    const rows = calcRowsForDisplay(hashrate.value, unit.value, phDay, price, fiatLabel);
+    qsa(".xmr-output").forEach((node) => {
+      const row = rows.find((item) => String(item.days) === node.dataset.period);
       if (row) node.textContent = formatXmr(row.xmr, 8);
     });
-    qsa(".cfi").forEach((node) => {
-      const row = rows.find((item) => String(item.days) === node.dataset.p);
-      if (row) node.textContent = formatFiat(row.fiat, row.fc);
+    qsa(".fiat-output").forEach((node) => {
+      const row = rows.find((item) => String(item.days) === node.dataset.period);
+      if (row) node.textContent = formatFiat(row.fiat, row.fiatLabel);
     });
     history.replaceState(null, "", calcRoute(hashrate.value, unit.value));
   };
@@ -119,7 +119,7 @@ function bindCalcEvents() {
 }
 
 function bindLocalHistoryControls() {
-  const button = qs("[data-lh]");
+  const button = qs("[data-local-history]");
   if (!button) return;
   const sync = () => {
     const enabled = localHistoryEnabled();
@@ -130,7 +130,7 @@ function bindLocalHistoryControls() {
   on(button, "click", () => {
     const enabled = setConsent(!localHistoryEnabled());
     state.w = enabled ? loadWatchlist() : [];
-    qs(".cns")?.remove();
+    qs(".local-history-consent")?.remove();
     sync();
     syncWalletTrackButtonLabels();
   });

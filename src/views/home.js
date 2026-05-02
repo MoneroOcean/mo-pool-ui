@@ -18,8 +18,8 @@ export async function homeView(route = state.r) {
     state.a = focusedAddress;
     state.w = saveWallet(focusedAddress);
   }
-  const graphWindow = route.q?.w || state.gw;
-  const graphMode = route.q?.m || state.gm;
+  const graphWindow = route.q?.window || state.gw;
+  const graphMode = route.q?.mode || state.gm;
   state.gw = graphWindow;
   state.gm = graphMode;
   const [pool, network] = await Promise.all([
@@ -31,21 +31,21 @@ export async function homeView(route = state.r) {
   const motd = normalizeMotd(getCache("pool/motd") || {});
 
   return `
-    <div class="gd">
+    <div class="grid">
       ${poolDashboard(pool, network, cachedUptime())}
       ${poolHashrateChart(poolChartRows, graphWindow)}
       ${motdSlot(motd)}
       ${dashboardGraphControls(graphWindow, graphMode)}
-      <div id=wl class=wl>
-        ${state.w.length ? await walletSummaryCards() : `<div class="cd mt">No wallets tracked yet.</div>`}
+      <div id=wallet-list class=wallet-list>
+        ${state.w.length ? await walletSummaryCards() : `<div class="card muted">No wallets tracked yet.</div>`}
       </div>
-      <div class="cd wtc">
-        <form id="af" class="ab">
-          <label class="sro" for="ai">XMR wallet address</label>
+      <div class="card wallet-track-card">
+        <form id="af" class="address-bar">
+          <label class="screen-reader-only" for="ai">XMR wallet address</label>
           <input id=ai autocomplete=off placeholder="Paste XMR wallet address" value="">
-          <button type=submit data-ws>${walletTrackButtonLabel()}</button>
+          <button type=submit data-wallet-submit>${walletTrackButtonLabel()}</button>
         </form>
-        ${focusedAddress && !focusedValid ? `<p class="red ex">Invalid wallet address. Paste a complete XMR payout address.</p>` : ""}
+        ${focusedAddress && !focusedValid ? `<p class="red explanation">Invalid wallet address. Paste a complete XMR payout address.</p>` : ""}
       </div>
     </div>`;
 }
@@ -79,14 +79,14 @@ function cachedUptime() {
 }
 
 function setUptimeNode(node, uptime) {
-  node.className = `ks ${uptimeToneClass(uptime.tone)}`;
+  node.className = `status-link ${uptimeToneClass(uptime.tone)}`;
   node.title = uptime.detail;
 }
 
 export function walletTrackButtonLabel(historyEnabled = localHistoryEnabled()) { return historyEnabled ? "Track wallet" : "Temporary track wallet"; }
 
 export function syncWalletTrackButtonLabels(root = document) {
-  qsa("[data-ws]", root).forEach((button) => {
+  qsa("[data-wallet-submit]", root).forEach((button) => {
     button.textContent = walletTrackButtonLabel();
   });
 }
@@ -97,49 +97,49 @@ async function walletSummaryCards() {
 }
 
 function dashboardGraphControls(graphWindow, graphMode) {
-  return graphControls(dashboardGraphRoute, graphWindow, graphMode, "cd gs br sbr");
+  return graphControls(dashboardGraphRoute, graphWindow, graphMode, "card graph-switches bar sbr");
 }
 
 function dashboardGraphRoute(graphWindow, graphMode) {
-  return `#/?w=${graphWindow}&m=${graphMode}`;
+  return `#/?window=${graphWindow}&mode=${graphMode}`;
 }
 
 function poolHashrateChart(rows, graphWindow) {
-  if (!Array.isArray(rows) || !rows.length) return `<section id=pch class=pn><div class="cd cph">${skel("Loading pool hashrate chart")}</div></section>`;
+  if (!Array.isArray(rows) || !rows.length) return `<section id=pch class=panel><div class="card chart-placeholder">${skel("Loading pool hashrate chart")}</div></section>`;
   const graph = hashrateChart(rows, graphWindow, "hsh");
-  return `<section id=pch class=pn>
-    <div class=cd>${chartHtml(graph.m, graph.l, graph.r, graph.a, "Pool-wide hashrate chart")}</div>
+  return `<section id=pch class=panel>
+    <div class=card>${chartHtml(graph.m, graph.l, graph.r, graph.a, "Pool-wide hashrate chart")}</div>
   </section>`;
 }
 
 function motdSlot(motd) {
   const html = motdCard(motd);
-  return `<div id="mtd"${html ? "" : " class=\"hd\""}>${html}</div>`;
+  return `<div id="mtd"${html ? "" : " class=\"hidden\""}>${html}</div>`;
 }
 
 function setMotdSlot(node, motd) {
   const html = motdCard(motd);
-  tog(node, "hd", !html);
+  tog(node, "hidden", !html);
   node.innerHTML = html;
-  const button = node.querySelector("[data-dm]");
+  const button = node.querySelector("[data-dismiss-motd]");
   if (button) button.addEventListener("click", (event) => {
-    dismissMotd(event.currentTarget.dataset.dm, { persist: localHistoryEnabled() });
-    event.currentTarget.closest(".mc")?.remove();
-    tog(node, "hd", true);
+    dismissMotd(event.currentTarget.dataset.dismissMotd, { persist: localHistoryEnabled() });
+    event.currentTarget.closest(".motd-card")?.remove();
+    tog(node, "hidden", true);
   });
 }
 
 function motdCard(motd) {
   if (!shouldShowMotd(motd, { persist: localHistoryEnabled() })) return "";
   const title = motd.subject || "Pool notice";
-  return `<section class="pn mc" data-mk="${escapeHtml(motd.key)}">
-    <div class=ph>
+  return `<section class="panel motd-card" data-motd-key="${escapeHtml(motd.key)}">
+    <div class=panel-header>
       <div>
         <h2>${escapeHtml(title)}</h2>
       </div>
-      <button class="md" data-dm="${escapeHtml(motd.key)}" aria-label="Dismiss pool notice until it changes" title="Dismiss until updated">🗑</button>
+      <button class="motd-dismiss" data-dismiss-motd="${escapeHtml(motd.key)}" aria-label="Dismiss pool notice until it changes" title="Dismiss until updated">🗑</button>
     </div>
-    <div class=cd><p class=mcp>${escapeHtml(motd.body)}</p></div>
+    <div class=card><p class=motd-copy>${escapeHtml(motd.body)}</p></div>
   </section>`;
 }
 
@@ -153,21 +153,21 @@ async function walletSummaryCard(address) {
   const key = state.gm === "raw" ? "hsh" : "hsh2";
   const graph = hashrateChart(chartRows, state.gw, key);
   return `
-    <article class="ws pn" id="wallet-${escapeHtml(address)}" data-w="${escapeHtml(address)}">
-      <div class="ph wh">
+    <article class="wallet-summary panel" id="wallet-${escapeHtml(address)}" data-wallet-address="${escapeHtml(address)}">
+      <div class="panel-header wallet-header">
         <div>
-          <div class="wtr">
-            <h1><a class="wtl" href="${walletRouteWithGraph(address, "overview", state.gw, state.gm)}">${shortAddress(address)}</a></h1>
+          <div class="wallet-title-row">
+            <h1><a class="wallet-title-link" href="${walletRouteWithGraph(address, "overview", state.gw, state.gm)}">${shortAddress(address)}</a></h1>
             ${lastShareAgeSuffix(stats)}
-            ${chipLink("Setup", `#/setup?a=${encodeUrlPart(address)}`, false, `title="Open setup commands for this wallet"`)}
+            ${chipLink("Setup", `#/setup?addr=${encodeUrlPart(address)}`, false, `title="Open setup commands for this wallet"`)}
           </div>
         </div>
-        <button class="wrm" data-rw="${escapeHtml(address)}" aria-label="Remove wallet ${escapeHtml(shortAddress(address))}" title="Remove wallet">🗑</button>
+        <button class="wallet-remove" data-remove-wallet="${escapeHtml(address)}" aria-label="Remove wallet ${escapeHtml(shortAddress(address))}" title="Remove wallet">🗑</button>
       </div>
-      <div class="cd gd kg">
+      <div class="card grid kpi-grid wallet-kpi-grid">
         ${walletKpis(stats, workerRows.length, stats.hash2 || stats.hash || 0)}
       </div>
-      <div class=cd>${graph.p.length ? chartHtml(graph.m, graph.l, graph.r, graph.a, "Wallet hashrate chart") : `<p class=mt>No wallet graph data yet.</p>`}</div>
+      <div class=card>${graph.p.length ? chartHtml(graph.m, graph.l, graph.r, graph.a, "Wallet hashrate chart") : `<p class=muted>No wallet graph data yet.</p>`}</div>
     </article>
   `;
 }

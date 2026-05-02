@@ -23,5 +23,5 @@ export function pageCountFor(totalCount, pageSize) {
 
 export function pageQuery(page = 1, pageSize = PAGE_SIZES[0]) {
   const size = blockPageSize(pageSize);
-  return page > 1 ? `p=${page}&s=${size}` : `s=${size}`;
+  return page > 1 ? `page=${page}&limit=${size}` : `limit=${size}`;
 }

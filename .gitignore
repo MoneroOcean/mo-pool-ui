@@ -3,6 +3,10 @@ node_modules/
 package-lock.json
 build/
 coverage/
+test-results/
+playwright-report/
+blob-report/
+tmp/
 *.map
 *.log
 .env

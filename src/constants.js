@@ -69,17 +69,16 @@ export const GRAPH_WINDOWS = [
   ["all", "All", Infinity]
 ];
 
-// Short explanation keys keep repeated tooltip copy references compact:
-// p PPLNS, l luck, h hash scalar, n normalized hashrate, c current pool
-// estimate, r raw hashrate, py payout policy, x XMR-only payouts, pv privacy.
+// Shared tooltip copy keeps explanations consistent between KPI cards, help
+// entries, and wallet controls.
 export const EXPLANATIONS = {
-  p: "PPLNS pays shares in the current window when a block is found. Recent shares can earn after a worker stops.",
-  l: "Luck compares shares spent with expected difficulty. Over 100% took extra work; under 100% was luckier.",
-  h: "Hash scalar is profit per hash vs XMR, with effort luck penalty. 100% equals XMR.",
-  n: "XMR-normalized hashrate converts mined coins to XMR payout value for algorithm comparison.",
-  c: "Current pool estimate is XMR-normalized accepted-share hashrate from the last 10-minute backend window, not graph-window average; can lag spikes.",
-  r: "Raw hashrate is worker-reported by algo. Pool-side estimates use accepted shares and can lag spikes.",
-  py: "Payouts auto-send when due balance reaches the threshold. Small thresholds can mean higher relative fees or payout waits.",
-  x: "Rewards convert and pay in XMR. XMR can merge-mine XTM/Tari; no separate XTM wallet needed.",
-  pv: "Wallet history stays in this browser and is used only when opened."
+  pplns: "PPLNS pays shares in the current window when a block is found. Recent shares can earn after a worker stops.",
+  luck: "Luck compares shares spent with expected difficulty. Over 100% took extra work; under 100% was luckier.",
+  hashScalar: "Hash scalar is profit per hash vs XMR, with effort luck penalty. 100% equals XMR.",
+  normalizedHashrate: "XMR-normalized hashrate converts mined coins to XMR payout value for algorithm comparison.",
+  currentHashrate: "Current pool estimate is XMR-normalized accepted-share hashrate from the last 10-minute backend window, not graph-window average; can lag spikes.",
+  rawHashrate: "Raw hashrate is worker-reported by algo. Pool-side estimates use accepted shares and can lag spikes.",
+  payoutPolicy: "Payouts auto-send when due balance reaches the threshold. Small thresholds can mean higher relative fees or payout waits.",
+  xmrPayouts: "Rewards convert and pay in XMR. XMR can merge-mine XTM/Tari; no separate XTM wallet needed.",
+  privacy: "Wallet history stays in this browser and is used only when opened."
 };

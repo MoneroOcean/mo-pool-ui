@@ -1,5 +1,4 @@
-// Tiny DOM shorthands keep event-binding code readable while avoiding many
-// repeated document.querySelector/getElementById strings in the raw JS bundle.
+// Small DOM wrappers keep event-binding code consistent and null-safe.
 export const byId = (id) => document.getElementById(id);
 export const qs = (selector, root = document) => root?.querySelector(selector);
 export const qsa = (selector, root = document) => root?.querySelectorAll(selector) || [];

@@ -7,10 +7,14 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node --test",
+    "test": "node --require ./tests/common/test_output_buffer.cjs --test --test-reporter=./tests/common/spec_reporter.cjs --test-concurrency=1 tests/all.mjs",
+    "test:unit": "node --require ./tests/common/test_output_buffer.cjs --test --test-reporter=./tests/common/spec_reporter.cjs --test-concurrency=1 tests/build-invariants.mjs tests/core-routing-privacy.mjs tests/rendered-views.mjs tests/wallet-workers-render-policy.mjs tests/setup-settings.mjs tests/dom-interactions.mjs tests/settings-setup-interactions.mjs",
+    "test:e2e": "playwright test --config=tests/playwright.config.mjs",
+    "test:all": "npm test",
     "build": "./build.sh"
   },
   "devDependencies": {
+    "@playwright/test": "^1.59.1",
     "csso-cli": "^4.0.2",
     "esbuild": "^0.25.12",
     "html-minifier-terser": "^7.2.0",
