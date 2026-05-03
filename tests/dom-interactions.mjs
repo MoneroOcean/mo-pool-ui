@@ -178,7 +178,10 @@ function installDom({ width = 800 } = {}) {
   global.matchMedia = global.window.matchMedia;
   global.location = { hash: "#/" };
   global.history = { replaceState: (state, title, url) => { global.location.hash = String(url); } };
-  global.navigator = { clipboard: { writeText: (text) => { writes.push(text); return Promise.resolve(); } } };
+  Object.defineProperty(global, "navigator", {
+    configurable: true,
+    value: { clipboard: { writeText: (text) => { writes.push(text); return Promise.resolve(); } } }
+  });
   global.localStorage = {
     getItem: (key) => storage.has(key) ? storage.get(key) : null,
     setItem: (key, value) => storage.set(key, String(value)),

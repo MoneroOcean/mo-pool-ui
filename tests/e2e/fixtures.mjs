@@ -2,7 +2,7 @@ import { expect } from "@playwright/test";
 
 export const VALID_WALLET = "4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
 
-const now = 1_777_735_000;
+const now = Math.floor(Date.now() / 1000);
 
 export function chartRows(count = 18, base = 100_000) {
   return Array.from({ length: count }, (_, index) => ({
