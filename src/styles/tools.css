@@ -412,6 +412,16 @@ summary { cursor: pointer; color: var(--accent-color); }
 .help-list li + li {
   margin-top: 8px;
 }
+.reference-port-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 4px 18px;
+  margin: 8px 0 0;
+  padding-left: 18px;
+}
+.reference-port-list li + li {
+  margin-top: 0;
+}
 .help-entry a {
   overflow-wrap: anywhere;
 }

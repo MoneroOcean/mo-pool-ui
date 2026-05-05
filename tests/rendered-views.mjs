@@ -28,6 +28,7 @@ import { homeView, walletTrackButtonLabel } from "../src/views/home.js";
 import { poolDashboard } from "../src/views/pool-dashboard.js";
 import { coinsView } from "../src/views/coins.js";
 import { paymentsView, paymentRoute } from "../src/views/payments.js";
+import { calcView } from "../src/views/calc.js";
 
 const TEST_POLICY = payoutPolicyFromConfig({
   payout_policy: {
@@ -318,6 +319,17 @@ test.describe("rendered views, links, charts, and coins", { concurrency: false }
     assert.match(html, /<line class="cursor-line cursor-horizontal"/);
     assert.match(html, /data-chart-points="\[/);
     assert.doesNotMatch(html, /NaN|undefined/);
+  });
+
+  test("calculator explains the XMR fiat price source", async () => {
+    await withApiStubs({
+      poolStats: async () => ({ coins: { 18081: { port: 18081, symbol: "XMR", profit: 0.00000008 } }, price: { usd: 400 } })
+    }, async () => {
+      const html = await calcView({ n: "calc", p: "#/calc?rate=2&unit=kh", q: { rate: "2", unit: "kh" } });
+
+      assert.match(html, /XMR USD price \$400\.00\./);
+      assert.match(html, /Price comes from CoinMarketCap\./);
+    });
   });
 
   test("wallet graph details are opt-in and stale share labels use common age text", () => {

@@ -23,7 +23,7 @@ import { blockPaymentStage, blockRoute, blocksView } from "../src/views/blocks.j
 import { walletRouteWithGraph, lastShareAgeSuffix, walletWorkersSection, workerList as walletWorkerList } from "../src/views/wallet.js";
 import { chartHtml, normalizeGraph } from "../src/views/charts.js";
 import { skel } from "../src/views/common.js";
-import { referencePortSummary } from "../src/views/help.js";
+import { referencePortList, referencePortSummary } from "../src/views/help.js";
 import { homeView, walletTrackButtonLabel } from "../src/views/home.js";
 import { poolDashboard } from "../src/views/pool-dashboard.js";
 import { coinsView } from "../src/views/coins.js";
@@ -245,6 +245,9 @@ test.describe("setup, settings, uptime, and copy", { concurrency: false }, () =>
 
   test("help reference ports match current port stats", () => {
     assert.equal(referencePortSummary(), "80/443 TLS for 1 KH/s; 10001/20001 TLS for 1 KH/s; 10002/20002 TLS for 2 KH/s; 10004/20004 TLS for 4 KH/s; 10008/20008 TLS for 8 KH/s; 10016/20016 TLS for 16 KH/s; 10032/20032 TLS for 32 KH/s; 10064/20064 TLS for 64 KH/s; 10128/20128 TLS for 128 KH/s; 10256/20256 TLS for 256 KH/s; 10512/20512 TLS for 512 KH/s; 11024/21024 TLS for 1 MH/s; 12048/22048 TLS for 2 MH/s; 14096/24096 TLS for 4 MH/s; 18192/28192 TLS for 8 MH/s");
+    const list = referencePortList();
+    assert.match(list, /^<ul class="reference-port-list"><li>80\/443 TLS for 1 KH\/s<\/li>/);
+    assert.equal([...list.matchAll(/<li>/g)].length, 15);
   });
 
   test("wallet chart endpoint uses backend hashrate chart path", () => {

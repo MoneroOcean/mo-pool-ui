@@ -8,6 +8,8 @@ import { state } from "../state.js";
 import { escapeHtml } from "./common.js";
 import { normalizeGraph } from "./charts.js";
 
+const XMR_PRICE_SOURCE = "Price comes from CoinMarketCap.";
+
 export async function calcView(route = state.r) {
   const pool = await api.poolStats();
   const defaultHashrate = route.q?.rate ? null : await trackedWalletHashrate();
@@ -31,7 +33,7 @@ export async function calcView(route = state.r) {
           <span class="muted fiat-output" data-period="${row.days}">${escapeHtml(formatFiat(row.fiat, row.fiatLabel))}</span>
         </article>`).join("")}
       </div>
-      <p class="muted calc-footnote">XMR ${isFiniteNumber(price) ? `${fiat.label} price ${formatFiat(price, fiat.label)}.` : `${fiat.label} price unavailable from API.`}</p>
+      <p class="muted calc-footnote">XMR ${isFiniteNumber(price) ? `${fiat.label} price ${formatFiat(price, fiat.label)}.` : `${fiat.label} price unavailable from API.`} ${XMR_PRICE_SOURCE}</p>
     </div>
   </section>`;
 }

@@ -67,7 +67,7 @@ export async function helpView() {
     ]],
     ["Hosts, ports, Tor", [
       `Use ${POOL_HOST}; it routes miners to a nearby healthy node. Check ${statusOrDiscord} during incidents.`,
-      `Setup selects a port from estimated hashrate. Reference ports: ${referencePortSummary()}.`,
+      `Setup selects a port from estimated hashrate. Reference ports:${referencePortList()}`,
       `Ports 80 and 443 help on web-only networks. Tor onion for non-TLS mining: ${TOR_MINING_HOST}.`
     ]],
     ["Workers and proxies", [
@@ -99,9 +99,17 @@ function helpLink(href, label) {
 export function referencePortSummary(ports = DEFAULT_REFERENCE_PORTS) {
   // Public mining ports are a hashrate ladder: 100xx is KH/s, 11xxx+ is MH/s,
   // and port 80 is a firewall-friendly alias for the first 1 KH/s tier.
+  return referencePortLabels(ports).join("; ");
+}
+
+export function referencePortList(ports = DEFAULT_REFERENCE_PORTS) {
+  return `<ul class="reference-port-list">${referencePortLabels(ports).map((label) => `<li>${escapeHtml(label)}</li>`).join("")}</ul>`;
+}
+
+function referencePortLabels(ports = DEFAULT_REFERENCE_PORTS) {
   return ports.map((port) => {
     if (Array.isArray(port)) return `${port[0]}${port[1] ? `/${port[1]} TLS` : ""} for ${port[2] || formatHashrate(port[3])}`;
     const rate = port < 11024 ? port === 80 ? 1 : port - 10000 : (port - 10000) / 1024;
     return `${port}/${port === 80 ? 443 : port + 10000} TLS for ${rate} ${port < 11024 ? "KH/s" : "MH/s"}`;
-  }).join("; ");
+  });
 }
