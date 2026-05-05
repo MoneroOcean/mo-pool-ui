@@ -115,7 +115,7 @@ test.describe("wallet workers and render policy", { concurrency: false }, () => 
     assert.equal(workerStatus(true, 0, 9990, now), "Dead");
 
     const workers = compactWorkerRows({
-      active: { hsh2: 20, hsh: 200, lastHash: 9700, totalHash: 1000, validShares: 5, invalidShares: 1 },
+      active: { hsh2: 20, hsh: 200, lastHash: 9700, totalHash: 1000, validShares: 5, invalidShares: 1, lastShareAlgo: "rx/0" },
       stale: { hsh2: 40, hsh: 400, lastHash: 9300, totalHashes: 2000, valid: 8, invalid: 2 },
       dead: { hsh2: 0, hsh: 0, lastHash: 9950, hashes: 3000, valid: 1, invalid: 3 },
       global: { hsh2: 999 }
@@ -129,6 +129,7 @@ test.describe("wallet workers and render policy", { concurrency: false }, () => 
     assert.equal(byName.active.l, 9990);
     assert.equal(byName.active.status, "Active");
     assert.equal(byName.active.ax, 20);
+    assert.equal(byName.active.la, "rx/0");
     assert.equal(byName.stale.status, "Stale");
     assert.equal(byName.dead.status, "Dead");
     assert.equal(byName.chartOnly.status, "Dead");
@@ -137,14 +138,15 @@ test.describe("wallet workers and render policy", { concurrency: false }, () => 
 
   test("worker list sorting defaults to name and supports list columns", () => {
     const workers = [
-      { n: "active", status: "Active", xmr: 20, raw: 200, ax: 20, ar: 200, l: 9990, vs: 5, is: 1, totalHashes: 1000 },
-      { n: "stale", status: "Stale", xmr: 40, raw: 400, ax: 0, ar: 0, l: 9300, vs: 8, is: 2, totalHashes: 2000 },
-      { n: "dead", status: "Dead", xmr: 0, raw: 0, ax: 0, ar: 0, l: 9950, vs: 1, is: 3, totalHashes: 3000 },
-      { n: "chartOnly", status: "Dead", xmr: 0, raw: 0, ax: 15, ar: 150, l: 9800, vs: 0, is: 0, totalHashes: 0 }
+      { n: "active", status: "Active", la: "rx/0", xmr: 20, raw: 200, ax: 20, ar: 200, l: 9990, vs: 5, is: 1, totalHashes: 1000 },
+      { n: "stale", status: "Stale", la: "kawpow", xmr: 40, raw: 400, ax: 0, ar: 0, l: 9300, vs: 8, is: 2, totalHashes: 2000 },
+      { n: "dead", status: "Dead", la: "", xmr: 0, raw: 0, ax: 0, ar: 0, l: 9950, vs: 1, is: 3, totalHashes: 3000 },
+      { n: "chartOnly", status: "Dead", la: "ghostrider", xmr: 0, raw: 0, ax: 15, ar: 150, l: 9800, vs: 0, is: 0, totalHashes: 0 }
     ];
 
     assert.equal(workerListSortMode("bad"), "name");
     assert.equal(workerListSortMode("status"), "name");
+    assert.equal(workerListSortMode("algo"), "algo");
     assert.deepEqual(sortWorkerListRows(workers).map((worker) => worker.n), ["active", "chartOnly", "dead", "stale"]);
     assert.deepEqual(sortWorkerListRows(workers, "name", "asc").map((worker) => worker.n), ["active", "chartOnly", "dead", "stale"]);
     assert.equal(sortWorkerListRows(workers, "xmr")[0].n, "stale");
@@ -152,6 +154,7 @@ test.describe("wallet workers and render policy", { concurrency: false }, () => 
     assert.equal(sortWorkerListRows(workers, "avg")[0].n, "active");
     assert.equal(sortWorkerListRows(workers, "avgraw")[0].n, "active");
     assert.equal(sortWorkerListRows(workers, "last")[0].n, "active");
+    assert.equal(sortWorkerListRows(workers, "algo", "asc")[0].n, "dead");
     assert.equal(sortWorkerListRows(workers, "valid")[0].n, "stale");
     assert.equal(sortWorkerListRows(workers, "invalid")[0].n, "dead");
     assert.equal(sortWorkerListRows(workers, "hashes")[0].n, "dead");
@@ -168,11 +171,13 @@ test.describe("wallet workers and render policy", { concurrency: false }, () => 
     }, 10_000_000);
     const html = walletWorkersSection(address, workers, {}, "12h", "xmr", "status", "desc", false, "list");
 
-    for (const key of ["name", "xmr", "raw", "avg", "avgraw", "last", "valid", "invalid", "hashes"]) {
+    for (const key of ["name", "algo", "xmr", "raw", "avg", "avgraw", "last", "valid", "invalid", "hashes"]) {
       assert.match(html, new RegExp(`sort=${key}`));
     }
     assert.doesNotMatch(html, /sort=status/);
     assert.doesNotMatch(html, />Status</);
+    assert.match(html, />Algo</);
+    assert.match(html, />--</);
     assert.doesNotMatch(html, /<span class=red>Stale<\/span>/);
     assert.doesNotMatch(html, /<span class=red>Dead<\/span>/);
     assert.match(html, /<span class=red>stale<\/span>/);
@@ -222,6 +227,9 @@ test.describe("wallet workers and render policy", { concurrency: false }, () => 
     assert.doesNotMatch(hiddenHtml, /<h3><span class=red title="Dead">dead<\/span>/);
     assert.doesNotMatch(hiddenHtml, /<h3><span class=red title="Dead">chartOnly<\/span>/);
     assert.match(hiddenHtml, /dead=0/);
+
+    const detailHtml = walletWorkersSection(address, workers, charts, "all", "xmr", "h", "desc", true, 2);
+    assert.match(detailHtml, /<small>Last algo --<\/small>/);
   });
 
   test("block payout stage keeps unlock and pay-stage detail", () => {

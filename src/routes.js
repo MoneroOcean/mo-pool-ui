@@ -54,7 +54,7 @@ Wallet:
   #/wallet/<address>/payout
   #/wallet/<address>/alerts
   params: window=6h|12h|24h|all, mode=xmr|raw, view=1|2|3|list,
-          sort=h|name|xmr|raw|avg|avgraw|last|valid|invalid|hashes,
+          sort=h|name|algo|xmr|raw|avg|avgraw|last|valid|invalid|hashes,
           dir=asc|desc, dead=0, stats=1,
           wpage=<withdrawal page>, wlimit=15|50|100,
           rpage=<reward page>, rlimit=15|50|100

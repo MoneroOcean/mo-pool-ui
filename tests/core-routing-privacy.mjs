@@ -228,7 +228,7 @@ test.describe("core routing, privacy, and preferences", { concurrency: false }, 
     for (const mode of ["1", "2", "3", "list"]) {
       assert.deepEqual(parseRoute(`#/wallet/${address}/overview?view=${mode}&sort=name&dir=asc`).q, { view: mode, sort: "name", dir: "asc" }, `worker display mode ${mode}`);
     }
-    for (const sort of ["name", "xmr", "raw", "avg", "avgraw", "last", "valid", "invalid", "hashes"]) {
+    for (const sort of ["name", "algo", "xmr", "raw", "avg", "avgraw", "last", "valid", "invalid", "hashes"]) {
       assert.deepEqual(parseRoute(`#/wallet/${address}/overview?view=list&sort=${sort}&dir=desc`).q, { view: "list", sort, dir: "desc" }, `worker list sort ${sort}`);
     }
   });

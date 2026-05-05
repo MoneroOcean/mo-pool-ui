@@ -334,11 +334,12 @@ test.describe("rendered views, links, charts, and coins", { concurrency: false }
     assert.equal(workerDisplayMode("list"), "list");
 
     const workers = walletWorkerList({
-      alpha: { hash2: 50, lastHash: 1000, totalHash: 1234, validShares: 7, invalidShares: 2 },
+      alpha: { hash2: 50, lastHash: 1000, totalHash: 1234, validShares: 7, invalidShares: 2, lastShareAlgo: "rx/0" },
       beta: { stats: [{ hsh2: 10, lts: 2000, totalHashes: 400, valid: 3, invalid: 1 }] }
     });
     assert.deepEqual(workers.map((worker) => worker.n), ["alpha", "beta"]);
     assert.equal(workers[0].totalHashes, 1234);
+    assert.equal(workers[0].la, "rx/0");
     assert.equal(workers[0].vs, 7);
     assert.equal(workers[0].is, 2);
     assert.equal(lastShareAgeSuffix(1000, (1000 + 180) * 1000), "");

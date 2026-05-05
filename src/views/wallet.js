@@ -24,6 +24,7 @@ const THRESHOLD_TAB = "payout";
 const EMAIL_ALERTS_TAB = "alerts";
 const WORKER_COLUMNS = [
   ["Worker", "name"],
+  ["Algo", "algo"],
   ["XMR", "xmr"],
   ["Raw", "raw"],
   ["Avg XMR", "avg"],
@@ -224,7 +225,7 @@ function workerTableHeadings(address, graphWindow, graphMode, active, direction,
 
 function sortableWorkerHeading(label, key, address, graphWindow, graphMode, active, direction, graphDetails, showDead = workerShowDead) {
   const selected = active === key;
-  const firstDirection = { name: "asc" };
+  const firstDirection = { name: "asc", algo: "asc" };
   const next = nextSortDirectionForKey(active, direction, key, firstDirection);
   const arrow = selected ? (direction === "asc" ? " ↑" : " ↓") : "";
   return { html: `<a class="sortable" href="${walletRouteWithGraph(address, OVERVIEW_TAB, graphWindow, graphMode, key, next, graphDetails, "list", showDead)}">${escapeHtml(label)}${escapeHtml(arrow)}</a>` };
@@ -233,6 +234,7 @@ function sortableWorkerHeading(label, key, address, graphWindow, graphMode, acti
 function workerTableRow(worker) {
   const row = [
     worker.n,
+    worker.la || "--",
     formatHashrate(worker.xmr),
     formatHashrate(worker.raw),
     formatHashrate(worker.ax),
@@ -433,7 +435,7 @@ function miningStatsLine(stats = {}) {
   const total = stats.totalHashes ?? stats.th ?? stats.totalHash ?? stats.hashes ?? 0;
   const valid = stats.vs ?? stats.validShares ?? stats.valid ?? stats.shares ?? stats.s ?? 0;
   const invalid = stats.is ?? stats.invalidShares ?? stats.invalid ?? stats.badShares ?? stats.bad_shares ?? 0;
-  return [`Total hashes ${formatNumber(total)}`, `Valid shares ${formatNumber(valid)}`, `Invalid shares ${formatNumber(invalid)}`];
+  return [`Last algo ${stats.la || stats.lastShareAlgo || "--"}`, `Total hashes ${formatNumber(total)}`, `Valid shares ${formatNumber(valid)}`, `Invalid shares ${formatNumber(invalid)}`];
 }
 
 export function bindSettingsForms() {

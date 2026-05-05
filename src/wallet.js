@@ -3,7 +3,7 @@ import { isXmrAddress } from "./routes.js";
 import { compareValues } from "./table-sort.js";
 
 const STALE_WORKER_SECONDS = 10 * 60;
-const WORKER_LIST_SORT_KEYS = ["name", "xmr", "raw", "avg", "avgraw", "last", "valid", "invalid", "hashes"];
+const WORKER_LIST_SORT_KEYS = ["name", "algo", "xmr", "raw", "avg", "avgraw", "last", "valid", "invalid", "hashes"];
 
 export function trackWalletState(watchlist, address, now = Date.now()) {
   if (!isXmrAddress(address)) return { watchlist, nextHash: null, clearInput: false };
@@ -78,6 +78,7 @@ function compactWorkerRow(name, stats, chartRows, now) {
     r: current,
     xmr,
     raw,
+    la: statText(stat?.row, stats, ["lastShareAlgo", "algo"]),
     ax: chart.xmr,
     ar: chart.raw,
     l: lastSeen,
@@ -142,6 +143,11 @@ function statValue(row, parent, keys) {
   return isFiniteNumber(number) ? number : 0;
 }
 
+function statText(row, parent, keys) {
+  const value = firstValue(row, keys) ?? firstValue(parent, keys);
+  return value ? String(value) : "";
+}
+
 function firstValue(source, keys) {
   if (!isObject(source)) return undefined;
   for (const key of keys) {
@@ -152,6 +158,7 @@ function firstValue(source, keys) {
 
 function workerListSortValue(row, key) {
   if (key === "name") return row.n;
+  if (key === "algo") return row.la;
   if (key === "xmr") return row.xmr;
   if (key === "raw") return row.raw;
   if (key === "avg") return row.ax;
