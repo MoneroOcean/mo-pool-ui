@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { expectHashParamKeys, expectHashParams, mockApi, openApp, VALID_WALLET, waitForStableMicrotasks } from "./fixtures.mjs";
+import { expectHashParams, expectHashPath, mockApi, openApp, VALID_WALLET, waitForStableMicrotasks } from "./fixtures.mjs";
 
 test("GDPR local-history banner allow and deny paths update visible wallet behavior", async ({ page }) => {
   const api = await mockApi(page);
@@ -88,7 +88,7 @@ test("wallet history persists only when local history is enabled", async ({ page
   await openApp(page, "#/");
   await page.locator("#ai").fill(VALID_WALLET);
   await page.locator("#af").evaluate((form) => form.requestSubmit());
-  await expectHashParamKeys(page, ["tracked"]);
+  await expectHashPath(page, `#/wallet/${VALID_WALLET}/overview`);
   await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem("mo.wallets.v1") || "[]").length)).toBe(1);
 
   await openApp(page, "#/help");

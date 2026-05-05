@@ -60,7 +60,8 @@ const scheduler = new RefreshScheduler({
 
 async function render({ background = false } = {}) {
   const previousRoute = state.r;
-  const nextRoute = parseRoute(location.hash || "#/");
+  const targetHash = location.hash || "#/";
+  const nextRoute = parseRoute(targetHash);
   if (background && isStaticRoute(nextRoute)) return;
   const keepCurrentView = !background && isSameViewNavigation(previousRoute, nextRoute);
   state.r = nextRoute;
@@ -72,6 +73,7 @@ async function render({ background = false } = {}) {
   if (shouldShowLoading(previousRoute, state.r, { background })) view.innerHTML = skel("Loading dashboard");
   try {
     const html = await routeHtml(state.r);
+    if ((location.hash || "#/") !== targetHash) return;
     if (background && isStaticRoute(parseRoute(location.hash || "#/"))) return;
     view.innerHTML = html;
     bindViewEvents();

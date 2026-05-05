@@ -1,14 +1,15 @@
 import { isFiniteNumber, normalizeTimestampSeconds } from "./format.js";
-import { isXmrAddress } from "./routes.js";
+import { isXmrAddress, walletRoute } from "./routes.js";
 import { compareValues } from "./table-sort.js";
 
 const STALE_WORKER_SECONDS = 10 * 60;
 const WORKER_LIST_SORT_KEYS = ["name", "algo", "xmr", "raw", "avg", "avgraw", "last", "valid", "invalid", "hashes"];
 
-export function trackWalletState(watchlist, address, now = Date.now()) {
-  if (!isXmrAddress(address)) return { watchlist, nextHash: null, clearInput: false };
-  const next = [...watchlist.filter((row) => row.address !== address), { address, time: now }].slice(-10);
-  return { watchlist: next, nextHash: `#/?tracked=${now}`, clearInput: true };
+export function trackWalletState(watchlist = [], address, now = Date.now()) {
+  const rows = Array.isArray(watchlist) ? watchlist : [];
+  if (!isXmrAddress(address)) return { watchlist: rows, nextHash: null, clearInput: false };
+  const next = [...rows.filter((row) => row.address !== address), { address, time: now }].slice(-10);
+  return { watchlist: next, nextHash: rows.length ? `#/?tracked=${now}` : walletRoute(address, "overview"), clearInput: true };
 }
 
 export function workerSortMode(value) {
@@ -21,7 +22,7 @@ export function workerSortDirection(value) {
 
 export function workerGraphColumns(value, width = globalThis.innerWidth || 1300) {
   const cols = Number(value);
-  return cols > 0 && cols < 4 ? cols : width >= 760 ? 2 : 1;
+  return cols > 0 && cols < 6 ? cols : width >= 760 ? 2 : 1;
 }
 
 export function workerDisplayMode(value, width = globalThis.innerWidth || 1300) {

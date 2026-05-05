@@ -325,12 +325,16 @@ test.describe("rendered views, links, charts, and coins", { concurrency: false }
     assert.doesNotMatch(walletRouteWithGraph(address, "overview", "12h", "xmr"), /stats=1/);
     assert.match(walletRouteWithGraph(address, "overview", "12h", "xmr", "h", "desc", true, 2), /stats=1/);
     assert.match(walletRouteWithGraph(address, "overview", "12h", "xmr", "h", "desc", false, 3), /view=3/);
+    assert.match(walletRouteWithGraph(address, "overview", "12h", "xmr", "h", "desc", false, 5), /view=5/);
     assert.match(walletRouteWithGraph(address, "overview", "12h", "xmr", "h", "desc", false, "list"), /view=list&sort=name&dir=asc/);
     assert.match(walletRouteWithGraph(address, "overview", "12h", "xmr", "h", "desc", false, "list", false), /dead=0/);
     assert.equal(workerGraphColumns("", 500), 1);
     assert.equal(workerGraphColumns("", 900), 2);
     assert.equal(workerGraphColumns("", 1400), 2);
     assert.equal(workerGraphColumns(3, 1400), 3);
+    assert.equal(workerGraphColumns(4, 1400), 4);
+    assert.equal(workerGraphColumns(5, 1400), 5);
+    assert.equal(workerGraphColumns(6, 1400), 2);
     assert.equal(workerDisplayMode("list"), "list");
 
     const workers = walletWorkerList({

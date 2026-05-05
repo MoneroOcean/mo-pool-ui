@@ -225,7 +225,7 @@ test.describe("core routing, privacy, and preferences", { concurrency: false }, 
     for (const window of ["6h", "12h", "24h", "all"]) {
       assert.deepEqual(parseRoute(`#/wallet/${address}/overview?window=${window}&mode=raw`).q, { window, mode: "raw" }, `wallet graph window ${window}`);
     }
-    for (const mode of ["1", "2", "3", "list"]) {
+    for (const mode of ["1", "2", "3", "4", "5", "list"]) {
       assert.deepEqual(parseRoute(`#/wallet/${address}/overview?view=${mode}&sort=name&dir=asc`).q, { view: mode, sort: "name", dir: "asc" }, `worker display mode ${mode}`);
     }
     for (const sort of ["name", "algo", "xmr", "raw", "avg", "avgraw", "last", "valid", "invalid", "hashes"]) {

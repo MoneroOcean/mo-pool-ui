@@ -297,9 +297,14 @@ test.describe("setup, settings, uptime, and copy", { concurrency: false }, () =>
     assert.equal(summarizeUptimeRobot({ data: [{ name: "Backend: API server", statusClass: "danger" }] }).tone, "red");
   });
 
-  test("tracking a wallet stays on dashboard and clears input", () => {
+  test("tracking a wallet opens first wallet details then stays on dashboard for later wallets", () => {
     const address = `4${"A".repeat(94)}`;
     const existing = `8${"B".repeat(105)}`;
+    const first = trackWalletState([], address, 123);
+    assert.equal(first.nextHash, `#/wallet/${address}/overview`);
+    assert.equal(first.clearInput, true);
+    assert.deepEqual(first.watchlist.map((row) => row.address), [address]);
+
     const result = trackWalletState([{ address: existing, time: 1 }], address, 123);
     assert.equal(result.nextHash, "#/?tracked=123");
     assert.equal(result.clearInput, true);
@@ -325,6 +330,8 @@ test.describe("setup, settings, uptime, and copy", { concurrency: false }, () =>
     const mobileDefaultControls = walletWorkersSection(address, [], {}, "6h", "xmr", "h", "desc", false, 1, true);
     assert.match(mobileDefaultControls, /aria-current=page>1</);
     assert.match(mobileDefaultControls, /window=6h&mode=xmr&view=3&sort=h&dir=desc/);
+    assert.match(mobileDefaultControls, /window=6h&mode=xmr&view=4&sort=h&dir=desc/);
+    assert.match(mobileDefaultControls, /window=6h&mode=xmr&view=5&sort=h&dir=desc/);
   });
 
   test("explainer copy covers required terms", () => {

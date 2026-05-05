@@ -212,7 +212,7 @@ function workerModeControls(address, graphWindow, graphMode, workerSort, workerD
 function workerModeLinks(address, graphWindow, graphMode, workerSort, workerDir, graphDetails, activeMode, showDead = workerShowDead) {
   const mode = activeMode || workerMode || workerGraphColumns();
   const deadLink = chipLink("Dead", walletRouteWithGraph(address, OVERVIEW_TAB, graphWindow, graphMode, workerSort, workerDir, graphDetails, mode, !showDead), showDead);
-  return deadLink + ["list", 1, 2, 3].map((value) => {
+  return deadLink + ["list", 1, 2, 3, 4, 5].map((value) => {
     const sortable = value === "list" ? workerListSortMode(workerSort) : workerSortMode(workerSort);
     const direction = value === "list" && sortable === "name" && workerSort !== "name" ? "asc" : workerDir;
     return chipLink(value === "list" ? "List" : value, walletRouteWithGraph(address, OVERVIEW_TAB, graphWindow, graphMode, sortable, direction, graphDetails, value, showDead), mode === value);

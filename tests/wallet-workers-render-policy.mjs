@@ -230,6 +230,11 @@ test.describe("wallet workers and render policy", { concurrency: false }, () => 
 
     const detailHtml = walletWorkersSection(address, workers, charts, "all", "xmr", "h", "desc", true, 2);
     assert.match(detailHtml, /<small>Last algo --<\/small>/);
+
+    const fiveColumnHtml = walletWorkersSection(address, workers, charts, "12h", "xmr", "h", "desc", false, 5);
+    assert.match(fiveColumnHtml, /class="worker-graph-grid w5"/);
+    assert.match(fiveColumnHtml, /view=4&sort=h&dir=desc/);
+    assert.match(fiveColumnHtml, /view=5&sort=h&dir=desc/);
   });
 
   test("block payout stage keeps unlock and pay-stage detail", () => {

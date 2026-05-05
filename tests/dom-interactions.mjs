@@ -251,6 +251,7 @@ test.describe("DOM interactions and controls", { concurrency: false }, () => {
     const walletCard = el("article", { id: `wallet-${VALID_WALLET}` }, [el("button", { "data-remove-wallet": VALID_WALLET })]);
     list.append(walletCard);
     document.body.append(form, list, graphControls);
+    state.w = [];
     state.r = { n: "wallet", a: VALID_WALLET };
 
     (await bindViewEvents())();
@@ -259,7 +260,7 @@ test.describe("DOM interactions and controls", { concurrency: false }, () => {
 
     input.value = VALID_WALLET;
     await form.dispatchEvent(new TestEvent("submit"));
-    assert.match(location.hash, /^#\/\?tracked=/);
+    assert.equal(location.hash, `#/wallet/${VALID_WALLET}/overview`);
 
     await walletCard.querySelector("[data-remove-wallet]").dispatchEvent(new TestEvent("click"));
     assert.equal(walletCard.parentElement, null);
