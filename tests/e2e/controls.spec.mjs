@@ -29,10 +29,9 @@ test("table sorting, paging, and graph controls produce visible effects", async 
   await expectHashParams(page, { window: "12h" });
   await page.getByRole("link", { name: "Raw" }).click();
   await expectHashParams(page, { mode: "raw" });
-  const chart = page.locator(".hashrate-chart").first();
-  const box = await chart.boundingBox();
-  expect(box).not.toBeNull();
-  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  const chart = page.getByRole("img", { name: "Pool-wide hashrate chart" });
+  await expect(chart).toBeVisible();
+  await chart.hover();
   await expect(page.locator(".chart-readout").first()).not.toHaveText("Point: move over graph");
 
   await openApp(page, "#/setup?os=linux&profile=xmrig-mo");

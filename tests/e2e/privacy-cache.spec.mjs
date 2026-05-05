@@ -15,7 +15,7 @@ test("GDPR local-history banner allow and deny paths update visible wallet behav
   await expect(page.evaluate(() => localStorage.getItem("mo.wallets.v1"))).resolves.toBeNull();
 
   await openApp(page, "#/help");
-  await page.getByText("Privacy/support").click();
+  await openPrivacySupport(page);
   await page.locator("[data-local-history]").click();
   await expect(page.locator("[data-local-history]")).toHaveAttribute("aria-pressed", "true");
   await openApp(page, "#/");
@@ -60,7 +60,7 @@ test("GDPR deny and disable paths clear all optional browser persistence", async
   });
 
   await openApp(page, "#/help");
-  await page.getByText("Privacy/support").click();
+  await openPrivacySupport(page);
   await page.locator("[data-local-history]").click();
   await openApp(page, "#/");
   await page.locator("#ai").fill(VALID_WALLET);
@@ -68,7 +68,7 @@ test("GDPR deny and disable paths clear all optional browser persistence", async
   await expect.poll(() => page.evaluate(() => localStorage.getItem("mo.wallets.v1"))).not.toBeNull();
 
   await openApp(page, "#/help");
-  await page.getByText("Privacy/support").click();
+  await openPrivacySupport(page);
   await page.locator("#theme-toggle").click();
   await page.locator("#comments-toggle").click();
   await page.locator("[data-local-history]").click();
@@ -92,7 +92,7 @@ test("wallet history persists only when local history is enabled", async ({ page
   await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem("mo.wallets.v1") || "[]").length)).toBe(1);
 
   await openApp(page, "#/help");
-  await page.getByText("Privacy/support").click();
+  await openPrivacySupport(page);
   await page.locator("[data-local-history]").click();
   await expect.poll(() => page.evaluate(() => localStorage.getItem("mo.wallets.v1"))).toBeNull();
   await openApp(page, "#/");
@@ -158,6 +158,13 @@ test("wallet tabs fetch only the data needed for the active tab", async ({ page 
 
 function minerCallCount(api) {
   return [...api.calls].filter(([path]) => path.startsWith("miner/")).reduce((sum, [, count]) => sum + count, 0);
+}
+
+async function openPrivacySupport(page) {
+  const summary = page.locator("summary", { hasText: "Privacy/support" });
+  await expect(summary).toBeVisible();
+  await summary.click();
+  await expect(page.locator("[data-local-history]")).toBeVisible();
 }
 
 async function expectStorageAudit(page, expected) {

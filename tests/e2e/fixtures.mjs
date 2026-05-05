@@ -108,8 +108,10 @@ export async function mockApi(page, overrides = {}) {
 
 export async function openApp(page, route = "#/") {
   await page.goto(`/${route}`);
+  await expect.poll(() => page.evaluate(() => location.hash)).toBe(route);
   await expect(page.locator("#view")).not.toHaveAttribute("aria-busy", "true");
   await expect(page.locator(".skeleton")).toHaveCount(0, { timeout: 5000 });
+  await waitForStableMicrotasks(page);
 }
 
 export async function expectHashParams(page, params) {
