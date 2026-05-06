@@ -21,7 +21,7 @@ import { calcProfitRows, fiatForTimezone, formatFiat, hashrateFromInput, hashrat
 import { dismissMotd, normalizeMotd, resetMotdDismissalsForTest, shouldShowMotd } from "../src/motd.js";
 import { blockPaymentStage, blockRoute, blocksView } from "../src/views/blocks.js";
 import { walletRouteWithGraph, lastShareAgeSuffix, walletWorkersSection, workerList as walletWorkerList } from "../src/views/wallet.js";
-import { chartHtml, normalizeGraph } from "../src/views/charts.js";
+import { chartHtml, hashrateChart, normalizeGraph } from "../src/views/charts.js";
 import { skel } from "../src/views/common.js";
 import { referencePortSummary } from "../src/views/help.js";
 import { homeView, walletTrackButtonLabel } from "../src/views/home.js";
@@ -293,6 +293,19 @@ test.describe("rendered views, links, charts, and coins", { concurrency: false }
     assert.doesNotMatch(svgLine(points, "hsh2", 700, 220, true), /NaN|undefined/);
     assert.doesNotMatch(svgLine(points, "hsh2"), / C/);
     assert.equal(chartModel([{ tme: 1, hsh2: 90 }, { tme: 2, hsh2: 100 }], "hsh2").n, 90);
+    const gapRows = normalizeGraph([{ tme: 1000, hsh: 10, hsh2: 10 }, { tme: 5000, hsh: 20, hsh2: 20 }]);
+    assert.deepEqual(gapRows.map((row) => [row.tme, row.hsh2, row.g === true, row.b === true]), [[1000, 10, false, false], [1001, 0, true, false], [4999, 0, true, true], [5000, 20, false, false]]);
+    const gapGraph = hashrateChart(gapRows, "all", "hsh2");
+    assert.equal(gapGraph.a, 15);
+    assert.equal(gapGraph.m.r[1].z, gapGraph.m.r[1].y);
+    assert.equal(gapGraph.m.r[2].z, gapGraph.m.r[2].y);
+    assert.equal(gapGraph.m.r[3].z, gapGraph.m.r[3].y);
+    assert.ok(gapGraph.l.includes(`L${gapGraph.m.r[1].x},${gapGraph.m.r[1].y}`));
+    assert.ok(gapGraph.l.includes(`M${gapGraph.m.r[2].x},${gapGraph.m.r[2].y}`));
+    assert.ok(gapGraph.l.includes(`L${gapGraph.m.r[3].x},${gapGraph.m.r[3].y}`));
+    assert.ok(gapGraph.r.includes(`L${gapGraph.m.r[1].x},${gapGraph.m.r[1].y}`));
+    assert.ok(gapGraph.r.includes(`M${gapGraph.m.r[2].x},${gapGraph.m.r[2].y}`));
+    assert.ok(gapGraph.r.includes(`L${gapGraph.m.r[3].x},${gapGraph.m.r[3].y}`));
     assert.deepEqual(pplnsWindowRect({ s: 0, e: 100, w: 700, h: 220 }, 25), { x: 525, y: 0, width: 175, height: 220 });
     assert.deepEqual(pplnsWindowRect({ s: 0, e: 100, w: 700, h: 220 }, 200), { x: 0, y: 0, width: 700, height: 220 });
     assert.equal(isWithinPplnsWindow(75, 100, 25), true);

@@ -4,6 +4,8 @@ import { state } from "../state.js";
 import { escapeHtml } from "./common.js";
 import { attr, on, qs, qsa, tog } from "../dom.js";
 
+const GRAPH_GAP_ZERO_SECONDS = 30 * 60;
+
 export function chartHtml(model, line, raw, average, label, detail = "") {
   // The chart is plain SVG plus a small data-chart-points payload so hover works without
   // shipping a charting library. Hover points keep named fields because the
@@ -34,7 +36,10 @@ function chartPath(rows, smooth = false) {
   const key = smooth && rows.length > 2 ? "z" : "y";
   return rows.map((point, index) => {
     if (!index) return `M${point.x},${point[key]}`;
+    if (point.b) return `M${point.x},${point[key]}`;
     if (key === "z") {
+      const previous = rows[index - 1];
+      if (point.g || previous.g) return `L${point.x},${point.y}`;
       const mid = (rows[index - 1].x + point.x) / 2;
       return `C${mid},${point.z} ${mid},${point.z} ${point.x},${point.z}`;
     }
@@ -46,7 +51,7 @@ function pplnsAverage(model) {
   const windowSeconds = Number(state.p) || 0;
   if (!windowSeconds || !model.r?.length) return 0;
   const minTime = model.e - windowSeconds;
-  const rows = model.r.filter((row) => row.tme >= minTime);
+  const rows = model.r.filter((row) => row.tme >= minTime && row.g !== true);
   if (!rows.length) return 0;
   return rows.reduce((sum, row) => sum + Number(row.v || 0), 0) / rows.length;
 }
@@ -100,13 +105,34 @@ export function bindChartHover() {
 export function normalizeGraph(stats) {
   const rows = Array.isArray(stats) ? stats : Array.isArray(stats?.stats) ? stats.stats : Array.isArray(stats?.charts) ? stats.charts : [];
   if (!rows.length) return [];
-  return rows.map(normalizeGraphRow).filter((row) => row.tme > 0).sort((a, b) => a.tme - b.tme);
+  return fillGraphGaps(rows.map(normalizeGraphRow).filter((row) => row.tme > 0).sort((a, b) => a.tme - b.tme));
 }
 
 function normalizeGraphRow(row) {
   return {
     tme: normalizeTimestampSeconds(row.tme ?? row.ts ?? row.time),
     hsh: Number(row.hsh ?? row.hs ?? row.hash ?? 0),
-    hsh2: Number(row.hsh2 ?? row.hs2 ?? row.hash2 ?? row.hsh ?? row.hs ?? 0)
+    hsh2: Number(row.hsh2 ?? row.hs2 ?? row.hash2 ?? row.hsh ?? row.hs ?? 0),
+    g: row.g === true,
+    b: row.b === true
   };
+}
+
+function fillGraphGaps(rows) {
+  if (rows.length < 2) return rows;
+  const filled = [rows[0]];
+  for (let index = 1; index < rows.length; index += 1) {
+    const previous = filled[filled.length - 1];
+    const row = rows[index];
+    if (hasHashrate(previous) && hasHashrate(row) && row.tme - previous.tme > GRAPH_GAP_ZERO_SECONDS) {
+      filled.push({ tme: previous.tme + 1, hsh: 0, hsh2: 0, g: true });
+      filled.push({ tme: row.tme - 1, hsh: 0, hsh2: 0, g: true, b: true });
+    }
+    filled.push(row);
+  }
+  return filled;
+}
+
+function hasHashrate(row) {
+  return Number(row.hsh) > 0 || Number(row.hsh2) > 0;
 }

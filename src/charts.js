@@ -13,7 +13,7 @@ export function filterWindow(points, windowId, nowSeconds = Date.now() / 1000) {
 }
 
 export function averageVisible(points, key = "hsh2") {
-  const values = points.map((point) => Number(point[key])).filter(isFiniteNumber);
+  const values = points.filter((point) => point.g !== true).map((point) => Number(point[key])).filter(isFiniteNumber);
   if (!values.length) return 0;
   return values.reduce((sum, value) => sum + value, 0) / values.length;
 }
@@ -45,12 +45,21 @@ function smoothLine(rows) {
 export function chartModel(points, key) {
   const bounds = chartBounds(points, key);
   const rows = points.map((point) => {
+    const value = Number(point[key]) || 0;
     const x = ((point.tme - bounds.minTime) / bounds.span) * 700;
-    const y = chartY(Number(point[key]) || 0, bounds.min, bounds.max);
-    return { ...point, x, y, v: Number(point[key]) || 0 };
+    const y = chartY(value, bounds.min, bounds.max);
+    return { ...point, x, y, v: value };
   });
   let z = rows[0]?.y || 0;
-  for (const row of rows) row.z = z += (row.y - z) * 0.2;
+  for (let index = 0; index < rows.length; index += 1) {
+    const row = rows[index];
+    if (row.b || row.g || rows[index - 1]?.g) {
+      z = row.y;
+    } else {
+      z += (row.y - z) * 0.2;
+    }
+    row.z = z;
+  }
   // Public API point names remain untouched; chart rendering adds only the SVG
   // coordinates it needs for path and hover math.
   return { n: bounds.min, x: bounds.max, s: bounds.minTime, e: bounds.maxTime, r: rows };
