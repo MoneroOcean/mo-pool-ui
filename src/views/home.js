@@ -101,7 +101,7 @@ function dashboardGraphControls(graphWindow, graphMode) {
 }
 
 function dashboardGraphRoute(graphWindow, graphMode) {
-  return `#/?window=${graphWindow}&mode=${graphMode}`;
+  return `#/?window=${encodeUrlPart(graphWindow)}&mode=${encodeUrlPart(graphMode)}`;
 }
 
 function poolHashrateChart(rows, graphWindow) {
