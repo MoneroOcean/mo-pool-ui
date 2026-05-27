@@ -1,5 +1,5 @@
 import { api } from "../api.js";
-import { EXPLANATIONS, XMR_PORT } from "../constants.js";
+import { EXPLANATIONS, GRAPH_WINDOWS, XMR_PORT } from "../constants.js";
 import { atomicXmr, formatAge, formatDate, formatHashrate, formatNumber, normalizeTimestampSeconds, shortAddress } from "../format.js";
 import { coinName } from "../pool.js";
 import { walletRoute, isXmrAddress } from "../routes.js";
@@ -16,6 +16,7 @@ import { chartHtml, hashrateChart, normalizeGraph } from "./charts.js";
 import { poolDashboard } from "./pool-dashboard.js";
 
 const BLOCK_REWARD_HELP = "Per-block PPLNS rewards. Hashes link to share dump CSVs.";
+const GRAPH_WINDOW_SET = new Set(GRAPH_WINDOWS.map((entry) => entry[0]));
 const EMAIL_ALERTS_HELP = "Toggle alerts; replace with Current/New email.";
 const OVERVIEW_TAB = "overview";
 const BLOCK_REWARDS_TAB = "rewards";
@@ -42,8 +43,8 @@ export async function walletView(route) {
   if (!isXmrAddress(address)) return `<section class=panel><div class=card><h1>Invalid wallet address</h1><p class=muted>Paste a complete XMR payout address.</p></div></section>`;
   state.a = address;
   state.w = saveWallet(address);
-  const graphWindow = route.q?.window || state.gw;
-  const graphMode = route.q?.mode || state.gm;
+  const graphWindow = normalizeGraphWindow(route.q?.window || state.gw);
+  const graphMode = normalizeGraphMode(route.q?.mode || state.gm);
   state.gw = graphWindow;
   state.gm = graphMode;
   workerMode = workerDisplayMode(route.q?.view);
@@ -265,8 +266,21 @@ export function walletRouteWithGraph(address, tab, window, mode, workerSort = "h
   const displayMode = workerDisplayMode(cols);
   const sortable = displayMode === "list" ? workerListSortMode(workerSort) : workerSortMode(workerSort);
   const direction = displayMode === "list" && sortable === "name" && workerSort !== "name" ? "asc" : workerSortDirection(workerDir);
-  const graphMode = mode === "raw" ? "raw" : "xmr";
-  return `${walletRoute(address, tab)}?window=${window}&mode=${graphMode}&view=${displayMode}&sort=${sortable}&dir=${direction}${showDead ? "" : "&dead=0"}${graphDetails ? "&stats=1" : ""}`;
+  const graphWindow = normalizeGraphWindow(window);
+  const graphMode = normalizeGraphMode(mode);
+  const params = new URLSearchParams({ window: graphWindow, mode: graphMode, view: String(displayMode), sort: sortable, dir: direction });
+  if (!showDead) params.set("dead", "0");
+  if (graphDetails) params.set("stats", "1");
+  return `${walletRoute(address, tab)}?${params.toString()}`;
+}
+
+function normalizeGraphWindow(value) {
+  const graphWindow = String(value || "24h");
+  return GRAPH_WINDOW_SET.has(graphWindow) ? graphWindow : "24h";
+}
+
+function normalizeGraphMode(value) {
+  return value === "raw" ? "raw" : "xmr";
 }
 
 function walletWithdrawalsPanel(address, stats, graphWindow, graphMode, workerSort, workerDir, graphDetails, withdrawals, withdrawalPage, withdrawalLimit, blockRewardPage, blockRewardLimit) {
@@ -353,14 +367,20 @@ function walletPager(kind, page, limit, pageCount, hasNext, routeFor, canEditPag
 function walletPaymentRouteFor(address, tab, graphWindow, graphMode, workerSort, workerDir, graphDetails, withdrawalPage, withdrawalLimit, blockRewardPage, blockRewardLimit) {
   // Wallet table paging shares one route so switching between withdrawals and
   // block rewards preserves the other table's page size.
-  let params = `window=${graphWindow}&mode=${graphMode}&view=${workerMode || workerGraphColumns()}&sort=${workerSort}&dir=${workerDir}`;
-  if (!workerShowDead) params += "&dead=0";
-  if (graphDetails) params += "&stats=1";
-  if (withdrawalPage > 1) params += `&wpage=${withdrawalPage}`;
-  params += `&wlimit=${blockPageSize(withdrawalLimit)}`;
-  if (blockRewardPage > 1) params += `&rpage=${blockRewardPage}`;
-  params += `&rlimit=${blockPageSize(blockRewardLimit)}`;
-  return `${walletRoute(address, tab)}?${params}`;
+  const params = new URLSearchParams({
+    window: normalizeGraphWindow(graphWindow),
+    mode: normalizeGraphMode(graphMode),
+    view: String(workerMode || workerGraphColumns()),
+    sort: workerSort,
+    dir: workerDir,
+    wlimit: String(blockPageSize(withdrawalLimit)),
+    rlimit: String(blockPageSize(blockRewardLimit))
+  });
+  if (!workerShowDead) params.set("dead", "0");
+  if (graphDetails) params.set("stats", "1");
+  if (withdrawalPage > 1) params.set("wpage", String(withdrawalPage));
+  if (blockRewardPage > 1) params.set("rpage", String(blockRewardPage));
+  return `${walletRoute(address, tab)}?${params.toString()}`;
 }
 
 export function walletPaymentRoute(overrides = {}) {
