@@ -1,5 +1,6 @@
 import { isFiniteNumber, trimFixed } from "./format.js";
 import { HASHRATE_UNITS } from "./constants.js";
+import { isXmrAddress } from "./routes.js";
 
 export const POOL_HOST = "gulf.moneroocean.stream";
 const LOCAL_PROXY = "127.0.0.1:3333";
@@ -316,15 +317,16 @@ function lolminerPlan({ os, address, password, pool, portRow }) {
 
 function mominerPlan({ os, address, password, pool, portRow }) {
   const windows = os === WINDOWS;
+  const wallet = windows && !isXmrAddress(address) ? "YOUR_XMR_ADDRESS" : address;
   const binary = windows ? windowsLocal(MOMINER_CMD) : MOMINER_BIN;
   const mominerJson = mominerC29Json({ escapeQuotes: windows });
   return {
     summary: setupPoolSummary(pool, portRow),
     downloadCommand: windows ? mominerWindowsDownload() : mominerLinuxDownload(),
     downloadNote: windows ? WINDOWS_POWERSHELL_BKM : "",
-    tlsRunCommand: portRow.tlsPort ? mominerRun(binary, `${POOL_HOST}:${portRow.tlsPort}tls`, address, password, mominerJson) : "",
+    tlsRunCommand: portRow.tlsPort ? mominerRun(binary, `${POOL_HOST}:${portRow.tlsPort}tls`, wallet, password, mominerJson) : "",
     tlsRunNote: TLS_MODE_NOTE,
-    plainRunCommand: mominerRun(binary, pool, address, password, mominerJson),
+    plainRunCommand: mominerRun(binary, pool, wallet, password, mominerJson),
     plainRunNote: PLAIN_MODE_NOTE,
     notes: "mo-miner is used for fixed Intel GPU C29."
   };

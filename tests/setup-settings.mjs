@@ -197,6 +197,7 @@ test.describe("setup, settings, uptime, and copy", { concurrency: false }, () =>
     assert.doesNotMatch(setupPlanWithPorts({ profile: "srb-gpu", gpu: "gpu", algo: "kawpow" }).plainRunCommand, /--disable-gpu-/);
     assert.match(setupPlanWithPorts({ profile: "srb-gpu", gpu: "intel", algo: "c29" }).plainRunCommand, /\.\/mo-miner mine gulf\.moneroocean\.stream:10002 .*--new\.algo_param\.c29 '\{"dev":"gpu1\*1"\}'/);
     assert.match(setupPlanWithPorts({ profile: "srb-gpu", os: "windows", gpu: "intel", algo: "c29" }).plainRunCommand, /^\.\\mo-miner\.cmd mine gulf\.moneroocean\.stream:10002 .*--new\.algo_param\.c29 '\{\\"dev\\":\\"gpu1\*1\\"\}'/);
+    assert.match(setupPlanWithPorts({ profile: "srb-gpu", os: "windows", gpu: "intel", algo: "c29", address: "ADDR; Start-Process calc; #" }).plainRunCommand, /\.\\mo-miner\.cmd mine gulf\.moneroocean\.stream:10002 YOUR_XMR_ADDRESS /);
     assert.doesNotMatch(setupPlanWithPorts({ profile: "srb-gpu", os: "windows", gpu: "intel", algo: "c29" }).plainRunCommand, /mo-miner\.exe|'\{"dev"/);
     assert.match(setupPlanWithPorts({ profile: "srb-gpu", gpu: "intel", algo: "c29" }).downloadCommand, /MoneroOcean\/mo-miner\/releases\/latest/);
     assert.match(setupPlanWithPorts({ profile: "srb-gpu", gpu: "intel", algo: "c29" }).downloadCommand, /mo-miner-v\.\*-lin\\\.tgz/);
