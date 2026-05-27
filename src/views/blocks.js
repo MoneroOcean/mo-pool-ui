@@ -1,5 +1,5 @@
 import { PAGE_SIZES, blockPageSize, pageCountFor, pageQuery, routePageNumber } from "../paging.js";
-import { averageBlockEffort, blockCoinPort, blockEffortPercent, coinAtomicUnits, coinBlockCount, coinName, coinStatsRows, coinSymbol, effortTone, hasBlockHistory } from "../pool.js";
+import { averageBlockEffort, blockCoinPort, blockEffortPercent, coinAtomicUnits, coinBlockCount, coinName, coinStatsRows, effortTone, hasBlockHistory } from "../pool.js";
 import { routeCoinId } from "../routes.js";
 import { api } from "../api.js";
 import { EXPLANATIONS, XMR_PORT } from "../constants.js";
@@ -43,7 +43,7 @@ function blockControls(pool, coin, coins, page, limit, rowCount, blocks = []) {
   const hasNext = page < pageCount || (!totalCount && rowCount >= limit);
   return `<div class="block-controls block-filters">
     <div class="block-controls-left">
-      <label class=field>Coin<select id=blocks-coin-filter>${coins.map((item) => `<option value="${escapeHtml(item.symbol)}" ${String(item.port) === String(coin) ? "selected" : ""}>${escapeHtml(item.name)}</option>`).join("")}</select></label>
+      <label class=field>Coin<select id=blocks-coin-filter>${coins.map((item) => `<option value="${escapeHtml(item.id)}" ${String(item.port) === String(coin) ? "selected" : ""}>${escapeHtml(item.name)}</option>`).join("")}</select></label>
       ${blockLuck(blocks)}
     </div>
     <div class="page-tools">
@@ -120,6 +120,6 @@ function blockCoinOptions(pool, selectedCoin) {
   if (Number(pool.totalBlocksFound) > 0) ports.add(String(XMR_PORT));
   return [...ports]
     .filter((port) => hasBlockHistory(pool, port))
-    .map((port) => ({ port, name: coinName(pool, port), symbol: coinSymbol(pool, port) }))
+    .map((port) => ({ port, name: coinName(pool, port), id: routeCoinId(port, pool) }))
     .sort((a, b) => a.name.localeCompare(b.name));
 }

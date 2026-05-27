@@ -98,12 +98,18 @@ const LINK_TEST_POOL = {
   minBlockRewards: { 18081: 600000000000, 9998: 200000000 },
   coins: {
     18081: { port: 18081, symbol: "XMR", displayName: "XMR", algo: "rx/0", profit: 1, pplnsShare: 0.7, active: true, exchangeConfigured: true, hashrate: 200000, miners: 3, blockTime: 120, atomicUnits: 1000000000000 },
+    18144: { port: 18144, symbol: "XTM", displayName: "XTM", algo: "rx/0", profit: 0.8, pplnsShare: 0.05, active: false, exchangeConfigured: true, hashrate: 0, miners: 0, blockTime: 120, atomicUnits: 1000000, altBlocksFound: 4 },
+    18146: { port: 18146, symbol: "XTM", displayName: "XTM-T", algo: "rx/0", profit: 0.7, pplnsShare: 0.05, active: true, exchangeConfigured: true, hashrate: 0, miners: 0, blockTime: 120, atomicUnits: 1000000, altBlocksFound: 3 },
+    18148: { port: 18148, symbol: "XTM", displayName: "XTM-C", algo: "c29", profit: 0.6, pplnsShare: 0.05, active: true, exchangeConfigured: true, hashrate: 100, miners: 1, blockTime: 120, atomicUnits: 1000000, altBlocksFound: 2 },
     9998: { port: 9998, symbol: "RTM", displayName: "Raptoreum", algo: "ghostrider", profit: 0.5, pplnsShare: 0.3, active: false, exchangeConfigured: false, disabledReason: "no exchange", hashrate: 20000, miners: 1, blockTime: 60, atomicUnits: 100000000, altBlocksFound: 2 }
   }
 };
 
 const LINK_TEST_NETWORK = {
   18081: { difficulty: 240000, time: 120, height: 3000 },
+  18144: { difficulty: 180000, time: 120, height: 7000 },
+  18146: { difficulty: 160000, time: 120, height: 7000 },
+  18148: { difficulty: 140000, time: 120, height: 7000 },
   9998: { difficulty: 120000, time: 60, height: 9000 }
 };
 
@@ -158,7 +164,11 @@ test.describe("rendered views, links, charts, and coins", { concurrency: false }
       assertInternalLinksResolve(poolDashboard(LINK_TEST_POOL, LINK_TEST_NETWORK, { tone: "green", detail: "Operational" }), "pool dashboard");
 
       state.r = { n: "coins", p: "#/coins?issues=1&inactive=0", q: { issues: "1", inactive: "0", sort: "name", dir: "asc" } };
-      assertInternalLinksResolve(await coinsView(), "coins view");
+      const coinsHtml = await coinsView();
+      assertInternalLinksResolve(coinsHtml, "coins view");
+      assert.match(coinsHtml, /href="#\/blocks\/XTM\?limit=15"/);
+      assert.match(coinsHtml, /href="#\/blocks\/XTM-T\?limit=15"/);
+      assert.match(coinsHtml, /href="#\/blocks\/XTM-C\?limit=15"/);
 
       assertInternalLinksResolve(await blocksView({ n: "blocks", c: "XMR", q: { page: "1", limit: "15" } }), "blocks view");
       assertInternalLinksResolve(await paymentsView({ n: "payments", q: { page: "1", limit: "15" } }), "payments view");
@@ -224,6 +234,9 @@ test.describe("rendered views, links, charts, and coins", { concurrency: false }
       currentEfforts: { 10128: 82.5 },
       coins: {
         18081: { port: 18081, symbol: "XMR", displayName: "Monero", profit: 4, pplnsShare: 0.1, active: true, exchangeConfigured: false, blockTime: 120, atomicUnits: 1_000_000_000_000 },
+        18144: { port: 18144, symbol: "XTM", displayName: "XTM", profit: 3, pplnsShare: 0.03, active: false, exchangeConfigured: true, blockTime: 120, atomicUnits: 1_000_000, altBlocksFound: 4 },
+        18146: { port: 18146, symbol: "XTM", displayName: "XTM-T", profit: 3, pplnsShare: 0.03, active: true, exchangeConfigured: true, blockTime: 120, atomicUnits: 1_000_000, altBlocksFound: 3 },
+        18148: { port: 18148, symbol: "XTM", displayName: "XTM-C", profit: 3, pplnsShare: 0.03, active: true, exchangeConfigured: true, blockTime: 120, atomicUnits: 1_000_000, altBlocksFound: 2 },
         9998: { port: 9998, symbol: "RTM", displayName: "Raptoreum", profit: 8, pplnsShare: 0.7, active: false, exchangeConfigured: false, disabledReason: "no exchange configured", hashrate: 123, miners: 7, blockTime: 60, atomicUnits: 100_000_000, altBlocksFound: 3 },
         2086: { port: 2086, symbol: "BLOC", displayName: "Bloc", profit: 6, pplnsShare: 0.2, active: true, exchangeConfigured: true, altBlocksFound: 5 }
       },
@@ -232,6 +245,9 @@ test.describe("rendered views, links, charts, and coins", { concurrency: false }
     assert.equal(topCoinPort(pool), "9998");
     assert.equal(blockCoinPort(pool, "XMR"), "18081");
     assert.equal(blockCoinPort(pool, "RTM"), "9998");
+    assert.equal(blockCoinPort(pool, "XTM"), "18144");
+    assert.equal(blockCoinPort(pool, "XTM-T"), "18146");
+    assert.equal(blockCoinPort(pool, "XTM-C"), "18148");
     assert.equal(blockCoinPort(pool, "Raptoreum"), "");
     assert.equal(blockCoinPort(pool, ""), "9998");
     assert.equal(blockCoinPort(pool, "18081"), "");

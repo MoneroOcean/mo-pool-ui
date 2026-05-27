@@ -1,6 +1,6 @@
 import { XMR_ADDRESS_RE } from "./constants.js";
 import { encodeUrlPart } from "./format.js";
-import { coinSymbol } from "./pool.js";
+import { coinRouteId } from "./pool.js";
 
 export function isXmrAddress(value) {
   return XMR_ADDRESS_RE.test(String(value ?? "").trim());
@@ -27,8 +27,8 @@ Blocks:
   #/blocks
   #/blocks/<COIN>
   params: coin=<COIN>, page=<number>, limit=15|50|100
-  <COIN> is a ticker/symbol such as XMR, RTM, or XTM. Ports and long display
-  names are deliberately not route identifiers.
+  <COIN> is a ticker/symbol such as XMR, RTM, XTM, or a short variant label
+  such as XTM-C. Ports and long display names are deliberately not route identifiers.
 
 Payments:
   #/payments
@@ -79,7 +79,7 @@ export function parseRoute(hash = "") {
   }
   if (parts[0] === "blocks" && parts[1]) {
     const coin = parts[1];
-    if (!/^(?=.*[A-Z])[A-Z0-9]+$/.test(coin)) return { n: "home", p: "#/", q: query };
+    if (!/^(?=.*[A-Z])[A-Z0-9]+(?:-[A-Z0-9]+)*$/.test(coin)) return { n: "home", p: "#/", q: query };
     return { n: "blocks", c: coin, p: `#/blocks/${encodeUrlPart(routeCoinId(coin))}`, q: query };
   }
   if (["coins", "blocks", "payments", "calc", "setup", "help"].includes(parts[0])) return { n: parts[0], p: `#/${parts[0]}`, q: query };
@@ -100,5 +100,5 @@ function isWalletTab(value) {
 }
 
 export function routeCoinId(port, poolStats) {
-  return coinSymbol(poolStats, port);
+  return coinRouteId(poolStats, port);
 }

@@ -71,14 +71,39 @@ function requestedBlockCoinPort(poolStats = {}, requested = "") {
   const wanted = coinRouteSlug(requested);
   if (!wanted) return "";
   const match = coinStatsRows(poolStats).find((coin) => {
-    const metadata = coinMetadata(poolStats, coin.p) || {};
-    return coinRouteSlug(metadata.symbol || coin.s) === wanted;
+    return coinRouteSlug(coinRouteId(poolStats, coin.p)) === wanted;
   });
   return match?.p || "";
 }
 
 export function coinRouteSlug(value) {
   return String(value || "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+}
+
+export function coinRouteId(poolStats = {}, port) {
+  const coin = coinMetadata(poolStats, port);
+  if (!coin) return String(port || "");
+  const symbol = coin.symbol || coin.displayName || String(port);
+  const symbolRoute = routeLabel(symbol) || String(port || "");
+  const displayName = coin.displayName || "";
+  const displayNameRoute = routeLabel(displayName);
+  if (displayNameRoute && displayNameRoute !== symbolRoute && hasDuplicateCoinSymbol(poolStats, symbol)) return displayNameRoute;
+  return symbolRoute;
+}
+
+function hasDuplicateCoinSymbol(poolStats = {}, symbol) {
+  const wanted = coinRouteSlug(symbol);
+  let count = 0;
+  for (const coin of coinStatsRows(poolStats)) {
+    const metadata = coinMetadata(poolStats, coin.p) || {};
+    if (coinRouteSlug(metadata.symbol || coin.s) === wanted) count += 1;
+    if (count > 1) return true;
+  }
+  return false;
+}
+
+function routeLabel(value) {
+  return coinRouteSlug(value).toUpperCase();
 }
 
 export function coinName(poolStats = {}, port) {

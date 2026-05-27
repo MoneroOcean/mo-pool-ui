@@ -40,11 +40,17 @@ export const fixtures = {
     price: { usd: 400, eur: 350 },
     coins: {
       18081: { port: 18081, symbol: "XMR", displayName: "XMR", algo: "rx/0", profit: 1, pplnsShare: 0.7, active: true, exchangeConfigured: true, hashrate: 200_000_000, miners: 4000, blockTime: 120, atomicUnits: 1_000_000_000_000 },
+      18144: { port: 18144, symbol: "XTM", displayName: "XTM", algo: "rx/0", profit: 0.8, pplnsShare: 0.05, active: false, exchangeConfigured: true, hashrate: 0, miners: 0, blockTime: 120, atomicUnits: 1_000_000, altBlocksFound: 4 },
+      18146: { port: 18146, symbol: "XTM", displayName: "XTM-T", algo: "rx/0", profit: 0.7, pplnsShare: 0.05, active: true, exchangeConfigured: true, hashrate: 0, miners: 0, blockTime: 120, atomicUnits: 1_000_000, altBlocksFound: 3 },
+      18148: { port: 18148, symbol: "XTM", displayName: "XTM-C", algo: "c29", profit: 0.6, pplnsShare: 0.05, active: true, exchangeConfigured: true, hashrate: 100, miners: 1, blockTime: 120, atomicUnits: 1_000_000, altBlocksFound: 2 },
       9998: { port: 9998, symbol: "RTM", displayName: "Raptoreum", algo: "ghostrider", profit: 0.5, pplnsShare: 0.3, active: false, exchangeConfigured: false, disabledReason: "no exchange", hashrate: 21_000_000, miners: 664, blockTime: 60, atomicUnits: 100_000_000, altBlocksFound: 7 }
     }
   },
   networkStats: {
     18081: { difficulty: 300_000_000_000, time: 120, height: 3_000_000 },
+    18144: { difficulty: 180_000, time: 120, height: 700_000 },
+    18146: { difficulty: 160_000, time: 120, height: 700_000 },
+    18148: { difficulty: 140_000, time: 120, height: 700_000 },
     9998: { difficulty: 100_000, time: 60, height: 900_000 }
   },
   motd: { subject: "Pool notice", body: "Exchange migration is stable.", created: "1777734000" },

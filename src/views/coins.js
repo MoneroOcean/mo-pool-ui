@@ -43,7 +43,7 @@ function coinRows(pool, network, showIssues, hideDisabled) {
     return {
       port,
       name: coin.n,
-      symbol: coin.s,
+      route: blockRoute(port, 1, undefined, pool),
       algo: coin.a || "--",
       profit: coinHashScalar(pool, port),
       effort: effortPercent(pool, network, port),
@@ -71,7 +71,7 @@ function coinControls(sortKey, direction, showIssues, hideDisabled) {
 
 function coinTableRow(row) {
   return coinRow(row, [
-    linkedBlockCoin(row.symbol, row.name),
+    linkedBlockCoin(row.route, row.name),
     row.algo,
     formatTinyPercent(row.profit, 2, 8),
     effortCell(row.effort),
@@ -85,8 +85,8 @@ function coinTableRow(row) {
   ]);
 }
 
-function linkedBlockCoin(symbol, name) {
-  return coinCell({ html: `<a href="${blockRoute(symbol)}">${escapeHtml(name)}</a>` });
+function linkedBlockCoin(route, name) {
+  return coinCell({ html: `<a href="${escapeHtml(route)}">${escapeHtml(name)}</a>` });
 }
 
 function coinSortKey(value) {

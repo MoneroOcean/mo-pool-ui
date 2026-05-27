@@ -18,6 +18,8 @@ test("table sorting, paging, and graph controls produce visible effects", async 
   await expectHashParams(page, { limit: "50" });
   await page.locator("#blocks-coin-filter").selectOption("RTM");
   await expectHashPath(page, "#/blocks/RTM");
+  await page.locator("#blocks-coin-filter").selectOption("XTM-C");
+  await expectHashPath(page, "#/blocks/XTM-C");
 
   await openApp(page, "#/payments");
   await page.locator("#pps").selectOption("50");

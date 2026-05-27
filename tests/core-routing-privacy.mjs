@@ -105,12 +105,18 @@ const LINK_TEST_POOL = {
   minBlockRewards: { 18081: 600000000000, 9998: 200000000 },
   coins: {
     18081: { port: 18081, symbol: "XMR", displayName: "XMR", algo: "rx/0", profit: 1, pplnsShare: 0.7, active: true, exchangeConfigured: true, hashrate: 200000, miners: 3, blockTime: 120, atomicUnits: 1000000000000 },
+    18144: { port: 18144, symbol: "XTM", displayName: "XTM", algo: "rx/0", profit: 0.8, pplnsShare: 0.05, active: false, exchangeConfigured: true, hashrate: 0, miners: 0, blockTime: 120, atomicUnits: 1000000, altBlocksFound: 4 },
+    18146: { port: 18146, symbol: "XTM", displayName: "XTM-T", algo: "rx/0", profit: 0.7, pplnsShare: 0.05, active: true, exchangeConfigured: true, hashrate: 0, miners: 0, blockTime: 120, atomicUnits: 1000000, altBlocksFound: 3 },
+    18148: { port: 18148, symbol: "XTM", displayName: "XTM-C", algo: "c29", profit: 0.6, pplnsShare: 0.05, active: true, exchangeConfigured: true, hashrate: 100, miners: 1, blockTime: 120, atomicUnits: 1000000, altBlocksFound: 2 },
     9998: { port: 9998, symbol: "RTM", displayName: "Raptoreum", algo: "ghostrider", profit: 0.5, pplnsShare: 0.3, active: false, exchangeConfigured: false, disabledReason: "no exchange", hashrate: 20000, miners: 1, blockTime: 60, atomicUnits: 100000000, altBlocksFound: 2 }
   }
 };
 
 const LINK_TEST_NETWORK = {
   18081: { difficulty: 240000, time: 120, height: 3000 },
+  18144: { difficulty: 180000, time: 120, height: 7000 },
+  18146: { difficulty: 160000, time: 120, height: 7000 },
+  18148: { difficulty: 140000, time: 120, height: 7000 },
   9998: { difficulty: 120000, time: 60, height: 9000 }
 };
 
@@ -119,11 +125,16 @@ test.describe("core routing, privacy, and preferences", { concurrency: false }, 
     assert.deepEqual(parseRoute("#/coins").n, "coins");
     assert.equal(parseRoute("#/blocks/XMR").c, "XMR");
     assert.equal(parseRoute("#/blocks/RTM").c, "RTM");
+    assert.equal(parseRoute("#/blocks/XTM-C").c, "XTM-C");
+    assert.equal(parseRoute("#/blocks/XTM-T").c, "XTM-T");
     assert.equal(parseRoute("#/blocks?coin=XMR").q.coin, "XMR");
     assert.equal(parseRoute("#/blocks?coin=RTM").q.coin, "RTM");
     assert.equal(parseRoute("#/blocks/18081").c, undefined);
     assert.equal(parseRoute("#/blocks/12345").c, undefined);
     assert.equal(routeCoinId("18081", LINK_TEST_POOL), "XMR");
+    assert.equal(routeCoinId("18144", LINK_TEST_POOL), "XTM");
+    assert.equal(routeCoinId("18146", LINK_TEST_POOL), "XTM-T");
+    assert.equal(routeCoinId("18148", LINK_TEST_POOL), "XTM-C");
     assert.equal(parseRoute("#/payments?page=3").q.page, "3");
     assert.equal(parseRoute("#/calc?rate=5&unit=mh").n, "calc");
     assert.equal(parseRoute("#/calc?rate=5&unit=mh").q.unit, "mh");
@@ -153,6 +164,8 @@ test.describe("core routing, privacy, and preferences", { concurrency: false }, 
       ["#/blocks", { n: "blocks", p: "#/blocks" }],
       ["#/blocks/XMR", { n: "blocks", c: "XMR", p: "#/blocks/XMR" }],
       ["#/blocks/RTM", { n: "blocks", c: "RTM", p: "#/blocks/RTM" }],
+      ["#/blocks/XTM-C", { n: "blocks", c: "XTM-C", p: "#/blocks/XTM-C" }],
+      ["#/blocks/XTM-T", { n: "blocks", c: "XTM-T", p: "#/blocks/XTM-T" }],
       ["#/blocks?coin=XMR", { n: "blocks", p: "#/blocks", q: { coin: "XMR" } }],
       ["#/blocks?coin=RTM", { n: "blocks", p: "#/blocks", q: { coin: "RTM" } }],
       ["#/payments", { n: "payments", p: "#/payments" }],
@@ -201,6 +214,8 @@ test.describe("core routing, privacy, and preferences", { concurrency: false }, 
       ["#/coins?issues=1&inactive=0&sort=profit&dir=desc", { n: "coins", p: "#/coins", q: { issues: "1", inactive: "0", sort: "profit", dir: "desc" } }],
       ["#/blocks/XMR?page=2&limit=50", { n: "blocks", c: "XMR", p: "#/blocks/XMR", q: { page: "2", limit: "50" } }],
       ["#/blocks/RTM?page=3&limit=100", { n: "blocks", c: "RTM", p: "#/blocks/RTM", q: { page: "3", limit: "100" } }],
+      ["#/blocks/XTM-C?page=4&limit=50", { n: "blocks", c: "XTM-C", p: "#/blocks/XTM-C", q: { page: "4", limit: "50" } }],
+      ["#/blocks/XTM-T?page=5&limit=100", { n: "blocks", c: "XTM-T", p: "#/blocks/XTM-T", q: { page: "5", limit: "100" } }],
       ["#/blocks?coin=XMR&page=2&limit=50", { n: "blocks", p: "#/blocks", q: { coin: "XMR", page: "2", limit: "50" } }],
       ["#/blocks?coin=RTM&page=3&limit=100", { n: "blocks", p: "#/blocks", q: { coin: "RTM", page: "3", limit: "100" } }],
       ["#/payments?page=4&limit=100", { n: "payments", p: "#/payments", q: { page: "4", limit: "100" } }],
