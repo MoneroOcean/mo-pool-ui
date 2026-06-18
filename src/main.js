@@ -38,7 +38,7 @@ export function startApp() {
   applyPreferences(preferences);
   syncPreferenceButtons();
   state.w = loadWatchlist();
-  on(window, "hashchange", render);
+  on(window, "hashchange", renderForeground);
   on(themeToggle, "click", () => {
     preferences.theme = saveTheme(toggleTheme(preferences.theme), { persist: localHistoryEnabled() });
     applyPreferences(preferences);
@@ -50,7 +50,17 @@ export function startApp() {
     syncPreferenceButtons();
   });
   maybeShowConsent();
-  render();
+  renderForeground();
+}
+
+// Foreground navigations (initial load + hashchange) invoke render() as a
+// floating promise. render() re-throws after showing the error panel so the
+// background RefreshScheduler can drive its backoff, but on these foreground
+// paths the rejection would otherwise surface as an unhandled rejection even
+// though the error panel is already on screen. Swallow it here so a failed
+// route load degrades to the error panel instead of an unhandled rejection.
+function renderForeground() {
+  render().catch(() => {});
 }
 
 const scheduler = new RefreshScheduler({
