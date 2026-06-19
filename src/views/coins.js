@@ -1,5 +1,5 @@
 import { api } from "../api.js";
-import { EXPLANATIONS, XMR_PORT } from "../constants.js";
+import { EXPLANATIONS, TARI_PORTS, XMR_PORT } from "../constants.js";
 import { formatHashrate, formatNumber, formatPercent, formatTinyPercent } from "../format.js";
 import { coinHashScalar, coinStatsRows, effortPercent, worldHashrateForPort } from "../pool.js";
 import { state } from "../state.js";
@@ -121,5 +121,5 @@ function rewardPercent(pool, port) {
 }
 
 function isIssueExemptCoin(port) {
-  return ["18144", "18146", "18148"].includes(String(port));
+  return TARI_PORTS.includes(String(port));
 }

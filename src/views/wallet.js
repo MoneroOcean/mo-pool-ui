@@ -11,7 +11,7 @@ import { compactWorkerRows, sortWorkerListRows, sortWorkerRows, workerDisplayMod
 import { MAX_ROUTE_PAGE, blockPageSize, pageBounds, routePageNumber } from "../paging.js";
 import { nextSortDirection } from "../table-sort.js";
 import { attr, on, qs } from "../dom.js";
-import { activeAttr, blockHashLink, cellHtml, chipLink, coinCell, dateCell, escapeHtml, formatAtomicXmrValue, graphControls, kpi, linkLabel, pageSizeSelect, pagerNav, paymentHashLink, recover, sortableHeading, tablePage } from "./common.js";
+import { activeAttr, blockHashLink, cellHtml, chipLink, coinCell, dateCell, escapeHtml, formatAtomicXmrValue, graphControls, kpi, linkLabel, pageSizeSelect, pagerNav, paymentHashLink, recover, sortArrow, sortableHeading, tablePage } from "./common.js";
 import { chartHtml, hashrateChart, normalizeGraph } from "./charts.js";
 import { poolDashboard } from "./pool-dashboard.js";
 
@@ -195,7 +195,7 @@ export function walletWorkersSection(address, workers, workerCharts, graphWindow
   const nameDir = nextSortDirection(workerSort, workerDir, "name");
   const hashrateDir = nextSortDirection(workerSort, workerDir, "h");
   const cols = typeof displayMode === "number" ? displayMode : workerGraphColumns();
-  const controls = `<div class=block-controls><div class=bar>${workerModeLinks(address, graphWindow, graphMode, workerSort, workerDir, graphDetails, cols, showDead)}</div><div class=bar>${chipLink(`Name${workerSort === "name" ? (workerDir === "asc" ? " ↑" : " ↓") : ""}`, walletRouteWithGraph(address, OVERVIEW_TAB, graphWindow, graphMode, "name", nameDir, graphDetails, cols, showDead), workerSort === "name")}${chipLink(`Hashrate${workerSort === "h" ? (workerDir === "asc" ? " ↑" : " ↓") : ""}`, walletRouteWithGraph(address, OVERVIEW_TAB, graphWindow, graphMode, "h", hashrateDir, graphDetails, cols, showDead), workerSort === "h")}</div></div>`;
+  const controls = `<div class=block-controls><div class=bar>${workerModeLinks(address, graphWindow, graphMode, workerSort, workerDir, graphDetails, cols, showDead)}</div><div class=bar>${chipLink(`Name${sortArrow(workerSort, "name", workerDir)}`, walletRouteWithGraph(address, OVERVIEW_TAB, graphWindow, graphMode, "name", nameDir, graphDetails, cols, showDead), workerSort === "name")}${chipLink(`Hashrate${sortArrow(workerSort, "h", workerDir)}`, walletRouteWithGraph(address, OVERVIEW_TAB, graphWindow, graphMode, "h", hashrateDir, graphDetails, cols, showDead), workerSort === "h")}</div></div>`;
   return `<section class=panel><div class=card>${controls}<div class="worker-graph-grid w${cols}">${sorted.map((worker) => workerGraphCard(worker, workerCharts?.[worker.n], chartKey, graphWindow, graphDetails)).join("") || `<div class=muted>No workers.</div>`}</div></div></section>`;
 }
 

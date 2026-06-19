@@ -1,4 +1,4 @@
-import { api } from "../api.js";
+import { api, POOL_CHART, POOL_MOTD } from "../api.js";
 import { byId, qsa, tog } from "../dom.js";
 import { encodeUrlPart, shortAddress } from "../format.js";
 import { dismissMotd, normalizeMotd, shouldShowMotd } from "../motd.js";
@@ -24,8 +24,8 @@ export async function homeView(route = state.r) {
   state.gm = graphMode;
   const [pool, network] = await Promise.all([api.poolStats(), api.networkStats()]);
   state.p = Number(pool.pplnsWindowTime) || 0;
-  const poolChartRows = getCache("pool/chart/hashrate");
-  const motd = normalizeMotd(getCache("pool/motd") || {});
+  const poolChartRows = getCache(POOL_CHART);
+  const motd = normalizeMotd(getCache(POOL_MOTD) || {});
 
   return `
     <div class="grid">

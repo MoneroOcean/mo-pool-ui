@@ -6,6 +6,9 @@ const SUPPORT_EMAIL_CODES = "c3VwcG9ydEBtb25lcm9vY2Vhbi5zdHJlYW0=";
 export const supportEmail = () => atob(SUPPORT_EMAIL_CODES);
 export const DONATION_XMR = "89TxfrUmqJJcb1V124WsUzA78Xa3UYHt7Bg8RGMhXVeZYPN8cE5CZEk58Y1m23ZMLHN7wYeJ9da5n5MXharEjrm41hSnWHL";
 export const XMR_PORT = 18081;
+// Tari (XTM) merge-mined ports; these share the XMR exchange so coins-view
+// treats them as exempt from the inactive/disabled issue flags.
+export const TARI_PORTS = ["18144", "18146", "18148"];
 export const HASHRATE_UNITS = [
   ["h", "H/s", 1],
   ["kh", "KH/s", 1000],

@@ -1,6 +1,9 @@
 import { GRAPH_WINDOWS } from "./constants.js";
 import { isFiniteNumber } from "./format.js";
 
+// Exponential-smoothing factor shared by smoothLine() and chartModel().
+const SMOOTHING = 0.2;
+
 export function graphWindow(id) {
   const row = GRAPH_WINDOWS.find((item) => item[0] === id) || GRAPH_WINDOWS.find((item) => item[0] === "12h") || GRAPH_WINDOWS[0];
   return { id: row[0], label: row[1], seconds: row[2] };
@@ -34,7 +37,7 @@ function smoothLine(rows) {
   let py = rows[0].y;
   return rows.reduce((path, point, index) => {
     if (!index) return `M${px},${py}`;
-    const y = py += (point.y - py) * 0.2;
+    const y = py += (point.y - py) * SMOOTHING;
     const mid = (px + point.x) / 2;
     const next = `${path} C${mid},${y} ${mid},${y} ${point.x},${y}`;
     px = point.x;
@@ -56,7 +59,7 @@ export function chartModel(points, key) {
     if (row.b || row.g || rows[index - 1]?.g) {
       z = row.y;
     } else {
-      z += (row.y - z) * 0.2;
+      z += (row.y - z) * SMOOTHING;
     }
     row.z = z;
   }

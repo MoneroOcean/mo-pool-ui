@@ -155,9 +155,14 @@ export function optionMarkup(options, selected = "") {
   return options.map(([value, text]) => `<option value="${value}" ${value === selected ? "selected" : ""}>${escapeHtml(text)}</option>`).join("");
 }
 
+export function sortArrow(active, key, direction) {
+  if (active !== key) return "";
+  return direction === "asc" ? " ↑" : " ↓";
+}
+
 export function sortableHeading(label, key, active, direction, firstDirection, hrefFor) {
   const next = nextSortDirectionForKey(active, direction, key, firstDirection);
-  const arrow = active === key ? (direction === "asc" ? " ↑" : " ↓") : "";
+  const arrow = sortArrow(active, key, direction);
   return { html: `<a class="sortable" href="${hrefFor(key, next)}">${cellHtml(label)}${escapeHtml(arrow)}</a>` };
 }
 

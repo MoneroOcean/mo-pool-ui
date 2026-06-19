@@ -3,6 +3,7 @@ import { HASHRATE_UNITS } from "./constants.js";
 import { isXmrAddress } from "./routes.js";
 
 export const POOL_HOST = "gulf.moneroocean.stream";
+const DEFAULT_ADDRESS = "YOUR_XMR_ADDRESS";
 const LOCAL_PROXY = "127.0.0.1:3333";
 const LINUX = "linux";
 const MACOS = "macos";
@@ -107,7 +108,7 @@ const XMRIG_AUTO_SWITCH_NOTE = "MoneroOcean XMRig benchmarks/switches CPU algos 
 const SMALL_PROXY_NOTE = "For small proxy setups, start with 64-128 KH/s.";
 
 export function setupAddress({ queryAddress = "", activeAddress = "", watchlist = [] } = {}) {
-  return queryAddress || activeAddress || watchlist.find((row) => row?.address)?.address || "YOUR_XMR_ADDRESS";
+  return queryAddress || activeAddress || watchlist.find((row) => row?.address)?.address || DEFAULT_ADDRESS;
 }
 
 export function setupAlgoOptions(profile = XMRIG_MO) {
@@ -183,7 +184,7 @@ export function setupPlan(options = {}) {
   const hashrate = normalizedHashrateInput(options.hashrate, defaultHashrate.value);
   const hashrateHps = setupHashrateToHps(hashrate, hashrateUnit);
   const portRow = portRowForHashrate(hashrateHps, options.ports);
-  const address = String(options.address || "YOUR_XMR_ADDRESS").trim() || "YOUR_XMR_ADDRESS";
+  const address = String(options.address || DEFAULT_ADDRESS).trim() || DEFAULT_ADDRESS;
   const commandAddress = setupCommandAddress(address);
   const worker = workerName(options.worker);
   const port = portRow?.port || 0;
@@ -209,7 +210,7 @@ function unavailablePortPlan() {
 }
 
 function setupCommandAddress(address) {
-  return isXmrAddress(address) ? address : "YOUR_XMR_ADDRESS";
+  return isXmrAddress(address) ? address : DEFAULT_ADDRESS;
 }
 
 function setupPoolSummary(pool, portRow, suffix = ".") {
