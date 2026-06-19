@@ -15,7 +15,8 @@ function coinMetadata(poolStats = {}, port) {
   return byPort(poolStats.coins, port);
 }
 
-function normalizedCoinRow(key, coin = {}) {
+function normalizedCoinRow(key, coinEntry = {}) {
+  const coin = coinEntry || {};
   const port = String(coin.port ?? key);
   const name = coin.displayName || coin.symbol || String(port);
   return {

@@ -26,7 +26,10 @@ export function errorPanel(error) {
 }
 
 export function recover(promise, fallback) {
-  return promise.catch(() => fallback);
+  return promise.catch((error) => {
+    console.warn("recover: using fallback after fetch error", error);
+    return fallback;
+  });
 }
 
 export function kpi(label, value, explain) {

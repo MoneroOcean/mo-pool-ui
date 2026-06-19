@@ -35,7 +35,7 @@ async function postJson(path, body = {}) {
   });
   const json = await response.json().catch(() => ({}));
   if (!response.ok) {
-    throw new Error(json.msg || json.error || `${response.status} ${response.statusText}`);
+    throw new Error((json && json.msg) || (json && json.error) || `${response.status} ${response.statusText}`);
   }
   return json;
 }
@@ -117,7 +117,7 @@ export const api = {
   config: (options) => cachedEndpoint(CONFIG, options, 300_000),
   poolStats: async (options) => {
     const data = await fetchJson(POOL_STATS, { ttl: 60_000, ...options });
-    return data.pool_statistics || data || {};
+    return (data && data.pool_statistics) || data || {};
   },
   poolPorts: (options) => cachedEndpoint(POOL_PORTS, options, 60_000),
   networkStats: (options) => cachedEndpoint(NETWORK_STATS, options, 180_000),

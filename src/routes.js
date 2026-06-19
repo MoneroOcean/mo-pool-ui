@@ -64,7 +64,12 @@ export function parseRoute(hash = "") {
   const [pathRaw, queryRaw = ""] = raw.split("?");
   const path = pathRaw.startsWith("/") ? pathRaw : `/${pathRaw}`;
   const query = Object.fromEntries(new URLSearchParams(queryRaw));
-  const parts = path.split("/").filter(Boolean).map(decodeURIComponent);
+  let parts;
+  try {
+    parts = path.split("/").filter(Boolean).map(decodeURIComponent);
+  } catch {
+    return { n: "home", p: "#/", q: query };
+  }
   if (!parts.length) return { n: "home", p: "#/", q: query };
   if (parts[0] === "wallet") {
     const tab = walletTab(parts[2] || "overview");

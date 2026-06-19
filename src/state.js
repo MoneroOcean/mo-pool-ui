@@ -23,4 +23,5 @@ export function getCache(key) {
 
 export function setError(key, error) {
   state.e.set(key, error);
+  console.warn("api error (serving stale/last-good value)", key, error);
 }
