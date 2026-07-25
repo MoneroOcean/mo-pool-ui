@@ -128,6 +128,9 @@ test.describe("rendered views, links, charts, and coins", { concurrency: false }
       assert.match(coinsHtml, /href="#\/blocks\/XTM\?limit=15"/);
       assert.match(coinsHtml, /href="#\/blocks\/XTM-T\?limit=15"/);
       assert.match(coinsHtml, /href="#\/blocks\/XTM-C\?limit=15"/);
+      assert.match(coinsHtml, /href="https:\/\/xmrchain\.net"[^>]*>3000<\/a>/);
+      assert.match(coinsHtml, /href="https:\/\/explore\.tari\.com"[^>]*>7000<\/a>/);
+      assert.equal(coinsHtml.includes('href="https://xmrchain.net/block/3000"'), false);
 
       assertInternalLinksResolve(await blocksView({ n: "blocks", c: "XMR", q: { page: "1", limit: "15" } }), "blocks view");
       assertInternalLinksResolve(await paymentsView({ n: "payments", q: { page: "1", limit: "15" } }), "payments view");

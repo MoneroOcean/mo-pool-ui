@@ -8,6 +8,7 @@ import { summarizeUptimeRobot, uptimeToneClass, UNKNOWN_UPTIME } from "../src/up
 import { sortWorkerRows, trackWalletState, workerSortDirection, workerSortMode } from "../src/wallet.js";
 import { formatPayoutThresholdInput, normalizePayoutPolicy, normalizePayoutThreshold, payoutFeeEstimate, payoutFeeText, payoutPolicyFromConfig, payoutThresholdFromAtomic, validatePayoutThreshold } from "../src/settings.js";
 import { walletWorkersSection } from "../src/views/wallet.js";
+import { explorerHeightLink } from "../src/views/common.js";
 import { referencePortList, referencePortSummary } from "../src/views/help.js";
 
 const TEST_POLICY = payoutPolicyFromConfig({
@@ -51,6 +52,8 @@ function setupRunCommands(plan) {
 test.describe("setup, settings, uptime, and copy", { concurrency: false }, () => {
   test("setup output and ports mapping include required miners and ports", () => {
     assert.equal(COIN_EXPLORERS[18081], "https://xmrchain.net");
+    assert.equal(COIN_EXPLORERS[8645], "https://etc.blockscout.com");
+    assert.match(explorerHeightLink(8645, 123).html, /href="https:\/\/etc\.blockscout\.com"/);
     assert.equal(COIN_HEIGHT_EXPLORERS[18081].replace("{height}", "123"), "https://xmrchain.net/block/123");
     assert.equal(COIN_HEIGHT_EXPLORERS[12211].replace("{height}", "1142193"), "https://explorer.ryo.tools/search?value=1142193");
     assert.equal(COIN_HEIGHT_EXPLORERS[8766].replace("{height}", "4343926"), "https://ravencoin.atomicwallet.io/block/4343926");

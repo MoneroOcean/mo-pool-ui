@@ -39,7 +39,7 @@ export const COIN_EXPLORERS = {
   5110: "https://kcnxp.com",
   10225: "https://explorer.bitoreum.cc",
   9053: "https://explorer.ergoplatform.com/en",
-  8645: "https://etcerscan.com",
+  8645: "https://etc.blockscout.com",
   17750: "https://explorer.havenprotocol.org",
   25182: "https://explorer.bittube.cash",
   11812: "https://explorer.scalaproject.io",

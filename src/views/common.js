@@ -79,14 +79,12 @@ export function coinCell(value) {
 
 export function explorerHeightLink(port, height) {
   const value = height || "--";
-  const url = explorerHeightUrl(port, value);
+  const url = explorerBlocksUrl(port);
   if (!url || value === "--") return value;
-  return { html: `<a href="${url}" ${EXTERNAL_LINK} title="Open ${escapeHtml(coinName({}, port))} block ${escapeHtml(value)}">${escapeHtml(value)}</a>` };
+  return { html: `<a href="${url}" ${EXTERNAL_LINK} title="Open ${escapeHtml(coinName({}, port))} explorer latest blocks">${escapeHtml(value)}</a>` };
 }
 
-function explorerHeightUrl(port, height) {
-  const template = COIN_HEIGHT_EXPLORERS[port] || COIN_HEIGHT_EXPLORERS[Number(port)];
-  if (template) return template.replace("{height}", encodeUrlPart(height));
+function explorerBlocksUrl(port) {
   return COIN_EXPLORERS[port] || COIN_EXPLORERS[Number(port)] || "";
 }
 
