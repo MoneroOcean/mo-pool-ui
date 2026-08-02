@@ -46,6 +46,13 @@ export function formatTinyPercent(value, digits = 2, maxDigits = 8) {
   return `${trimFixed(number, maxDigits)}%`;
 }
 
+export function formatHashScalar(value, digits = 4, maxDigits = 10) {
+  const number = Number(value);
+  if (!isFiniteNumber(number)) return "--";
+  if (Math.abs(number) >= 10 ** -digits) return `${trimFixed(number, digits)}×`;
+  return `${trimFixed(number, maxDigits)}×`;
+}
+
 export function trimFixed(value, digits) {
   // Strip trailing zeros only after a decimal point ("1.20"->"1.2", "3.00"->"3"),
   // never from a whole number ("10" must stay "10", not "1").

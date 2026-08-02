@@ -106,7 +106,7 @@ export const GRAPH_WINDOWS = [
 export const EXPLANATIONS = {
   pplns: "PPLNS pays shares in the current window when a block is found. Recent shares can earn after a worker stops.",
   luck: "Luck compares shares spent with expected difficulty. Over 100% took extra work; under 100% was luckier.",
-  hashScalar: "Hash scalar is profit per hash vs XMR, with effort luck penalty. 100% equals XMR.",
+  hashScalar: "Hash scalar is profit per hash vs XMR, with effort luck penalty. 1× equals XMR.",
   normalizedHashrate: "XMR-normalized hashrate converts mined coins to XMR payout value for algorithm comparison.",
   currentHashrate: "Current pool estimate is XMR-normalized accepted-share hashrate from the last 10-minute backend window, not graph-window average; can lag spikes.",
   rawHashrate: "Raw hashrate is worker-reported by algo. Pool-side estimates use accepted shares and can lag spikes.",

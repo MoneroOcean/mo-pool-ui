@@ -117,7 +117,7 @@ export function coinName(poolStats = {}, port) {
 export function coinHashScalar(poolStats = {}, port, basePort = XMR_PORT) {
   const profit = coinProfitValue(poolStats, port);
   const base = coinProfitValue(poolStats, basePort);
-  return base > 0 ? profit / base * 100 : 0;
+  return base > 0 ? profit / base : 0;
 }
 
 export function coinProfitValue(poolStats = {}, port) {

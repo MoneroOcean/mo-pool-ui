@@ -1,6 +1,6 @@
 import { api } from "../api.js";
 import { EXPLANATIONS, TARI_PORTS, XMR_PORT } from "../constants.js";
-import { formatHashrate, formatNumber, formatPercent, formatTinyPercent } from "../format.js";
+import { formatHashrate, formatHashScalar, formatNumber, formatPercent } from "../format.js";
 import { coinHashScalar, coinStatsRows, effortPercent, worldHashrateForPort } from "../pool.js";
 import { state } from "../state.js";
 import { sortDirection, sortRows } from "../table-sort.js";
@@ -73,7 +73,7 @@ function coinTableRow(row) {
   return coinRow(row, [
     linkedBlockCoin(row.route, row.name),
     row.algo,
-    formatTinyPercent(row.profit, 2, 8),
+    formatHashScalar(row.profit),
     effortCell(row.effort),
     formatPercent(row.reward, 2),
     formatNumber(row.wallets),

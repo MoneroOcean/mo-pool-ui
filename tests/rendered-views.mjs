@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { BLOCK_SHARE_DUMP_BASE, DONATION_XMR, GRAPH_WINDOWS, EXPLANATIONS } from "../src/constants.js";
 import { averageVisible, chartModel, filterWindow, graphWindow, isWithinPplnsWindow, pplnsWindowRect, svgLine } from "../src/charts.js";
-import { atomicXmr, formatAge, formatHashrate, formatTinyPercent, normalizeTimestampSeconds } from "../src/format.js";
+import { atomicXmr, formatAge, formatHashrate, formatHashScalar, formatTinyPercent, normalizeTimestampSeconds } from "../src/format.js";
 import { averageBlockEffort, blockCoinPort, blockEffortPercent, coinAtomicUnits, coinBlockCount, coinHashScalar, coinName, coinProfitValue, coinStatsRows, effortTone, topCoinPort, currentEffort, effortPercent, hasBlockHistory, worldHashrateForPort } from "../src/pool.js";
 import { parseRoute } from "../src/routes.js";
 import { api } from "../src/api.js";
@@ -204,6 +204,25 @@ test.describe("rendered views, links, charts, and coins", { concurrency: false }
     });
   });
 
+  test("coins render hash scalar values as multipliers", async () => {
+    const pool = {
+      coins: {
+        18081: { port: 18081, symbol: "XMR", profit: 1, active: true },
+        9998: { port: 9998, symbol: "RTM", profit: 4100, active: true, exchangeConfigured: true }
+      }
+    };
+    await withApiStubs({
+      poolStats: async () => pool,
+      networkStats: async () => ({})
+    }, async () => {
+      state.r = { n: "coins", p: "#/coins", q: {} };
+      const html = await coinsView();
+      assert.match(html, /<td>4100×<\/td>/);
+      assert.match(html, /<td>1×<\/td>/);
+      assert.doesNotMatch(html, /410000(?:\.00)?%/);
+    });
+  });
+
   test("effort colors render consistently on coins and blocks pages", async () => {
     const pool = { ...LINK_TEST_POOL, totalBlocksFound: 40, currentEfforts: { 18081: 50, 9998: 150 } };
     const network = {
@@ -263,7 +282,7 @@ test.describe("rendered views, links, charts, and coins", { concurrency: false }
     assert.equal(effortTone(100.01), "red");
     assert.equal(worldHashrateForPort({ 18081: { difficulty: 240 } }, "18081", pool), 2);
     assert.equal(worldHashrateForPort({ 18081: { difficulty: 240 } }, "18081"), 0);
-    assert.equal(coinHashScalar(pool, "9998"), 200);
+    assert.equal(coinHashScalar(pool, "9998"), 2);
     assert.equal(coinHashScalar({ coinProfit: { 18081: 8e-8, 8645: 1.4e-12 } }, "8645"), 0);
     assert.equal(coinName({}, "18144"), "18144");
     assert.equal(coinName({}, "12345"), "12345");
@@ -295,6 +314,10 @@ test.describe("rendered views, links, charts, and coins", { concurrency: false }
     assert.equal(normalizeTimestampSeconds(1777348100000), 1777348100);
     assert.equal(formatTinyPercent(0.000001386, 2, 8), "0.00000139%");
     assert.equal(formatTinyPercent(0, 2, 8), "0.00%");
+    assert.equal(formatHashScalar(4100), "4100×");
+    assert.equal(formatHashScalar(1), "1×");
+    assert.equal(formatHashScalar(1.2345), "1.2345×");
+    assert.equal(formatHashScalar(0.00000001386), "0.0000000139×");
     assert.equal(formatAge(1000, (1000 + 370 * 24 * 60 * 60) * 1000), "1y ago");
   });
 
