@@ -17,10 +17,12 @@ export const HASHRATE_UNITS = [
 export const XMR_ADDRESS_RE = /^[48][1-9A-HJ-NP-Za-km-z]{94}([1-9A-HJ-NP-Za-km-z]{11})?$/;
 const XMRCHAIN_URL = "https://xmrchain.net";
 const TARI_EXPLORER_URL = "https://explore.tari.com";
+const RAVENCOIN_EXPLORER_URL = "https://cryptoscope.io/rvn/";
 const blockHeightUrl = (base) => `${base}/block/{height}`;
 const blockHashUrl = (base) => `${base}/block/{hash}`;
 const blocksHashUrl = (base) => `${base}/blocks/{hash}`;
 const searchHashUrl = (base) => `${base}/search?value={hash}`;
+const blockQueryUrl = (base, parameter, placeholder) => `${base.replace(/\/+$/, "")}/block/?${parameter}={${placeholder}}`;
 
 export const COIN_EXPLORERS = {
   18081: XMRCHAIN_URL,
@@ -33,7 +35,7 @@ export const COIN_EXPLORERS = {
   48782: "https://lethean.io/explorer",
   19281: "https://explorer.monerov.online",
   19950: "https://explorer.getswap.eu",
-  8766: "https://blockbook.ravencoin.org",
+  8766: RAVENCOIN_EXPLORER_URL,
   19001: "https://explorer.neurai.org",
   9998: "https://explorer.raptoreum.com",
   5110: "https://kcnxp.com",
@@ -58,7 +60,7 @@ export const COIN_HEIGHT_EXPLORERS = {
   18146: `${TARI_EXPLORER_URL}/blocks/{height}`,
   18148: `${TARI_EXPLORER_URL}/blocks/{height}`,
   12211: "https://explorer.ryo.tools/search?value={height}",
-  8766: "https://ravencoin.atomicwallet.io/block/{height}",
+  8766: blockQueryUrl(COIN_EXPLORERS[8766], "blockheight", "height"),
   9053: "https://explorer.ergoplatform.com/en/blocks/{height}",
   8645: "https://etc.blockscout.com/block/{height}",
   16000: "https://explorer.conceal.network/index.html?hash={height}",
@@ -76,7 +78,7 @@ export const COIN_HASH_EXPLORERS = {
   48782: `${COIN_EXPLORERS[48782]}/#/block/{hash}`,
   19281: `${COIN_EXPLORERS[19281]}/index.html?hash={hash}`,
   19950: blockHashUrl(COIN_EXPLORERS[19950]),
-  8766: "https://ravencoin.atomicwallet.io/block/{hash}",
+  8766: blockQueryUrl(COIN_EXPLORERS[8766], "blockhash", "hash"),
   19001: blockHashUrl(COIN_EXPLORERS[19001]),
   9998: blockHashUrl(COIN_EXPLORERS[9998]),
   5110: blockHashUrl(COIN_EXPLORERS[5110]),
