@@ -56,13 +56,14 @@ test.describe("setup, settings, uptime, and copy", { concurrency: false }, () =>
     assert.match(explorerHeightLink(8645, 123).html, /href="https:\/\/etc\.blockscout\.com"/);
     assert.equal(COIN_HEIGHT_EXPLORERS[18081].replace("{height}", "123"), "https://xmrchain.net/block/123");
     assert.equal(COIN_HEIGHT_EXPLORERS[12211].replace("{height}", "1142193"), "https://explorer.ryo.tools/search?value=1142193");
-    assert.equal(COIN_HEIGHT_EXPLORERS[8766].replace("{height}", "4343926"), "https://cryptoscope.io/rvn/block/?blockheight=4343926");
+    assert.equal(COIN_EXPLORERS[8766], "https://blockbook.ravencoin.org");
+    assert.equal(COIN_HEIGHT_EXPLORERS[8766].replace("{height}", "4343926"), "https://blockbook.ravencoin.org/api/v2/block/4343926");
     assert.equal(COIN_HEIGHT_EXPLORERS[8645].replace("{height}", "24458492"), "https://etc.blockscout.com/block/24458492");
     assert.equal(COIN_HEIGHT_EXPLORERS[17767].replace("{height}", "764069"), "https://explorer.zephyrprotocol.com/block/764069");
     assert.equal(COIN_HASH_EXPLORERS[18081].replace("{hash}", "abc"), "https://xmrchain.net/block/abc");
     assert.equal(COIN_HASH_EXPLORERS[18144].replace("{hash}", "abc"), "https://explore.tari.com/blocks/abc");
     assert.equal(COIN_HASH_EXPLORERS[12211].replace("{hash}", "abc"), "https://explorer.ryo.tools/search?value=abc");
-    assert.equal(COIN_HASH_EXPLORERS[8766].replace("{hash}", "abc"), "https://cryptoscope.io/rvn/block/?blockhash=abc");
+    assert.equal(COIN_HASH_EXPLORERS[8766].replace("{hash}", "abc"), "https://blockbook.ravencoin.org/api/v2/block/abc");
     assert.equal(COIN_HASH_EXPLORERS[8645].replace("{hash}", "abc"), "https://etc.blockscout.com/block/abc");
     assert.equal(COIN_HASH_EXPLORERS[10225].replace("{hash}", "abc"), "https://explorer.bitoreum.cc/block/abc");
     for (const port of Object.keys(COIN_EXPLORERS)) {
