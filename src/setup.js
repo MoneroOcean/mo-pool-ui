@@ -48,7 +48,8 @@ const MOM_RELEASE_API = `${GITHUB_RELEASE_API}MoneroOcean/mo-miner/releases/late
 const MULTI_MINER_RELEASE_API = `${GITHUB_RELEASE_API}MoneroOcean/multi-miner/releases/latest`;
 const XMRIG_PROXY_RELEASE_API = `${GITHUB_RELEASE_API}MoneroOcean/xmrig-proxy/releases/latest`;
 export const TOR_MINING_HOST = "mo2tor2amawhphlrgyaqlrqx7o27jaj7yldnx3t6jip3ow4bujlwz6id.onion";
-const LINUX_XMRIG_ASSET = "grep -E 'lin64-compat|lin64\\.tar\\.gz'";
+const LINUX_XMRIG_ASSET = "grep -E 'lin-compat\\.tar\\.gz|lin\\.tar\\.gz'";
+const XMRIG_WINDOWS_ZIP_ASSET = "win\\.zip$";
 const WIN64_ZIP_ASSET = "win64\\.zip$";
 const XMRIG_PROXY_TAR = "xmrig-proxy.tar.gz";
 const BROWSER_DOWNLOAD_URL = "browser_download_url";
@@ -95,13 +96,12 @@ const SRB_ALGO = {
 const ETCHASH_EXTRA = " --esm 2 --nicehash true";
 const MULTI_MINER_ALGOS = Object.keys(SRB_ALGO).map((name) => [name, SRB_ALGO[name], name === "etchash" ? ETCHASH_EXTRA : ""]);
 const WINDOWS_POWERSHELL_BKM = "Open Windows PowerShell first. From cmd.exe, run: powershell -NoProfile. Windows Security or other antivirus may quarantine miner archives; if extraction is blocked, review the alert and allow or exclude only this mining folder if you trust the release.";
+const MOM_WINDOWS_BKM = `${WINDOWS_POWERSHELL_BKM} Run the setup from an Administrator PowerShell because mom's bundled install.bat installs required GPU runtime support.`;
 const PORT_METADATA_UNAVAILABLE = "Pool port metadata unavailable from API.";
 const TLS_MODE_NOTE = "TLS encrypts miner-to-pool traffic. Use plain only when TLS is blocked or unsupported.";
 const PLAIN_MODE_NOTE = "Plain mode uses the non-TLS mining port for tests or restricted networks.";
 const TOR_MODE_NOTE = "Tor mode uses MoneroOcean's onion host via local SOCKS5 and the selected non-TLS setup port. Use 127.0.0.1:9050 for system Tor or 127.0.0.1:9150 for Tor Browser. TLS does not improve security over Tor.";
 const SRB_RUN_NOTE = "Use --list-devices first if GPU 0 is wrong. Intel Alchemist/Battlemage, NVIDIA Pascal+, and supported AMD GPUs work.";
-const XMRIG_MAC_DOWNLOAD_NOTE = "MoneroOcean XMRig macOS release assets are currently arm64 only. Use Linux/Windows or build XMRig from source on Intel macOS.";
-const XMRIG_PROXY_MAC_DOWNLOAD_NOTE = "MoneroOcean xmrig-proxy macOS release assets are currently arm64 only. Use Linux/Windows or build xmrig-proxy from source on Intel macOS.";
 const PROXY_HOSTS_PORT_3333 = "workers connect to this host on port 3333.";
 const REPLACE_PROXY_HOST = "Replace PROXY_HOST with the proxy machine hostname or address.";
 const XMRIG_AUTO_SWITCH_NOTE = "MoneroOcean XMRig benchmarks/switches CPU algos for XMR payout; first run may benchmark for several minutes before pool jobs appear.";
@@ -226,7 +226,7 @@ function xmrigPlan({ os, address, worker, pool, portRow }) {
   const macos = os === MACOS;
   const binary = windows ? windowsLocal(XMRIG_EXE) : XMRIG_BIN;
   const download = windows
-    ? windowsZipDownload(XMRIG_RELEASE_API, WIN64_ZIP_ASSET, "xmrig.zip", "moneroocean")
+    ? windowsZipDownload(XMRIG_RELEASE_API, XMRIG_WINDOWS_ZIP_ASSET, "xmrig.zip", "moneroocean")
     : macos
       ? macXmrigDownload()
     : `${linuxReleaseDownload("moneroocean", XMRIG_RELEASE_API, LINUX_XMRIG_ASSET, XMRIG_TAR)} && tar xf ${XMRIG_TAR} && chmod +x ${XMRIG}`;
@@ -235,7 +235,7 @@ function xmrigPlan({ os, address, worker, pool, portRow }) {
   return {
     summary: setupPoolSummary(pool, portRow),
     downloadCommand: download,
-    downloadNote: windows ? WINDOWS_POWERSHELL_BKM : macos ? XMRIG_MAC_DOWNLOAD_NOTE : "",
+    downloadNote: windows ? WINDOWS_POWERSHELL_BKM : "",
     tlsRunCommand: tlsRun,
     tlsRunNote: TLS_MODE_NOTE,
     plainRunCommand: directRun,
@@ -243,7 +243,7 @@ function xmrigPlan({ os, address, worker, pool, portRow }) {
     torCommand: windows ? "" : xmrigTorRun({ os, address, worker, port: portRow.port }),
     torNote: windows ? "" : TOR_MODE_NOTE,
     notes: macos
-      ? `Best first CPU setup on Apple Silicon Macs. Intel macOS is not supported by this download. ${XMRIG_AUTO_SWITCH_NOTE} If Gatekeeper blocks it, remove quarantine and retry.`
+      ? `Best first CPU setup on Macs. The download selects the current Apple Silicon or Intel archive. ${XMRIG_AUTO_SWITCH_NOTE} If Gatekeeper blocks it, remove quarantine and retry.`
       : `Best first setup for CPU mining. ${XMRIG_AUTO_SWITCH_NOTE}`
   };
 }
@@ -285,7 +285,7 @@ function multiMinerPlan({ os, gpu, address, pool, portRow }) {
     downloadCommand: windows
       ? multiMinerWindowsDownload(intelGpu)
       : multiMinerLinuxDownload(intelGpu),
-    downloadNote: windows ? WINDOWS_POWERSHELL_BKM : "",
+    downloadNote: windows ? (intelGpu ? MOM_WINDOWS_BKM : WINDOWS_POWERSHELL_BKM) : "",
     tlsRunCommand: windows ? multiMinerWindowsRun({ address, pool: tlsPool, disable, intelGpu }) : multiMinerLinuxRun({ address, pool: tlsPool, disable, intelGpu }),
     tlsRunNote: TLS_MODE_NOTE,
     notes: "Use this only for GPU algo switching; fixed GPU setup is simpler. First run benchmarks/autotunes configured algorithms before normal mining output appears."
@@ -334,12 +334,12 @@ function momPlan({ os, address, password, pool, portRow }) {
   return {
     summary: setupPoolSummary(pool, portRow),
     downloadCommand: windows ? momWindowsDownload() : momLinuxDownload(),
-    downloadNote: windows ? WINDOWS_POWERSHELL_BKM : "",
+    downloadNote: windows ? MOM_WINDOWS_BKM : "",
     tlsRunCommand: portRow.tlsPort ? momRun(binary, `${POOL_HOST}:${portRow.tlsPort}tls`, address, password, momJson) : "",
     tlsRunNote: TLS_MODE_NOTE,
     plainRunCommand: momRun(binary, pool, address, password, momJson),
     plainRunNote: PLAIN_MODE_NOTE,
-    notes: "mom is used for fixed Intel GPU C29."
+    notes: "mom is used for fixed Intel GPU C29. Its bundled installer supplies required GPU runtime support; automatic backend selection and tuning remain enabled."
   };
 }
 
@@ -352,7 +352,7 @@ function momRun(binary, pool, address, password, momJson = momC29Json()) {
 }
 
 function momC29Json({ escapeQuotes = false, perf = false } = {}) {
-  const json = JSON.stringify(perf ? { dev: "gpu1*1", perf: 1 } : { dev: "gpu1*1" });
+  const json = JSON.stringify(perf ? { dev: "gpu1", perf: 1 } : { dev: "gpu1" });
   return escapeQuotes ? json.replaceAll('"', '\\"') : json;
 }
 
@@ -408,12 +408,12 @@ function xmrigProxyPlan({ os, address, worker, pool, portRow }) {
       : macos
         ? xmrigProxyMacDownload()
         : xmrigProxyLinuxDownload(),
-    downloadNote: windows ? WINDOWS_POWERSHELL_BKM : macos ? XMRIG_PROXY_MAC_DOWNLOAD_NOTE : "",
+    downloadNote: windows ? WINDOWS_POWERSHELL_BKM : "",
     tlsRunCommand: proxyRunCommand,
     tlsRunNote: TLS_MODE_NOTE,
     localCommand: `${windows ? windowsLocal(XMRIG_EXE) : XMRIG_BIN} -o PROXY_HOST:3333 -u ${worker} --nicehash --donate-over-proxy 1 ${KEEPALIVE}`,
     localNote: `Worker miners connect to this proxy on port 3333 using NiceHash-compatible mode. ${REPLACE_PROXY_HOST}`,
-    notes: `${macos ? "Intel macOS is not supported by this download. " : ""}Use when many XMRig CPU workers share one upstream pool connection. ${SMALL_PROXY_NOTE} MoneroOcean fork keeps proxy aligned with algo switching. Keep fixed GPU miners direct or behind Multi-Miner.`
+    notes: `${macos ? "The download selects the current Apple Silicon or Intel archive. " : ""}Use when many XMRig CPU workers share one upstream pool connection. ${SMALL_PROXY_NOTE} MoneroOcean fork keeps proxy aligned with algo switching. Keep fixed GPU miners direct or behind Multi-Miner.`
   };
 }
 
@@ -543,12 +543,14 @@ function lolminerWindowsDownload() {
 function momLinuxDownload() {
   return `sudo apt-get install -y curl
 mkdir -p ~/${MOM_DIR} && cd ~/${MOM_DIR}
-${downloadMom()} && chmod +x ${MOM}`;
+${downloadMom()} && chmod +x ${MOM}
+sudo ./install.sh`;
 }
 
 function momWindowsDownload() {
   return `${windowsAssetDownload(MOM_RELEASE_API, "mom-v.*-win\\.zip$", MOM_ZIP)}
-${windowsExpandFlatten(MOM_ZIP, MOM_DIR, "mdir")}`;
+${windowsExpandFlatten(MOM_ZIP, MOM_DIR, "mdir")}
+.\\install.bat`;
 }
 
 // Expand a release zip and copy its single top-level subfolder's contents into the
@@ -564,7 +566,7 @@ function multiMinerLinuxDownload(intelGpu) {
 mkdir -p ~/${MULTI_MINER_DIR} && cd ~/${MULTI_MINER_DIR}
 ${downloadMultiMinerLinux()} && chmod +x mm
 ${releaseAssetDownload(SRBMINER_RELEASE_API, srbMinerLinuxAsset(), SRBMINER_ARCHIVE)} && ${unpackSrbMinerLinux()}
-${intelGpu ? `mkdir -p ${MOM_DIR} && (cd ${MOM_DIR} && ${downloadMom()} && chmod +x ${MOM})` : `${releaseAssetDownload(LOLMINER_RELEASE_API, lolMinerLinuxAsset(), LOLMINER_ARCHIVE)} && ${unpackLolMinerLinux()}`}`;
+${intelGpu ? `mkdir -p ${MOM_DIR} && (cd ${MOM_DIR} && ${downloadMom()} && chmod +x ${MOM} && sudo ./install.sh)` : `${releaseAssetDownload(LOLMINER_RELEASE_API, lolMinerLinuxAsset(), LOLMINER_ARCHIVE)} && ${unpackLolMinerLinux()}`}`;
 }
 
 function multiMinerWindowsDownload(intelGpu) {
@@ -581,11 +583,11 @@ function xmrigProxyLinuxDownload() {
 }
 
 function xmrigProxyMacDownload() {
-  return macTarDownload(XMRIG_PROXY, XMRIG_PROXY_RELEASE_API, XMRIG_PROXY_TAR, XMRIG_PROXY, `if [ "$(uname -m)" != "arm64" ]; then echo "${XMRIG_PROXY_MAC_DOWNLOAD_NOTE}"; exit 1; fi`);
+  return macTarDownload(XMRIG_PROXY, XMRIG_PROXY_RELEASE_API, XMRIG_PROXY_TAR, XMRIG_PROXY);
 }
 
 function xmrigProxyWindowsDownload() {
-  return windowsZipDownload(XMRIG_PROXY_RELEASE_API, WIN64_ZIP_ASSET, "xmrig-proxy.zip", XMRIG_PROXY);
+  return windowsZipDownload(XMRIG_PROXY_RELEASE_API, XMRIG_WINDOWS_ZIP_ASSET, "xmrig-proxy.zip", XMRIG_PROXY);
 }
 
 function releaseDownload(dir, api, grepCommand, file) {
@@ -641,9 +643,11 @@ ${enterChild ? `$dir=Get-ChildItem .\\${dir} -Directory | ${FIRST_ASSET}
 if ($dir) { Set-Location $dir.FullName } else { Set-Location .\\${dir} }` : `Set-Location .\\${dir}`}`;
 }
 
-function macTarDownload(dir, api, file, binary, precheck = "") {
+function macTarDownload(dir, api, file, binary) {
   return `mkdir -p ~/${dir} && cd ~/${dir}
-${precheck ? `${precheck}\n` : ""}url=$(curl -fsSL ${api} | grep ${BROWSER_DOWNLOAD_URL} | grep 'mac64\\.tar\\.gz' | head -1 | cut -d '"' -f 4)
+asset='mac\\.tar\\.gz'
+case "$(uname -m)" in x86_64|amd64) asset='mac-intel\\.tar\\.gz';; esac
+url=$(curl -fsSL ${api} | grep ${BROWSER_DOWNLOAD_URL} | grep "$asset" | head -1 | cut -d '"' -f 4)
 curl -L "$url" -o ${file} && tar xf ${file} && chmod +x ${binary}
 xattr -d com.apple.quarantine ${binary} 2>/dev/null || true`;
 }
