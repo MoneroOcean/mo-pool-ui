@@ -4,11 +4,14 @@ import { fileURLToPath } from "node:url";
 
 const testsDir = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(testsDir, "..");
+const requestedWorkers = Number.parseInt(process.env.PLAYWRIGHT_WORKERS || "1", 10);
+const workers = Number.isFinite(requestedWorkers) && requestedWorkers > 0 ? requestedWorkers : 1;
 
 export default defineConfig({
   testDir: resolve(testsDir, "e2e"),
   timeout: 30_000,
   fullyParallel: true,
+  workers,
   reporter: [["list"]],
   use: {
     baseURL: "http://127.0.0.1:4173",
