@@ -125,12 +125,12 @@ test.describe("setup, settings, uptime, and copy", { concurrency: false }, () =>
       global: [
         { port: 80, tls: false, difficulty: 10000, description: "1 kH/s" },
         { port: 443, tls: true, difficulty: 10000, description: "1 kH/s" },
-        { port: 10001, tls: false, difficulty: 10000, description: "1 KH/s" },
-        { port: 20001, tls: true, difficulty: 10000, description: "1 KH/s" },
-        { port: 10002, tls: false, difficulty: 20000, description: "2 KH/s" },
-        { port: 20002, tls: true, difficulty: 20000, description: "2 KH/s" },
-        { port: 10128, tls: false, difficulty: 1280000, description: "128 KH/s" },
-        { port: 20128, tls: true, difficulty: 1280000, description: "128 KH/s" }
+        { port: 10001, tls: false, difficulty: 10000, description: "1 kH/s" },
+        { port: 20001, tls: true, difficulty: 10000, description: "1 kH/s" },
+        { port: 10002, tls: false, difficulty: 20000, description: "2 kH/s" },
+        { port: 20002, tls: true, difficulty: 20000, description: "2 kH/s" },
+        { port: 10128, tls: false, difficulty: 1280000, description: "128 kH/s" },
+        { port: 20128, tls: true, difficulty: 1280000, description: "128 kH/s" }
       ]
     });
     assert.deepEqual(globalPorts.map((row) => [row.port, row.tlsPort, row.targetHashrate]), [[10001, 20001, 1000], [10002, 20002, 2000], [10128, 20128, 128000]]);
@@ -232,7 +232,7 @@ test.describe("setup, settings, uptime, and copy", { concurrency: false }, () =>
     assert.match(setupPlanWithPorts({ profile: "xmrig-proxy", os: "windows" }).localCommand, /^\.\\xmrig\.exe/);
     assert.match(setupPlanWithPorts({ profile: "xmrig-proxy" }).localCommand, /--nicehash/);
     assert.match(setupPlanWithPorts({ profile: "xmrig-proxy" }).localNote, /Replace PROXY_HOST/);
-    assert.match(setupPlanWithPorts({ profile: "xmrig-proxy" }).notes, /For small proxy setups, start with 64-128 KH\/s/);
+    assert.match(setupPlanWithPorts({ profile: "xmrig-proxy" }).notes, /For small proxy setups, start with 64-128 kH\/s/);
     assert.equal(setupPlanWithPorts({ profile: "xmrig-proxy", algo: "etchash" }).selection.algo, "auto");
     assert.match(setupPlanWithPorts({ profile: "xmr-node-proxy" }).tlsRunCommand, /node proxy\.js --config config\.json/);
     assert.equal(setupPlanWithPorts({ profile: "xmr-node-proxy", algo: "etchash" }).selection.algo, "auto");
@@ -309,9 +309,9 @@ test.describe("setup, settings, uptime, and copy", { concurrency: false }, () =>
   });
 
   test("help reference ports match current port stats", () => {
-    assert.equal(referencePortSummary(), "80/443 TLS for 1 KH/s; 10001/20001 TLS for 1 KH/s; 10002/20002 TLS for 2 KH/s; 10004/20004 TLS for 4 KH/s; 10008/20008 TLS for 8 KH/s; 10016/20016 TLS for 16 KH/s; 10032/20032 TLS for 32 KH/s; 10064/20064 TLS for 64 KH/s; 10128/20128 TLS for 128 KH/s; 10256/20256 TLS for 256 KH/s; 10512/20512 TLS for 512 KH/s; 11024/21024 TLS for 1 MH/s; 12048/22048 TLS for 2 MH/s; 14096/24096 TLS for 4 MH/s; 18192/28192 TLS for 8 MH/s");
+    assert.equal(referencePortSummary(), "80/443 TLS for 1 kH/s; 10001/20001 TLS for 1 kH/s; 10002/20002 TLS for 2 kH/s; 10004/20004 TLS for 4 kH/s; 10008/20008 TLS for 8 kH/s; 10016/20016 TLS for 16 kH/s; 10032/20032 TLS for 32 kH/s; 10064/20064 TLS for 64 kH/s; 10128/20128 TLS for 128 kH/s; 10256/20256 TLS for 256 kH/s; 10512/20512 TLS for 512 kH/s; 11024/21024 TLS for 1 MH/s; 12048/22048 TLS for 2 MH/s; 14096/24096 TLS for 4 MH/s; 18192/28192 TLS for 8 MH/s");
     const list = referencePortList();
-    assert.match(list, /^<ul class="reference-port-list"><li>80\/443 TLS for 1 KH\/s<\/li>/);
+    assert.match(list, /^<ul class="reference-port-list"><li>80\/443 TLS for 1 kH\/s<\/li>/);
     assert.equal([...list.matchAll(/<li>/g)].length, 15);
   });
 

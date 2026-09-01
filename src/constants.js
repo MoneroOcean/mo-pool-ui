@@ -11,7 +11,7 @@ export const XMR_PORT = 18081;
 export const TARI_PORTS = ["18144", "18146", "18148"];
 export const HASHRATE_UNITS = [
   ["h", "H/s", 1],
-  ["kh", "KH/s", 1000],
+  ["kh", "kH/s", 1000],
   ["mh", "MH/s", 1000000]
 ];
 export const XMR_ADDRESS_RE = /^[48][1-9A-HJ-NP-Za-km-z]{94}([1-9A-HJ-NP-Za-km-z]{11})?$/;

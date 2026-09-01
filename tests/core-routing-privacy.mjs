@@ -392,7 +392,7 @@ test.describe("core routing, privacy, and preferences", { concurrency: false }, 
     assert.equal(formatHashrate(0), "0 H/s");
     assert.equal(formatHashrate(-5), "0 H/s");
     assert.equal(formatHashrate(NaN), "0 H/s");
-    assert.equal(formatHashrate(12345), "12.3 KH/s");
+    assert.equal(formatHashrate(12345), "12.3 kH/s");
     assert.equal(formatHashrate(2.5e18), "2500 PH/s");
     assert.equal(escapeHtml(`<a href="x" title='y'>&`), "&lt;a href=&quot;x&quot; title=&#039;y&#039;&gt;&amp;");
     assert.equal(escapeHtml(null), "");
