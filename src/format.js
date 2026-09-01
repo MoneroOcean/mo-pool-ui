@@ -11,7 +11,7 @@ export function formatNumber(value, digits = 0) {
 export function formatHashrate(value) {
   const number = Number(value);
   if (!isFiniteNumber(number) || number <= 0) return "0 H/s";
-  const units = ["H/s", "KH/s", "MH/s", "GH/s", "TH/s", "PH/s"];
+  const units = ["H/s", "kH/s", "MH/s", "GH/s", "TH/s", "PH/s"];
   let scaled = number;
   let index = 0;
   while (scaled >= 1000 && index < units.length - 1) {
