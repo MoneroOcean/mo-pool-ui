@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { BLOCK_SHARE_DUMP_BASE, DONATION_XMR, GRAPH_WINDOWS, EXPLANATIONS } from "../src/constants.js";
+import { BLOCK_SHARE_DUMP_BASE, COIN_EXPLORERS, COIN_HASH_EXPLORERS, DONATION_XMR, GRAPH_WINDOWS, EXPLANATIONS } from "../src/constants.js";
 import { averageVisible, chartModel, filterWindow, graphWindow, isWithinPplnsWindow, pplnsWindowRect, svgLine } from "../src/charts.js";
 import { atomicXmr, formatAge, formatHashrate, formatHashScalar, formatTinyPercent, normalizeTimestampSeconds } from "../src/format.js";
 import { averageBlockEffort, blockCoinPort, blockEffortPercent, coinAtomicUnits, coinBlockCount, coinHashScalar, coinName, coinProfitValue, coinStatsRows, effortTone, topCoinPort, currentEffort, effortPercent, hasBlockHistory, worldHashrateForPort } from "../src/pool.js";
@@ -13,7 +13,7 @@ import { walletRouteWithGraph, lastShareAgeSuffix, walletView, walletWorkersSect
 import { setupView } from "../src/views/setup.js";
 import { helpView } from "../src/views/help.js";
 import { chartHtml, hashrateChart, normalizeGraph } from "../src/views/charts.js";
-import { skel } from "../src/views/common.js";
+import { explorerBlockHashLink, skel } from "../src/views/common.js";
 import { homeView } from "../src/views/home.js";
 import { poolDashboard } from "../src/views/pool-dashboard.js";
 import { coinsView } from "../src/views/coins.js";
@@ -73,6 +73,14 @@ const LINK_TEST_NETWORK = {
 };
 
 test.describe("rendered views, links, charts, and coins", { concurrency: false }, () => {
+  test("Pearl links use the official mainnet explorer", () => {
+    assert.equal(COIN_EXPLORERS[44109], "https://explorer.pearlresearch.ai");
+    assert.equal(COIN_EXPLORERS[44107], undefined);
+    assert.equal(COIN_HASH_EXPLORERS[44109], "https://explorer.pearlresearch.ai/block/{hash}");
+    assert.equal(COIN_HASH_EXPLORERS[44107], undefined);
+    assert.match(explorerBlockHashLink("44109", "pearl-hash").html, /href="https:\/\/explorer\.pearlresearch\.ai\/block\/pearl-hash"/);
+  });
+
   test("pool KPI help text is present when comments are enabled", () => {
     const pool = {
       miners: 4664,

@@ -18,6 +18,7 @@ export const XMR_ADDRESS_RE = /^[48][1-9A-HJ-NP-Za-km-z]{94}([1-9A-HJ-NP-Za-km-z
 const XMRCHAIN_URL = "https://xmrchain.net";
 const TARI_EXPLORER_URL = "https://explore.tari.com";
 const RAVENCOIN_EXPLORER_URL = "https://blockbook.ravencoin.org";
+const PEARL_EXPLORER_URL = "https://explorer.pearlresearch.ai";
 const blockHeightUrl = (base) => `${base}/block/{height}`;
 const blockHashUrl = (base) => `${base}/block/{hash}`;
 const blocksHashUrl = (base) => `${base}/blocks/{hash}`;
@@ -28,6 +29,7 @@ export const COIN_EXPLORERS = {
   18144: TARI_EXPLORER_URL,
   18146: TARI_EXPLORER_URL,
   18148: TARI_EXPLORER_URL,
+  44109: PEARL_EXPLORER_URL,
   19734: "https://explorer.sumokoin.com",
   12211: "https://explorer.ryo.tools",
   38081: "https://explorer.getmasari.org",
@@ -71,6 +73,7 @@ export const COIN_HASH_EXPLORERS = {
   18144: blocksHashUrl(TARI_EXPLORER_URL),
   18146: blocksHashUrl(TARI_EXPLORER_URL),
   18148: blocksHashUrl(TARI_EXPLORER_URL),
+  44109: blockHashUrl(PEARL_EXPLORER_URL),
   19734: blockHashUrl(COIN_EXPLORERS[19734]),
   12211: searchHashUrl(COIN_EXPLORERS[12211]),
   38081: `${COIN_EXPLORERS[38081]}/#/block/{hash}`,
