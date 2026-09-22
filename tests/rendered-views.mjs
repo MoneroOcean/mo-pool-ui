@@ -176,6 +176,36 @@ test.describe("rendered views, links, charts, and coins", { concurrency: false }
     });
   });
 
+  test("selected zero-history coin stays selected and shows an empty state", async () => {
+    const pool = {
+      ...LINK_TEST_POOL,
+      totalBlocksFound: 40,
+      coins: {
+        ...LINK_TEST_POOL.coins,
+        44109: { port: 44109, symbol: "PRL", displayName: "PRL", active: true, exchangeConfigured: true, blockTime: 16, atomicUnits: 100_000_000, altBlocksFound: 0 },
+        44110: { port: 44110, symbol: "ZERO", displayName: "Zero", active: true, exchangeConfigured: true, blockTime: 120, atomicUnits: 100, altBlocksFound: 0 }
+      }
+    };
+    let requested;
+    await withApiStubs({
+      poolStats: async () => pool,
+      networkStats: async () => ({ ...LINK_TEST_NETWORK, 44109: { difficulty: 1, time: 16, height: 1 } }),
+      coinBlocks: async (port, page, limit) => {
+        requested = { port, page, limit };
+        return [];
+      }
+    }, async () => {
+      const route = parseRoute("#/blocks/PRL?limit=15");
+      const html = await blocksView(route);
+      assert.equal(route.n, "blocks");
+      assert.equal(route.c, "PRL");
+      assert.deepEqual(requested, { port: "44109", page: 0, limit: 15 });
+      assert.match(html, /<option value="PRL" selected>PRL<\/option>/);
+      assert.doesNotMatch(html, /value="ZERO"/);
+      assert.match(html, /No blocks found for this coin\./);
+    });
+  });
+
   test("blocks table rejects API-supplied HTML objects in height cells", async () => {
     const payload = '<img src=x onerror="globalThis.__MO_POOL_UI_XSS__=1">';
     await withApiStubs({

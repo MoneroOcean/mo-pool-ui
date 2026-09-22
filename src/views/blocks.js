@@ -20,7 +20,8 @@ export async function blocksView(route) {
     ...(xmrCoin ? [] : [`Reward (${coinName(pool, coin)})`]),
     "Height", "Block hash"];
   const rows = (blocks || []).map((block) => blockRow(block, coin, pool, network, xmrCoin));
-  return tablePage("", "", headings, rows, controls);
+  const emptyText = Array.isArray(blocks) && blocks.length === 0 ? "No blocks found for this coin." : "";
+  return tablePage("", "", headings, rows, controls, "", emptyText);
 }
 
 function blockRow(block, coin, pool, network, xmrCoin) {
@@ -123,11 +124,11 @@ export function blockRoute(coin, page = 1, pageSize = PAGE_SIZES[0], pool) {
   return `#/blocks${suffix}?${pageQuery(page, pageSize)}`;
 }
 
-function blockCoinOptions(pool, _selectedCoin) {
+function blockCoinOptions(pool, selectedCoin) {
   const ports = new Set(coinStatsRows(pool).map((coin) => coin.p));
   if (Number(pool.totalBlocksFound) > 0) ports.add(String(XMR_PORT));
   return [...ports]
-    .filter((port) => hasBlockHistory(pool, port))
+    .filter((port) => String(port) === String(selectedCoin) || hasBlockHistory(pool, port))
     .map((port) => ({ port, name: coinName(pool, port), id: routeCoinId(port, pool) }))
     .sort((a, b) => a.name.localeCompare(b.name));
 }
