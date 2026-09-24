@@ -105,7 +105,7 @@ const SRB_RUN_NOTE = "Use --list-devices first if GPU 0 is wrong. Intel Alchemis
 const PROXY_HOSTS_PORT_3333 = "workers connect to this host on port 3333.";
 const REPLACE_PROXY_HOST = "Replace PROXY_HOST with the proxy machine hostname or address.";
 const XMRIG_AUTO_SWITCH_NOTE = "MoneroOcean XMRig benchmarks/switches CPU algos for XMR payout; first run may benchmark for several minutes before pool jobs appear.";
-const SMALL_PROXY_NOTE = "For small proxy setups, start with 64-128 KH/s.";
+const SMALL_PROXY_NOTE = "For small proxy setups, start with 64-128 kH/s.";
 
 export function setupAddress({ queryAddress = "", activeAddress = "", watchlist = [] } = {}) {
   return queryAddress || activeAddress || watchlist.find((row) => row?.address)?.address || DEFAULT_ADDRESS;
@@ -482,7 +482,7 @@ function normalizedHashrateInput(value, fallback) {
 function formatSetupHashrate(hashrateHps) {
   const hps = Number(hashrateHps) || 0;
   if (hps >= 1_000_000) return `${trimFixed(hps / 1_000_000, 3)} MH/s`;
-  if (hps >= 1000) return `${trimFixed(hps / 1000, 3)} KH/s`;
+  if (hps >= 1000) return `${trimFixed(hps / 1000, 3)} kH/s`;
   return `${trimFixed(hps, 3)} H/s`;
 }
 

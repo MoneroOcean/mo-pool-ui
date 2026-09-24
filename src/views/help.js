@@ -104,10 +104,10 @@ export function referencePortList(ports = DEFAULT_REFERENCE_PORTS) {
 }
 
 function referencePortLabels(ports = DEFAULT_REFERENCE_PORTS) {
-  // Public mining ports are a hashrate ladder: 100xx is KH/s, 11xxx+ is MH/s, and port 80
-  // is a firewall-friendly alias for the first 1 KH/s tier (TLS port = plain + 10000, 443 for 80).
+  // Public mining ports are a hashrate ladder: 100xx is kH/s, 11xxx+ is MH/s, and port 80
+  // is a firewall-friendly alias for the first 1 kH/s tier (TLS port = plain + 10000, 443 for 80).
   return ports.map((port) => {
     const rate = port < 11024 ? port === 80 ? 1 : port - 10000 : (port - 10000) / 1024;
-    return `${port}/${port === 80 ? 443 : port + 10000} TLS for ${rate} ${port < 11024 ? "KH/s" : "MH/s"}`;
+    return `${port}/${port === 80 ? 443 : port + 10000} TLS for ${rate} ${port < 11024 ? "kH/s" : "MH/s"}`;
   });
 }
