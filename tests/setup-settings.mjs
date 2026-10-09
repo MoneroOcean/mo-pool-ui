@@ -184,7 +184,7 @@ test("Windows AMD Multi-Miner preserves C29 with BZ and other algorithms with SR
 });
 
 test("GPU setup retains the published Intel dGPU identifier only", () => {
-  assert.deepEqual(SETUP_GPU_VENDORS, [["intel", "Intel dGPU"], ["nvidia", "NVIDIA"], ["amd", "AMD"], ["gpu", "Select NVIDIA or AMD"]]);
+  assert.deepEqual(SETUP_GPU_VENDORS, [["intel", "Intel dGPU"], ["nvidia", "NVIDIA"], ["amd", "AMD"]]);
   for (const os of ["linux", "windows"]) {
     const intel = setupPlanWithPorts({ profile: "srb-gpu", os, gpu: "intel", algo: "kawpow" });
     assert.equal(intel.selection.gpu, "intel");
@@ -455,8 +455,7 @@ test.describe("setup, settings, uptime, and copy", { concurrency: false }, () =>
     assert.deepEqual(setupAlgoOptions("xmrig-mo"), [["auto", "Auto switch"]]);
     assert.deepEqual(setupAlgoOptions("xmrig-fixed"), [["auto", "Auto switch"]]);
     assert.equal(setupAlgoOptions("srb-gpu").some(([id]) => id === "rx/0"), false);
-    assert.deepEqual(SETUP_GPU_VENDORS.map(([id]) => id), ["intel", "nvidia", "amd", "gpu"]);
-    assert.match(SETUP_GPU_VENDORS.at(-1)[1], /Select NVIDIA or AMD/);
+    assert.deepEqual(SETUP_GPU_VENDORS.map(([id]) => id), ["intel", "nvidia", "amd"]);
     assert.deepEqual(setupGpuMinerOptions({ gpu: "intel", algo: "kawpow" }).map(([id]) => id), ["mom", "srbminer"]);
     assert.deepEqual(setupGpuMinerOptions({ gpu: "intel", algo: "etchash" }).map(([id]) => id), ["mom", "srbminer"]);
     assert.match(setupGpuMinerOptions({ gpu: "intel", algo: "c29" })[1][1], /BZMiner \(Arc Battlemage\)/);
@@ -604,6 +603,7 @@ test.describe("setup, settings, uptime, and copy", { concurrency: false }, () =>
       ["intel", "intel"],
       ["nvidia", "nvidia"],
       ["amd", "amd"],
+      ["", null],
       ["gpu", null],
       ["nvidia-amd", null]
     ];
@@ -621,7 +621,7 @@ test.describe("setup, settings, uptime, and copy", { concurrency: false }, () =>
           } else {
             assert.equal(command.length, 0, `${label}/ambiguous-command`);
             assert.equal(/MOM_GPU_BACKEND=/.test(command), false, `${label}/ambiguous-backend`);
-            assert.equal(/Select NVIDIA or AMD/.test(plan.notes), true, `${label}/decision`);
+            assert.equal(/Select a GPU vendor\./.test(plan.notes), true, `${label}/decision`);
           }
         }
       }

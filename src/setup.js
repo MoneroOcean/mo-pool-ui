@@ -12,7 +12,7 @@ const INTEL = "intel";
 const NVIDIA = "nvidia";
 const AMD = "amd";
 const NVIDIA_AMD = "gpu";
-const GPU_AMBIGUOUS_NOTE = "Select NVIDIA or AMD";
+const GPU_AMBIGUOUS_NOTE = "Select a GPU vendor.";
 const XMRIG_MO = "xmrig-mo";
 const SRB_GPU = "srb-gpu";
 const MULTI_MINER = "multi-miner";
@@ -86,8 +86,7 @@ export const SETUP_HASHRATE_UNITS = HASHRATE_UNITS;
 export const SETUP_GPU_VENDORS = [
   [INTEL, "Intel dGPU"],
   [NVIDIA, "NVIDIA"],
-  [AMD, "AMD"],
-  [NVIDIA_AMD, GPU_AMBIGUOUS_NOTE]
+  [AMD, "AMD"]
 ];
 
 const GPU_ALGO_IDS = ["autolykos2", "kawpow", "etchash", "cn/gpu", "c29", "pearlhash"];
@@ -621,7 +620,7 @@ function profileId(value, os = LINUX) {
 }
 
 function gpuId(value) {
-  return optionId(value || INTEL, SETUP_GPU_VENDORS, NVIDIA_AMD);
+  return optionId(value ?? INTEL, SETUP_GPU_VENDORS, NVIDIA_AMD);
 }
 
 function isIntelGpu(gpu) {

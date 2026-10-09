@@ -64,7 +64,10 @@ function setupStep(title, id, text, note = "", wrapId = "", hidden = false) {
 }
 
 function setupSelect(id, label, options, selected, className) {
-  return `<label class="${className}">${label}<select id="${id}">${optionMarkup(options, selected)}</select></label>`;
+  // Legacy/invalid GPU routes must not appear to select the first vendor.
+  const placeholder = id === "setup-gpu" && !options.some(([value]) => value === selected)
+    ? `<option value="${escapeHtml(selected)}" disabled hidden selected>Select GPU</option>` : "";
+  return `<label class="${className}">${label}<select id="${id}">${placeholder}${optionMarkup(options, selected)}</select></label>`;
 }
 
 function setupTopTabs(plan) {

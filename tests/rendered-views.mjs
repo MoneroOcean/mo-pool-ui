@@ -546,6 +546,22 @@ test.describe("rendered views, links, charts, and coins", { concurrency: false }
         assert.match(html, /<input id=setup-wallet/);
         assert.match(html, /class=code-box/);
         assert.match(html, /gulf\.moneroocean\.stream/);
+        assert.doesNotMatch(html, /Select NVIDIA or AMD|Select GPU<\/option>/);
+        for (const gpu of ["gpu", "invalid", ""]) {
+          state.r.q = { profile: "srb-gpu", gpu, miner: "mom", algo: "c29" };
+          const unresolved = await setupView();
+          assert.match(unresolved, /<option value="gpu" disabled hidden selected>Select GPU<\/option>/);
+          assert.doesNotMatch(unresolved, /Select NVIDIA or AMD|MOM_GPU_BACKEND/);
+          for (const vendor of ["intel", "nvidia", "amd"]) {
+            assert.match(unresolved, new RegExp(`<option value="${vendor}" >`));
+          }
+        }
+        for (const gpu of ["intel", "nvidia", "amd"]) {
+          state.r.q = { profile: "multi-miner", gpu };
+          const selected = await setupView();
+          assert.match(selected, new RegExp(`<option value="${gpu}" selected>`));
+          assert.doesNotMatch(selected, /Select GPU<\/option>|value="gpu"/);
+        }
       });
       await withApiStubs({ poolPorts: async () => ({}) }, async () => {
         state.r = { n: "setup", p: "#/setup", q: {} };
