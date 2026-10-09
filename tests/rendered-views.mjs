@@ -557,11 +557,36 @@ test.describe("rendered views, links, charts, and coins", { concurrency: false }
           }
         }
         for (const gpu of ["intel", "nvidia", "amd"]) {
-          state.r.q = { profile: "multi-miner", gpu };
-          const selected = await setupView();
-          assert.match(selected, new RegExp(`<option value="${gpu}" selected>`));
-          assert.doesNotMatch(selected, /Select GPU<\/option>|value="gpu"/);
+          for (const os of ["linux", "windows"]) {
+            for (const miner of ["", "invalid", "mom", "multi-miner"]) {
+              state.r.q = { os, profile: "multi-miner", gpu, miner };
+              const selected = await setupView();
+              assert.match(selected, new RegExp(`<option value="${gpu}" selected>`));
+              assert.doesNotMatch(selected, /Select GPU<\/option>|value="gpu"/);
+              assert.match(selected, /class="setup-miner-field "/);
+              assert.match(selected, /class="setup-algo-field hidden"/);
+              const selectedMiner = miner === "mom" ? "mom" : "multi-miner";
+              assert.match(selected, new RegExp(`<option value="${selectedMiner}" selected>`));
+              const options = selected.match(/<select id="setup-miner">([\s\S]*?)<\/select>/)[1];
+              assert.equal(options.indexOf('value="mom"') < options.indexOf('value="multi-miner"'), gpu === "intel");
+              if (miner === "mom") {
+                assert.match(selected, new RegExp(`MOM_GPU_BACKEND[^\\n]*${gpu}`));
+                assert.doesNotMatch(selected, /--job\.algo|--bench_algo_params 0/);
+              }
+            }
+          }
         }
+        for (const os of ["linux", "windows"]) {
+          state.r.q = { os, profile: "multi-miner", gpu: "invalid", miner: "mom" };
+          const unresolved = await setupView();
+          assert.match(unresolved, /<option value="gpu" disabled hidden selected>Select GPU<\/option>/);
+          assert.doesNotMatch(unresolved, /MOM_GPU_BACKEND/);
+        }
+        state.r.q = { profile: "srb-gpu", gpu: "intel", algo: "pearlhash", miner: "mom" };
+        const labels = await setupView();
+        assert.match(labels, /<option value="intel" selected>Intel<\/option>/);
+        assert.match(labels, /<option value="pearlhash" selected>pearlhash<\/option>/);
+        assert.doesNotMatch(labels, /Intel dGPU|PRL \/ Pearl/);
       });
       await withApiStubs({ poolPorts: async () => ({}) }, async () => {
         state.r = { n: "setup", p: "#/setup", q: {} };

@@ -40,7 +40,7 @@ export async function setupView() {
           <div class="setup-form-row">
             ${setupSelect("setup-gpu", "GPU", SETUP_GPU_VENDORS, plan.selection.gpu, `setup-gpu-field ${showGpu ? "" : "hidden"}`)}
             ${setupSelect("setup-algo", "Algorithm", setupAlgoOptions(plan.selection.profile), plan.selection.algo, `setup-algo-field ${showAlgo ? "" : "hidden"}`)}
-            ${setupSelect("setup-miner", "Miner", plan.minerOptions || [], plan.selection.miner, `setup-miner-field ${showAlgo ? "" : "hidden"}`)}
+            ${setupSelect("setup-miner", "Miner", plan.minerOptions || [], plan.selection.miner, `setup-miner-field ${showGpu ? "" : "hidden"}`)}
             <label class=setup-hashrate>XMR h/r<input id=setup-hashrate-input value="${escapeHtml(String(plan.selection.hashrate))}" inputmode=decimal autocomplete=off></label>
             <label class="setup-unit">Unit<select id="setup-hashrate-unit">${optionMarkup(SETUP_HASHRATE_UNITS, plan.selection.hashrateUnit)}</select></label>
           </div>
@@ -182,7 +182,7 @@ function syncSetupInputs(plan) {
   }
   tog(qs(".setup-gpu-field"), "hidden", !setupShowsGpu(plan.selection.profile));
   tog(qs(".setup-algo-field"), "hidden", !setupShowsAlgo(plan.selection.profile));
-  tog(qs(".setup-miner-field"), "hidden", !setupShowsAlgo(plan.selection.profile));
+  tog(qs(".setup-miner-field"), "hidden", !setupShowsGpu(plan.selection.profile));
 }
 
 function syncSetupRoute(plan) {

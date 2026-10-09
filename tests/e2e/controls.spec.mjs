@@ -56,6 +56,54 @@ test("table sorting, paging, and graph controls produce visible effects", async 
   api.assertNoConsoleErrors();
 });
 
+test("GPU multi miner choices update commands and survive route reloads", async ({ page }) => {
+  const api = await mockApi(page);
+  for (const os of ["linux", "windows"]) {
+    await openApp(page, `#/setup?os=${os}&profile=multi-miner&gpu=intel`);
+    const miner = page.locator("#setup-miner");
+    const command = page.locator("#setup-run-plain");
+    await expect(miner).toBeVisible();
+    await expect(miner).toHaveValue("multi-miner");
+    await expect(page.locator("#setup-algo")).toBeHidden();
+    await expect(page.locator('#setup-gpu option[value="intel"]')).toHaveText("Intel");
+    for (const gpu of ["intel", "nvidia", "amd"]) {
+      await page.locator("#setup-gpu").selectOption(gpu);
+      await expect(miner).toHaveValue("multi-miner");
+      await expect(miner.locator("option")).toHaveText(gpu === "intel" ? ["MoM", "Multi-Miner"] : ["Multi-Miner", "MoM"]);
+      await page.locator("#setup-hashrate-input").fill("7");
+      await miner.selectOption("mom");
+      await expectHashParams(page, { os, profile: "multi-miner", gpu, miner: "mom", rate: "7" });
+      await expect.poll(() => page.evaluate(() => new URLSearchParams(location.hash.split("?")[1]).has("algo"))).toBe(false);
+      await expect(command).toContainText(new RegExp(`MOM_GPU_BACKEND[^\\n]*${gpu}`));
+      await expect(command).not.toContainText(/--job\.algo|--bench_algo_params 0/);
+      await page.reload();
+      await expect(miner).toHaveValue("mom");
+      await expect(page.locator("#setup-hashrate-input")).toHaveValue("7");
+      await expect(command).toContainText(new RegExp(`MOM_GPU_BACKEND[^\\n]*${gpu}`));
+      await miner.selectOption("multi-miner");
+      await expectHashParams(page, { miner: "multi-miner" });
+      await expect(command).not.toContainText("MOM_GPU_BACKEND");
+      await expect(page.locator("#setup-hashrate-input")).toHaveValue("7");
+      await page.reload();
+      await expect(miner).toHaveValue("multi-miner");
+    }
+    await openApp(page, `#/setup?os=${os}&profile=multi-miner&gpu=invalid&miner=mom`);
+    await expect(page.locator("#setup-gpu")).toHaveValue("gpu");
+    await expect(command).not.toContainText("MOM_GPU_BACKEND");
+    await page.locator("#setup-gpu").selectOption("intel");
+    await miner.selectOption("mom");
+    await page.locator(`[data-setup-input="setup-os"][data-setup-value="${os === "linux" ? "windows" : "linux"}"]`).click();
+    await expect(miner).toHaveValue("multi-miner");
+    await page.locator('[data-setup-value="srb-gpu"]').click();
+    await expect(miner).toHaveValue("mom");
+    await expect(page.locator("#setup-algo")).toBeVisible();
+    await expect(page.locator('#setup-algo option[value="pearlhash"]')).toHaveText("pearlhash");
+    await expect(command).toContainText("--job.algo autolykos2");
+    await expectUsablePage(page);
+  }
+  api.assertNoConsoleErrors();
+});
+
 test("wallet settings and copy buttons report visible results", async ({ page, context }) => {
   const api = await mockApi(page);
   await context.grantPermissions(["clipboard-read", "clipboard-write"]);

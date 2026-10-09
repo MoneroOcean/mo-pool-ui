@@ -70,7 +70,7 @@ const KEEPALIVE = "--keepalive";
 const SETUP_PROFILES = [
   [XMRIG_MO, "CPU multi", "MoneroOcean XMRig benchmarks CPU algos for XMR payout."],
   [SRB_GPU, "GPU fixed", "Fixed-algo GPU miner setup."],
-  [MULTI_MINER, "GPU multi", "Multi-Miner lets fixed-algo GPU miners switch with pool conditions."],
+  [MULTI_MINER, "GPU multi", "Switch GPU algorithms with MoM or Multi-Miner."],
   [XMRIG_PROXY, XMRIG_PROXY, "Many XMRig CPU workers behind one local proxy."],
   [XMR_NODE_PROXY, XMR_NODE_PROXY, "Larger CPU farms; keep GPU miners direct or behind Multi-Miner."]
 ];
@@ -84,7 +84,7 @@ export const SETUP_OS = [
 export const SETUP_HASHRATE_UNITS = HASHRATE_UNITS;
 
 export const SETUP_GPU_VENDORS = [
-  [INTEL, "Intel dGPU"],
+  [INTEL, "Intel"],
   [NVIDIA, "NVIDIA"],
   [AMD, "AMD"]
 ];
@@ -96,7 +96,7 @@ const MAC_PROFILES = [XMRIG_MO, XMRIG_PROXY, XMR_NODE_PROXY];
 const AUTO_ALGO = ["auto", "Auto switch"];
 const SETUP_ALGOS = [
   AUTO_ALGO,
-  ...GPU_ALGO_IDS.map((id) => [id, id === "pearlhash" ? "PRL / Pearl" : id])
+  ...GPU_ALGO_IDS.map((id) => [id, id])
 ];
 
 const SRB_ALGO = {
@@ -133,6 +133,7 @@ const SMALL_PROXY_NOTE = "Small proxies: start at 64-128 KH/s.";
 
 const GPU_MINER_LABELS = {
   mom: "MoM",
+  [MULTI_MINER]: "Multi-Miner",
   bzminer: "BZMiner",
   srbminer: "SRBMiner-Multi",
   lolminer: "lolMiner"
@@ -158,10 +159,14 @@ function normalizeGpuAlgo(algo) {
   return algo;
 }
 
-export function setupGpuMinerOptions({ os = LINUX, gpu = INTEL, algo = GPU_ALGO_IDS[0] } = {}) {
+export function setupGpuMinerOptions({ os = LINUX, gpu = INTEL, algo = GPU_ALGO_IDS[0], profile = SRB_GPU } = {}) {
   const normalizedGpu = gpuId(gpu);
   const normalizedAlgo = normalizeGpuAlgo(algo);
   const intel = isIntelGpu(normalizedGpu);
+  if (profile === MULTI_MINER) {
+    return (intel ? ["mom", MULTI_MINER] : [MULTI_MINER, "mom"])
+      .map((miner) => [miner, GPU_MINER_LABELS[miner]]);
+  }
   const srbSupported = gpuMinerSupport("srbminer", normalizedGpu, normalizedAlgo, os);
   const order = intel
     ? ["mom", "bzminer", "srbminer"]
@@ -259,13 +264,12 @@ export function setupPlan(options = {}) {
   const password = profile === XMRIG_MO || algo === AUTO_ALGO[0] ? worker : `${worker}~${algo}`;
 
   const selection = { profile, os, gpu, algo, miner: "", address, hashrate, hashrateUnit, hashrateHps, port };
-  const planOptions = { os, gpu, algo, miner: options.miner, address: commandAddress, worker, password, pool, port, portRow };
+  const planOptions = { os, profile, gpu, algo, miner: options.miner, address: commandAddress, worker, password, pool, port, portRow };
   if (!portRow) return withSelection(unavailablePortPlan(), selection);
-  if (profile === SRB_GPU) {
-    const plan = srbPlan(planOptions);
+  if (GPU_PROFILES.includes(profile)) {
+    const plan = gpuPlan(planOptions);
     return withSelection(plan, { ...selection, miner: plan.miner });
   }
-  if (profile === MULTI_MINER) return withSelection(multiMinerPlan(planOptions), selection);
   if (profile === XMRIG_PROXY) return withSelection(xmrigProxyPlan(planOptions), selection);
   if (profile === XMR_NODE_PROXY) return withSelection(xmrNodeProxyPlan(planOptions), selection);
   return withSelection(xmrigPlan(planOptions), selection);
@@ -318,16 +322,20 @@ function xmrigPlan({ os, address, worker, pool, portRow }) {
   };
 }
 
-function srbPlan(args) {
+function gpuPlan(args) {
   const options = setupGpuMinerOptions(args);
-  const miner = options.find(([id]) => id === args.miner)?.[0] || options[0]?.[0] || "srbminer";
+  // Preserve existing GPU-multi links that did not select a miner.
+  const fallback = args.profile === MULTI_MINER ? MULTI_MINER : options[0]?.[0] || "srbminer";
+  const miner = optionId(args.miner, options, fallback);
   const minerPlan = miner === "mom"
     ? momPlan(args)
-    : miner === "bzminer"
-      ? bzminerPlan(args)
-      : miner === "lolminer"
-        ? lolminerPlan(args)
-        : srbFixedPlan(args);
+    : miner === MULTI_MINER
+      ? multiMinerPlan(args)
+      : miner === "bzminer"
+        ? bzminerPlan(args)
+        : miner === "lolminer"
+          ? lolminerPlan(args)
+          : srbFixedPlan(args);
   return {
     ...minerPlan,
     notes: `${minerPlan.notes}${args.os === WINDOWS && args.gpu === AMD && ["autolykos2", "c29"].includes(args.algo)
@@ -445,6 +453,8 @@ function momPlan({ os, gpu, algo, address, password, pool, portRow }) {
     plainRunCommand: momRun(binary, pool, address, password, algo, gpu, windows),
     plainRunNote: PLAIN_MODE_NOTE,
     notes: gpu === NVIDIA_AMD ? GPU_AMBIGUOUS_NOTE
+      : algo === AUTO_ALGO[0]
+        ? "MoM benchmarks GPU algorithms and switches automatically. GPU donations remain enabled."
         : "Select GPU: mom algorithms, then --job.dev gpuN."
   };
 }
@@ -462,23 +472,40 @@ function lolminerRun(binary, algo, pool, address, password, tls) {
 }
 
 function momRun(binary, pool, address, password, algo = "c29", gpu, windows = false) {
-  const command = `${binary} mine ${pool} ${address} ${password} --job.algo ${algo} --bench_algo_params 0`;
   const backend = isIntelGpu(gpu) ? INTEL : gpu === NVIDIA || gpu === AMD ? gpu : null;
   if (!backend) return "";
+  const launch = windows ? `$env:MOM_GPU_BACKEND='${backend}'; & ${binary}` : `MOM_GPU_BACKEND=${backend} ${binary}`;
+  if (algo !== AUTO_ALGO[0]) {
+    return `${launch} mine ${pool} ${address} ${password} --job.algo ${algo} --bench_algo_params 0`;
+  }
+  // MoM 0.9.0 needs JSON login for switching and perf=0 to skip its default CPU benchmarks.
+  // Keep discovered GPU tuning and the normal donation pool; never invent a GPU index.
+  const config = JSON.stringify({
+    pools: [
+      { url: "mom.moneroocean.stream", port: 20001, is_tls: true, login: "user", use_subscribe: false },
+      { url: POOL_HOST, port: Number.parseInt(pool.split(":")[1], 10), is_tls: pool.endsWith("tls"), login: address, pass: password, use_subscribe: false }
+    ],
+    pool_ids: { primary: 1, donate: 0 },
+    algo_params: Object.fromEntries(["ghostrider", "panthera", "rx/0", "rx/arq", "rx/2"].map((name) => [name, { perf: 0 }]))
+  });
+  // All string values above are constants or validated wallet/worker identifiers.
+  const write = windows
+    ? `'${config}' | Set-Content -Encoding ascii gpu-auto.json`
+    : `printf '%s\\n' '${config}' > gpu-auto.json`;
   return windows
-    ? `$env:MOM_GPU_BACKEND='${backend}'; & ${command}`
-    : `MOM_GPU_BACKEND=${backend} ${command}`;
+    ? `${write}\nif ($?) { ${launch} mine gpu-auto.json }`
+    : `${write} &&\n${launch} mine gpu-auto.json`;
 }
 
-function multiMinerAlgoArgs({ common, lineContinuation, intelGpu, lolminer, wallet, bzminer = "", bzAlgos = [], lolAlgos = [], srbKawExtra = "" }) {
+function multiMinerAlgoArgs({ srbminer, lineContinuation, intelGpu, lolminer, wallet, bzminer = "", bzAlgos = [], lolAlgos = [], srbKawExtra = "" }) {
   // AMD's BZ alternative is C29 only; keep its Ergo path on SRBMiner.
   const commands = MULTI_MINER_ALGOS.map(([name, algorithm, extra]) => [name, bzAlgos.includes(name)
     ? bzminerRun(bzminer, name, LOCAL_PROXY, wallet, "mm", false)
     : lolAlgos.includes(name) ? lolminerRun(lolminer, name, LOCAL_PROXY, wallet, "x", false)
-    : `${common} --algorithm ${algorithm} --password x${extra}${name === "kawpow" ? srbKawExtra : ""}`]);
+    : `${srbminer} --algorithm ${algorithm} --password x${extra}${name === "kawpow" ? srbKawExtra : ""}`]);
   // MoM switches directly; Intel lacks fixed-miner Pearl/C29 entries here.
   if (!intelGpu) {
-    commands.push(["pearlhash", `${common} --algorithm pearlhash --password x`]);
+    commands.push(["pearlhash", `${srbminer} --algorithm pearlhash --password x`]);
     commands.push(["c29", bzAlgos.includes("c29") ? bzminerRun(bzminer, "c29", LOCAL_PROXY, wallet, "mm", false)
       : `${lolminer} --algo CR29 --pool ${LOCAL_PROXY} --user ${wallet} --pass x`]);
   }
@@ -491,25 +518,23 @@ function multiMinerLinuxRun({ address, pool, disable, intelGpu }) {
   return `WALLET='${address}'
 POOL='${pool}'
 LOCAL_PROXY='${LOCAL_PROXY}'
-SRB='${SRBMINER_BIN}'
 ${intelGpu ? "" : `LOLMINER='${LOLMINER_BIN}'`}
-${disable ? `GPU_FLAGS='${disable}'\n` : ""}COMMON="${srbCommon(disable ? "$GPU_FLAGS" : "", "$LOCAL_PROXY", "$WALLET", "mm", "$SRB")} --tls false"
+${disable ? `GPU_FLAGS='${disable}'\n` : ""}SRBMINER="${srbCommon(disable ? "$GPU_FLAGS" : "", "$LOCAL_PROXY", "$WALLET", "mm", SRBMINER_BIN)} --tls false"
 
 ./mm --no-config-save --pool="$POOL" --user="$WALLET" --pass=x --algo_min_time=60 \\
-${multiMinerAlgoArgs({ common: "$COMMON", lineContinuation: "\\", intelGpu, lolminer: "$LOLMINER", wallet: "$WALLET" })}`;
+${multiMinerAlgoArgs({ srbminer: "$SRBMINER", lineContinuation: "\\", intelGpu, lolminer: "$LOLMINER", wallet: "$WALLET" })}`;
 }
 
 function multiMinerWindowsRun({ address, pool, disable, intelGpu, bzAlgos, lolAlgos, gpu }) {
   return `$Wallet="${address}"
 $Pool="${pool}"
 $LocalProxy="${LOCAL_PROXY}"
-$Srb="${windowsLocal(SRBMINER_EXE)}"
 ${bzAlgos.length ? `$Bzminer="${windowsLocal(BZMINER_EXE)}"\n` : ""}
 ${intelGpu || bzAlgos.includes("c29") ? "" : `$Lolminer="${windowsLocal(LOLMINER_EXE)}"`}
-${disable ? `$GpuFlags="${disable}"\n` : ""}$Common="${srbCommon(disable ? "$GpuFlags" : "", "$LocalProxy", "$Wallet", "mm", "$Srb")} --tls false"
+${disable ? `$GpuFlags="${disable}"\n` : ""}$Srbminer="${srbCommon(disable ? "$GpuFlags" : "", "$LocalProxy", "$Wallet", "mm", windowsLocal(SRBMINER_EXE))} --tls false"
 
 ${windowsLocal("mm.exe")} --no-config-save --pool="$Pool" --user="$Wallet" --pass=x --algo_min_time=60 \`
-${multiMinerAlgoArgs({ common: "$Common", lineContinuation: "`", intelGpu, lolminer: "$Lolminer", wallet: "$Wallet", bzminer: bzAlgos.length ? "$Bzminer" : "", bzAlgos, lolAlgos, srbKawExtra: gpu === NVIDIA ? KAWPOW_SLOW_BUILD : "" })}`;
+${multiMinerAlgoArgs({ srbminer: "$Srbminer", lineContinuation: "`", intelGpu, lolminer: "$Lolminer", wallet: "$Wallet", bzminer: bzAlgos.length ? "$Bzminer" : "", bzAlgos, lolAlgos, srbKawExtra: gpu === NVIDIA ? KAWPOW_SLOW_BUILD : "" })}`;
 }
 
 function xmrigProxyPlan({ os, address, worker, pool, portRow }) {

@@ -389,7 +389,47 @@ test.describe("settings and setup interactions", { concurrency: false }, () => {
     await setupControls.dispatchEvent(click);
     assert.equal(profile.value, "multi-miner");
     assert.equal(algoWrap.classList.contains("hidden"), true);
-    assert.equal(minerWrap.classList.contains("hidden"), true);
+    assert.equal(minerWrap.classList.contains("hidden"), false);
+    assert.equal(minerWrap.children[0].value, "multi-miner");
+    for (const system of ["linux", "windows"]) {
+      tabs.children[0].dataset.setupInput = "setup-os";
+      tabs.children[0].dataset.setupValue = system;
+      await setupControls.dispatchEvent(click);
+      assert.equal(minerWrap.children[0].value, "multi-miner", "OS changes retain the historical default");
+      for (const gpu of ["intel", "nvidia", "amd"]) {
+        gpuWrap.children[0].value = gpu;
+        await gpuWrap.children[0].dispatchEvent(new TestEvent("change"));
+        assert.equal(minerWrap.children[0].value, "multi-miner", "GPU changes reset the miner");
+        assert.equal(minerWrap.children[0].innerHTML.indexOf('value="mom"') < minerWrap.children[0].innerHTML.indexOf('value="multi-miner"'), gpu === "intel");
+        rate.value = "7";
+        await rate.dispatchEvent(new TestEvent("input"));
+        for (const miner of ["mom", "multi-miner"]) {
+          minerWrap.children[0].value = miner;
+          await minerWrap.children[0].dispatchEvent(new TestEvent("change"));
+          assert.equal(minerWrap.children[0].value, miner);
+          assert.equal(rate.value, "7", "Miner changes preserve the entered hashrate");
+          assert.equal(algoWrap.classList.contains("hidden"), true);
+          assert.deepEqual({ os: state.r.q.os, profile: state.r.q.profile, gpu: state.r.q.gpu, miner: state.r.q.miner }, { os: system, profile: "multi-miner", gpu, miner });
+          assert.ok(!("algo" in state.r.q), "GPU multi routes omit a fixed algorithm");
+          const command = document.getElementById("setup-run-plain").textContent;
+          if (miner === "mom") {
+            assert.match(command, new RegExp(`MOM_GPU_BACKEND[^\\n]*${gpu}`));
+            assert.doesNotMatch(command, /--job\.algo|--bench_algo_params 0/);
+          } else {
+            assert.doesNotMatch(command, /MOM_GPU_BACKEND/);
+          }
+        }
+      }
+      gpuWrap.children[0].value = "gpu";
+      await gpuWrap.children[0].dispatchEvent(new TestEvent("change"));
+      minerWrap.children[0].value = "mom";
+      await minerWrap.children[0].dispatchEvent(new TestEvent("change"));
+      assert.doesNotMatch(document.getElementById("setup-run-plain").textContent, /MOM_GPU_BACKEND/);
+    }
+    tabs.children[0].dataset.setupInput = "setup-os";
+    tabs.children[0].dataset.setupValue = "linux";
+    await setupControls.dispatchEvent(click);
+    tabs.children[0].dataset.setupInput = "setup-profile";
     tabs.children[0].dataset.setupValue = "srb-gpu";
     await setupControls.dispatchEvent(click);
 
@@ -430,6 +470,15 @@ test.describe("settings and setup interactions", { concurrency: false }, () => {
       const roundTrip = await setupView();
       assert.match(roundTrip, /<option value="srbminer" selected>SRBMiner-Multi<\/option>/);
       assert.match(roundTrip, /SRBMiner-MULTI/);
+      for (const system of ["linux", "windows"]) {
+        for (const miner of ["mom", "multi-miner"]) {
+          state.r.q = { os: system, profile: "multi-miner", gpu: "intel", miner };
+          const selected = await setupView();
+          assert.match(selected, new RegExp(`<option value="${miner}" selected>`));
+          assert.match(selected, /class="setup-miner-field "/);
+          assert.match(selected, /class="setup-algo-field hidden"/);
+        }
+      }
     } finally {
       api.poolPorts = previousPoolPorts;
       state.r = previousRoute;

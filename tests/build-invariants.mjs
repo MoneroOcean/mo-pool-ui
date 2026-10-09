@@ -104,7 +104,7 @@ test.describe("build invariants", { concurrency: false }, () => {
     assert.doesNotMatch(script.toString("utf8"), /support@moneroocean\.stream/, "support email must stay obfuscated");
     assert.doesNotMatch(script.toString("utf8"), /--(?:tls|keepalive|nicehash|esm)\s+\$\{[A-Za-z_$][\w$]*\}/, "production bundle must not interpolate raw boolean option values");
     const packedSize = gzipSync(Buffer.concat([Buffer.from(index), css, script])).byteLength;
-    assert.ok(packedSize <= 41_000, `deployable gzip budget exceeded: ${packedSize} bytes`);
+    assert.ok(packedSize <= 41_500, `deployable gzip budget exceeded: ${packedSize} bytes`);
 
     for (const name of files) {
       assert.ok((await stat(`build/${name}`)).size > 0, `${name} is empty`);

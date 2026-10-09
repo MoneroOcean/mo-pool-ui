@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, writeFileSync, readFileSync, existsSync, rmSync } from "node:fs";
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
@@ -179,12 +179,12 @@ test("Windows AMD Multi-Miner preserves C29 with BZ and other algorithms with SR
   assert.doesNotMatch(plan.tlsRunCommand, /\$Lolminer|--algo CR29|\$Bzminer -a (?:ergo|cn\/gpu)/);
   for (const [algo, srbAlgo] of [["cn/gpu", "cryptonight_gpu"], ["autolykos2", "autolykos2"],
     ["kawpow", "kawpow"], ["etchash", "etchash"], ["pearlhash", "pearlhash"]]) {
-    assert.ok(plan.tlsRunCommand.includes(`--${algo}="$Common --algorithm ${srbAlgo} --password x`));
+    assert.ok(plan.tlsRunCommand.includes(`--${algo}="$Srbminer --algorithm ${srbAlgo} --password x`));
   }
 });
 
-test("GPU setup retains the published Intel dGPU identifier only", () => {
-  assert.deepEqual(SETUP_GPU_VENDORS, [["intel", "Intel dGPU"], ["nvidia", "NVIDIA"], ["amd", "AMD"]]);
+test("GPU setup retains the published Intel identifier with its simplified label", () => {
+  assert.deepEqual(SETUP_GPU_VENDORS, [["intel", "Intel"], ["nvidia", "NVIDIA"], ["amd", "AMD"]]);
   for (const os of ["linux", "windows"]) {
     const intel = setupPlanWithPorts({ profile: "srb-gpu", os, gpu: "intel", algo: "kawpow" });
     assert.equal(intel.selection.gpu, "intel");
@@ -213,6 +213,119 @@ function setupRunCommands(plan) {
     .filter(Boolean)
     .join("\n");
 }
+
+test("GPU auto switching offers vendor-ordered miners without changing the Multi-Miner default", () => {
+  for (const os of ["linux", "windows"]) for (const gpu of ["intel", "amd", "nvidia"]) {
+    const expected = gpu === "intel" ? ["mom", "multi-miner"] : ["multi-miner", "mom"];
+    for (const miner of [undefined, "", "invalid", "srbminer", "multi-miner", "mom"]) {
+      const plan = setupPlanWithPorts({ profile: "multi-miner", os, gpu, miner });
+      assert.deepEqual(plan.minerOptions.map(([id]) => id), expected, `${os}/${gpu}/${miner}`);
+      assert.equal(plan.selection.profile, "multi-miner");
+      assert.equal(plan.selection.algo, "auto");
+      assert.equal(plan.selection.miner, miner === "mom" ? "mom" : "multi-miner");
+    }
+  }
+});
+
+test("explicit GPU auto MoM reuses its installer and switches directly without algorithm restrictions", () => {
+  for (const os of ["linux", "windows"]) for (const gpu of ["intel", "amd", "nvidia"]) {
+    const options = { os, gpu, miner: "mom", address: DONATION_XMR, worker: "fixture" };
+    const plan = setupPlanWithPorts({ ...options, profile: "multi-miner", algo: "pearlhash" });
+    const fixed = setupPlanWithPorts({ ...options, profile: "srb-gpu", algo: "c29" });
+    assert.equal(plan.downloadCommand, fixed.downloadCommand, `${os}/${gpu}/installer`);
+    assert.equal(plan.downloadNote, fixed.downloadNote);
+    assert.match(plan.downloadCommand, /MoneroOcean\/mo-miner\/releases\/latest/);
+    assert.match(plan.downloadCommand, os === "windows" ? /\.\\install\.bat/ : /sudo \.\/install\.sh/);
+    assert.doesNotMatch(plan.downloadCommand, /multi-miner|SRBMiner|lolMiner|bzminer/);
+    for (const [command, tls] of [[plan.plainRunCommand, false], [plan.tlsRunCommand, true]]) {
+      assert.ok(command.length > 0, `${os}/${gpu}/direct command`);
+      const lines = command.split("\n");
+      assert.equal(lines.length, 2, "write one config, then launch directly");
+      const configMatch = lines[0].match(os === "windows"
+        ? /^'([^']+)' \| Set-Content -Encoding ascii gpu-auto\.json$/
+        : /^printf '%s\\n' '([^']+)' > gpu-auto\.json &&$/);
+      assert.ok(configMatch, `${os}/${gpu}/JSON writer`);
+      const config = JSON.parse(configMatch[1]);
+      assert.deepEqual(config, {
+        pools: [
+          { url: "mom.moneroocean.stream", port: 20001, is_tls: true, login: "user", use_subscribe: false },
+          { url: "gulf.moneroocean.stream", port: tls ? TEST_PORTS.find(row => row.port === plan.selection.port).tlsPort : plan.selection.port,
+            is_tls: tls, login: DONATION_XMR, pass: "fixture", use_subscribe: false }
+        ],
+        pool_ids: { primary: 1, donate: 0 },
+        algo_params: Object.fromEntries(["ghostrider", "panthera", "rx/0", "rx/arq", "rx/2"].map(algo => [algo, { perf: 0 }]))
+      }, `${os}/${gpu}/${tls ? "tls" : "plain"}/GPU-only switching config`);
+      assert.equal(lines[1], os === "windows"
+        ? `if ($?) { $env:MOM_GPU_BACKEND='${gpu}'; & .\\mom.cmd mine gpu-auto.json }`
+        : `MOM_GPU_BACKEND=${gpu} ./mom mine gpu-auto.json`);
+      assert.doesNotMatch(command, /~|--job\.(?:algo|dev)|--bench_algo_params|"(?:job|dev|bench_algo_params)"|gpu\d|--(?:cn\/gpu|kawpow|autolykos2|etchash|pearlhash|c29)=|\.\/mm|\.\\mm\.exe/);
+    }
+  }
+});
+
+test("Linux auto MoM launches a stub only after its config write succeeds", { skip: process.platform === "win32" }, () => {
+  for (const gpu of ["intel", "amd", "nvidia"]) for (const tls of [false, true]) {
+    const plan = setupPlanWithPorts({ profile: "multi-miner", os: "linux", gpu, miner: "mom" });
+    const command = tls ? plan.tlsRunCommand : plan.plainRunCommand;
+    const root = mkdtempSync(join(tmpdir(), "ui-mom-config-write-"));
+    try {
+      for (const failWrite of [false, true]) {
+        const cwd = join(root, failWrite ? "failure" : "success");
+        mkdirSync(cwd);
+        writeFileSync(join(cwd, "mom"), '#!/bin/bash\nprintf "%s\\n" "$MOM_GPU_BACKEND" "$@" > invoked\n', { mode: 0o700 });
+        if (failWrite) mkdirSync(join(cwd, "gpu-auto.json"));
+        const result = spawnSync("bash", ["-c", command], { cwd, encoding: "utf8", timeout: 5000 });
+        const invoked = join(cwd, "invoked");
+        if (failWrite) {
+          assert.notEqual(result.status, 0, `${gpu}/${tls}/failed write`);
+          assert.equal(existsSync(invoked), false, "failed writer must not launch even the stub");
+        } else {
+          assert.equal(result.status, 0, `${gpu}/${tls}/successful write`);
+          const written = readFileSync(join(cwd, "gpu-auto.json"), "utf8");
+          assert.equal(written.endsWith("\n"), true);
+          assert.deepEqual(JSON.parse(written), JSON.parse(command.match(/'(\{[^\n]+\})'/)[1]));
+          assert.equal(readFileSync(invoked, "utf8"), `${gpu}\nmine\ngpu-auto.json\n`, "stub receives only the config and allowlisted vendor");
+        }
+      }
+    } finally { rmSync(root, { recursive: true, force: true }); }
+  }
+});
+
+test("explicit auto MoM fails closed for ambiguous or untrusted GPU input", () => {
+  for (const os of ["linux", "windows"]) for (const gpu of ["", "gpu", "intel-dgpu", "nvidia-amd", "intel; touch unsafe-marker", "$(touch unsafe-marker)"]) {
+    const plan = setupPlanWithPorts({ profile: "multi-miner", os, gpu, miner: "mom" });
+    assert.equal(plan.selection.miner, "mom");
+    assert.equal(setupRunCommands(plan), "", `${os}/${gpu}/no mining command`);
+    assert.match(plan.notes, /Select a GPU vendor\./);
+    assert.doesNotMatch(plan.downloadCommand + plan.notes, /unsafe-marker|touch/);
+  }
+});
+
+test("Multi-Miner SRBMiner variable simplification preserves expanded child commands", () => {
+  const algorithms = { "cn/gpu": "cryptonight_gpu", kawpow: "kawpow", autolykos2: "autolykos2", etchash: "etchash", pearlhash: "pearlhash" };
+  for (const os of ["linux", "windows"]) for (const gpu of ["intel", "amd", "nvidia", "gpu"]) {
+    const plan = setupPlanWithPorts({ profile: "multi-miner", os, gpu, miner: "multi-miner" });
+    const command = plan.tlsRunCommand;
+    const windows = os === "windows";
+    const variable = windows ? "$Srbminer" : "$SRBMINER";
+    const assignment = command.split("\n").find(line => line.startsWith(`${windows ? "$" : ""}${windows ? "Srbminer" : "SRBMINER"}=`));
+    assert.ok(assignment, `${os}/${gpu}/combined variable`);
+    assert.doesNotMatch(command, /^(?:SRB=|COMMON=|\$Srb=|\$Common=)/m);
+    const common = assignment.slice(assignment.indexOf('="') + 2, -1)
+      .replace(/\$(?:LOCAL_PROXY|LocalProxy)/g, "127.0.0.1:3333")
+      .replace(/\$(?:WALLET|Wallet)/g, "WALLET")
+      .replace(/\$(?:GPU_FLAGS|GpuFlags)/g, "--disable-gpu-amd --disable-gpu-nvidia");
+    const expectedCommon = `${windows ? ".\\SRBMiner-MULTI.exe" : "./SRBMiner-MULTI"} --disable-cpu${gpu === "intel" ? " --disable-gpu-amd --disable-gpu-nvidia" : ""} --pool 127.0.0.1:3333 --wallet WALLET --worker mm --gpu-id 0 --keepalive true --tls false`;
+    assert.equal(common, expectedCommon, `${os}/${gpu}/common semantics`);
+    const children = [...command.matchAll(/--([a-z0-9/]+)="([^"]+)"/g)].filter(([, , child]) => child.startsWith(variable));
+    const expectedAlgos = Object.keys(algorithms).filter(algo => !(gpu === "intel" && algo === "pearlhash") && !(windows && gpu === "nvidia" && ["cn/gpu", "autolykos2", "etchash"].includes(algo)));
+    assert.deepEqual(children.map(([, algo]) => algo).sort(), expectedAlgos.sort());
+    for (const [, algo, child] of children) {
+      const extra = algo === "etchash" ? " --esm 2 --nicehash true" : windows && gpu === "nvidia" && algo === "kawpow" ? " --gpu-table-slow-build" : "";
+      assert.equal(child.replace(variable, common), `${expectedCommon} --algorithm ${algorithms[algo]} --password x${extra}`, `${os}/${gpu}/${algo}`);
+    }
+  }
+});
 
 test.describe("setup, settings, uptime, and copy", { concurrency: false }, () => {
   test("setup output and ports mapping include required miners and ports", () => {
@@ -382,15 +495,15 @@ test.describe("setup, settings, uptime, and copy", { concurrency: false }, () =>
     assert.ok(/MoM/.test(setupPlanWithPorts({ profile: "multi-miner", gpu: "gpu" }).notes) && /direct/i.test(setupPlanWithPorts({ profile: "multi-miner", gpu: "gpu" }).notes), 'MM guidance must distinguish the direct MoM alternative');
     assert.match(setupPlanWithPorts({ profile: "multi-miner", gpu: "gpu" }).tlsRunCommand, /\.\/mm --no-config-save/);
     assert.match(setupPlanWithPorts({ profile: "multi-miner", gpu: "gpu" }).tlsRunCommand, /WALLET=/);
-    assert.match(setupPlanWithPorts({ profile: "multi-miner", gpu: "gpu" }).tlsRunCommand, /COMMON="\$SRB --disable-cpu --pool/);
+    assert.match(setupPlanWithPorts({ profile: "multi-miner", gpu: "gpu" }).tlsRunCommand, /SRBMINER="\.\/SRBMiner-MULTI --disable-cpu --pool/);
     assert.doesNotMatch(setupPlanWithPorts({ profile: "multi-miner", gpu: "gpu" }).tlsRunCommand, /GPU_FLAGS|--disable-gpu-/);
-    assert.match(setupPlanWithPorts({ profile: "multi-miner", gpu: "gpu" }).tlsRunCommand, /--kawpow="\$COMMON --algorithm kawpow/);
+    assert.match(setupPlanWithPorts({ profile: "multi-miner", gpu: "gpu" }).tlsRunCommand, /--kawpow="\$SRBMINER --algorithm kawpow/);
     assert.match(setupPlanWithPorts({ profile: "multi-miner", gpu: "gpu" }).tlsRunCommand, /--c29="\$LOLMINER --algo CR29 --pool 127\.0\.0\.1:3333 --user \$WALLET/);
     assert.ok(!/--c29="\$MOM mine 127\.0\.0\.1:3333 \$WALLET x --new\.algo_param\.c29 '\{\\"dev\\":\\"gpu1\\",\\"perf\\":1\}'"/.test(setupPlanWithPorts({ profile: "multi-miner", gpu: "intel" }).tlsRunCommand), 'Intel MM must omit unsupported C29');
     assert.match(setupPlanWithPorts({ profile: "multi-miner", os: "windows", gpu: "gpu" }).downloadCommand, /MoneroOcean\/multi-miner\/releases\/latest/);
     assert.match(setupPlanWithPorts({ profile: "multi-miner", os: "windows", gpu: "gpu" }).downloadCommand, /mm-v\.\*-win\\\.zip/);
-    assert.match(setupPlanWithPorts({ profile: "multi-miner", os: "windows", gpu: "gpu" }).tlsRunCommand, /\$Common="\$Srb --disable-cpu --pool/);
-    assert.match(setupPlanWithPorts({ profile: "multi-miner", os: "windows", gpu: "gpu" }).tlsRunCommand, /\$Srb="\.\\SRBMiner-MULTI\.exe"/);
+    assert.match(setupPlanWithPorts({ profile: "multi-miner", os: "windows", gpu: "gpu" }).tlsRunCommand, /\$Srbminer="\.\\SRBMiner-MULTI\.exe --disable-cpu --pool/);
+    assert.doesNotMatch(setupPlanWithPorts({ profile: "multi-miner", os: "windows", gpu: "gpu" }).tlsRunCommand, /\$Srb=|\$Common/);
     assert.match(setupPlanWithPorts({ profile: "multi-miner", os: "windows", gpu: "gpu" }).tlsRunCommand, /\$Lolminer="\.\\lolMiner\.exe"/);
     assert.match(setupPlanWithPorts({ profile: "multi-miner", os: "windows", gpu: "gpu" }).tlsRunCommand, /^\.\\mm\.exe --no-config-save/m);
     assert.ok(!/mom-v\.\*-win\\\.zip/.test(setupPlanWithPorts({ profile: "multi-miner", os: "windows", gpu: "intel" }).downloadCommand), 'MM must omit MoM downloads, wrappers, and setup instructions');
@@ -510,7 +623,7 @@ test.describe("setup, settings, uptime, and copy", { concurrency: false }, () =>
         }
       }
     }
-    assert.deepEqual(setupAlgoOptions("srb-gpu").find(([id]) => id === "pearlhash"), ["pearlhash", "PRL / Pearl"]);
+    assert.deepEqual(setupAlgoOptions("srb-gpu").find(([id]) => id === "pearlhash"), ["pearlhash", "pearlhash"]);
     assert.equal(setupPlanWithPorts({ profile: "srb-gpu", gpu: "intel", algo: "prl" }).selection.algo, "pearlhash");
     const intelDgpuPlan = setupPlanWithPorts({ profile: "srb-gpu", gpu: "intel", algo: "kawpow" });
     assert.equal(intelDgpuPlan.selection.miner, "mom");
@@ -762,7 +875,7 @@ test.describe("setup, settings, uptime, and copy", { concurrency: false }, () =>
     assert.match(child, /^\$Lolminer --algo ETCHASH /);
     assert.deepEqual(child.match(/--[a-z]+/g), ["--algo", "--pool", "--user", "--pass", "--ethstratum"]);
     assert.match(child, /--ethstratum ETHV1$/);
-    assert.doesNotMatch(child, /\$Common|--tls|--esm|--nicehash|--gpu-intensity|--extended-log/);
+    assert.doesNotMatch(child, /\$Srbminer|--tls|--esm|--nicehash|--gpu-intensity|--extended-log/);
     assert.equal((plan.downloadCommand.match(/Invoke-RestMethod https:\/\/api\.github\.com\/repos\/Lolliedieb\/lolMiner-releases\/releases\/latest/g) || []).length, 1, "C29 already supplies the existing lolMiner archive");
     for (const [os, gpu] of [["linux", "nvidia"], ["linux", "amd"], ["windows", "amd"], ["linux", "intel"], ["windows", "intel"]]) {
       const unchanged = setupPlanWithPorts({ os, gpu, profile: "multi-miner" });
@@ -778,9 +891,9 @@ test.describe("setup, settings, uptime, and copy", { concurrency: false }, () =>
     assert.ok(/\$Bzminer\s*=/.test(plan.tlsRunCommand), "BZMiner child path is resolved");
     assert.ok(/--cn\/gpu=.*\$Bzminer -a cn\/gpu/.test(plan.tlsRunCommand), "CN/GPU uses BZMiner");
     assert.ok(/--autolykos2=.*\$Bzminer -a ergo/.test(plan.tlsRunCommand), "Autolykos2 uses BZMiner");
-    assert.ok(/--kawpow=.*\$Common --algorithm kawpow/.test(plan.tlsRunCommand), "KawPow retains SRBMiner");
+    assert.ok(/--kawpow=.*\$Srbminer --algorithm kawpow/.test(plan.tlsRunCommand), "KawPow retains SRBMiner");
     assert.ok(/--etchash=.*\$Lolminer --algo ETCHASH/.test(plan.tlsRunCommand), "Etchash uses the existing lolMiner fallback");
-    assert.ok(/--pearlhash=.*\$Common --algorithm pearlhash/.test(plan.tlsRunCommand), "Pearl retains SRBMiner");
+    assert.ok(/--pearlhash=.*\$Srbminer --algorithm pearlhash/.test(plan.tlsRunCommand), "Pearl retains SRBMiner");
     assert.ok(/--c29=.*\$Lolminer/.test(plan.tlsRunCommand), "C29 retains lolMiner");
     assert.ok(!/MOM_GPU_BACKEND|\$Mom\b/.test(plan.tlsRunCommand), "no redundant MoM wrapper");
   });
