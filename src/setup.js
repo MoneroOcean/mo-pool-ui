@@ -452,10 +452,11 @@ function momPlan({ os, gpu, algo, address, password, pool, portRow }) {
     tlsRunNote: TLS_MODE_NOTE,
     plainRunCommand: momRun(binary, pool, address, password, algo, gpu, windows),
     plainRunNote: PLAIN_MODE_NOTE,
-    notes: gpu === NVIDIA_AMD ? GPU_AMBIGUOUS_NOTE
+    notes: (gpu === NVIDIA_AMD ? GPU_AMBIGUOUS_NOTE
       : algo === AUTO_ALGO[0]
         ? "MoM benchmarks and switches GPU algorithms, including donations. This example selects gpu1 only. Run mom algorithms with the same GPU backend and replace gpu1 with your reported GPU device."
-        : "Select GPU: mom algorithms, then --job.dev gpuN."
+        : "Select GPU: mom algorithms, then --job.dev gpuN.") +
+      (gpu === INTEL ? " Intel selects discrete GPUs only." : "")
   };
 }
 

@@ -66,6 +66,8 @@ test("GPU multi miner choices update commands and survive route reloads", async 
     await expect(miner).toHaveValue("multi-miner");
     await expect(page.locator("#setup-algo")).toBeHidden();
     await expect(page.locator('#setup-gpu option[value="intel"]')).toHaveText("Intel");
+    await expect(page.locator("#setup-gpu option")).toHaveText(["Intel", "NVIDIA", "AMD"]);
+    await expect(page.locator('#setup-gpu option[value="intel_igpu"]')).toHaveCount(0);
     for (const gpu of ["intel", "nvidia", "amd"]) {
       await page.locator("#setup-gpu").selectOption(gpu);
       await expect(miner).toHaveValue("multi-miner");

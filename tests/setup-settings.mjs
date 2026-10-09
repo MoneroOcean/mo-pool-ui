@@ -195,6 +195,10 @@ test("GPU setup retains the published Intel identifier with its simplified label
     const intel = setupPlanWithPorts({ profile: "srb-gpu", os, gpu: "intel", algo: "kawpow" });
     assert.equal(intel.selection.gpu, "intel");
     assert.equal(intel.selection.miner, "mom");
+    for (const profile of ["srb-gpu", "multi-miner"]) {
+      const mom = setupPlanWithPorts({ profile, os, gpu: "intel", miner: "mom", algo: "kawpow" });
+      assert.match(mom.notes, /Intel selects discrete GPUs only\./);
+    }
     const oldAmbiguous = setupPlanWithPorts({ profile: "srb-gpu", os, gpu: "gpu" });
     assert.equal(oldAmbiguous.selection.gpu, "gpu");
     const unpublished = setupPlanWithPorts({ profile: "srb-gpu", os, gpu: "intel-dgpu" });
@@ -289,7 +293,7 @@ test("auto MoM CLI sanitizes wallet and worker inputs on both platforms", () => 
 });
 
 test("explicit auto MoM fails closed for ambiguous or untrusted GPU input", () => {
-  for (const os of ["linux", "windows"]) for (const gpu of ["", "gpu", "intel-dgpu", "nvidia-amd", "intel; touch unsafe-marker", "$(touch unsafe-marker)"]) {
+  for (const os of ["linux", "windows"]) for (const gpu of ["", "gpu", "intel-dgpu", "nvidia-amd", "intel; touch unsafe-marker", "$(touch unsafe-marker)", "intel_igpu", "amd_igpu", "igpu"]) {
     const plan = setupPlanWithPorts({ profile: "multi-miner", os, gpu, miner: "mom" });
     assert.equal(plan.selection.miner, "mom");
     assert.equal(setupRunCommands(plan), "", `${os}/${gpu}/no mining command`);
@@ -739,7 +743,10 @@ test.describe("setup, settings, uptime, and copy", { concurrency: false }, () =>
       ["amd", "amd"],
       ["", null],
       ["gpu", null],
-      ["nvidia-amd", null]
+      ["nvidia-amd", null],
+      ["intel_igpu", null],
+      ["amd_igpu", null],
+      ["igpu", null]
     ];
     for (const os of ["linux", "windows"]) {
       for (const [gpu, backend] of aliases) {
