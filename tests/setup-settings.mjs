@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, rmSync } from "node:fs";
+import { mkdtempSync, writeFileSync, readFileSync, existsSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
@@ -245,55 +245,46 @@ test("explicit GPU auto MoM reuses its installer and switches directly without a
     assert.doesNotMatch(plan.downloadCommand, /multi-miner|SRBMiner|lolMiner|bzminer/);
     for (const [command, tls] of [[plan.plainRunCommand, false], [plan.tlsRunCommand, true]]) {
       assert.ok(command.length > 0, `${os}/${gpu}/direct command`);
-      const lines = command.split("\n");
-      assert.equal(lines.length, 2, "write one config, then launch directly");
-      const configMatch = lines[0].match(os === "windows"
-        ? /^'([^']+)' \| Set-Content -Encoding ascii gpu-auto\.json$/
-        : /^printf '%s\\n' '([^']+)' > gpu-auto\.json &&$/);
-      assert.ok(configMatch, `${os}/${gpu}/JSON writer`);
-      const config = JSON.parse(configMatch[1]);
-      assert.deepEqual(config, {
-        pools: [
-          { url: "mom.moneroocean.stream", port: 20001, is_tls: true, login: "user", use_subscribe: false },
-          { url: "gulf.moneroocean.stream", port: tls ? TEST_PORTS.find(row => row.port === plan.selection.port).tlsPort : plan.selection.port,
-            is_tls: tls, login: DONATION_XMR, pass: "fixture", use_subscribe: false }
-        ],
-        pool_ids: { primary: 1, donate: 0 },
-        algo_params: Object.fromEntries(["ghostrider", "panthera", "rx/0", "rx/arq", "rx/2"].map(algo => [algo, { perf: 0 }]))
-      }, `${os}/${gpu}/${tls ? "tls" : "plain"}/GPU-only switching config`);
-      assert.equal(lines[1], os === "windows"
-        ? `if ($?) { $env:MOM_GPU_BACKEND='${gpu}'; & .\\mom.cmd mine gpu-auto.json }`
-        : `MOM_GPU_BACKEND=${gpu} ./mom mine gpu-auto.json`);
-      assert.doesNotMatch(command, /~|--job\.(?:algo|dev)|--bench_algo_params|"(?:job|dev|bench_algo_params)"|gpu\d|--(?:cn\/gpu|kawpow|autolykos2|etchash|pearlhash|c29)=|\.\/mm|\.\\mm\.exe/);
+      const port = tls ? TEST_PORTS.find(row => row.port === plan.selection.port).tlsPort : plan.selection.port;
+      const launch = os === "windows"
+        ? `$env:MOM_GPU_BACKEND='${gpu}'; & .\\mom.cmd`
+        : `MOM_GPU_BACKEND=${gpu} ./mom`;
+      assert.equal(command, `${launch} mine gulf.moneroocean.stream:${port}${tls ? "tls" : ""} ${DONATION_XMR} fixture --job.dev gpu1`);
+      assert.doesNotMatch(command, /\n|~|gpu-auto\.json|algo_params|perf|--job\.algo|--bench_algo_params|--pool|--(?:cn\/gpu|kawpow|autolykos2|etchash|pearlhash|c29)=|\.\/mm|\.\\mm\.exe/);
     }
+    assert.doesNotMatch(plan.notes, /0\.9\.1|version/i);
+    assert.match(plan.notes, /including donations/);
+    assert.match(plan.notes, /mom algorithms.*replace gpu1.*reported GPU device/);
   }
 });
 
-test("Linux auto MoM launches a stub only after its config write succeeds", { skip: process.platform === "win32" }, () => {
+test("Linux auto MoM passes only GPU-scoped positional CLI arguments without writing config", { skip: process.platform === "win32" }, () => {
   for (const gpu of ["intel", "amd", "nvidia"]) for (const tls of [false, true]) {
     const plan = setupPlanWithPorts({ profile: "multi-miner", os: "linux", gpu, miner: "mom" });
     const command = tls ? plan.tlsRunCommand : plan.plainRunCommand;
-    const root = mkdtempSync(join(tmpdir(), "ui-mom-config-write-"));
+    const root = mkdtempSync(join(tmpdir(), "ui-mom-cli-"));
     try {
-      for (const failWrite of [false, true]) {
-        const cwd = join(root, failWrite ? "failure" : "success");
-        mkdirSync(cwd);
-        writeFileSync(join(cwd, "mom"), '#!/bin/bash\nprintf "%s\\n" "$MOM_GPU_BACKEND" "$@" > invoked\n', { mode: 0o700 });
-        if (failWrite) mkdirSync(join(cwd, "gpu-auto.json"));
-        const result = spawnSync("bash", ["-c", command], { cwd, encoding: "utf8", timeout: 5000 });
-        const invoked = join(cwd, "invoked");
-        if (failWrite) {
-          assert.notEqual(result.status, 0, `${gpu}/${tls}/failed write`);
-          assert.equal(existsSync(invoked), false, "failed writer must not launch even the stub");
-        } else {
-          assert.equal(result.status, 0, `${gpu}/${tls}/successful write`);
-          const written = readFileSync(join(cwd, "gpu-auto.json"), "utf8");
-          assert.equal(written.endsWith("\n"), true);
-          assert.deepEqual(JSON.parse(written), JSON.parse(command.match(/'(\{[^\n]+\})'/)[1]));
-          assert.equal(readFileSync(invoked, "utf8"), `${gpu}\nmine\ngpu-auto.json\n`, "stub receives only the config and allowlisted vendor");
-        }
-      }
+      writeFileSync(join(root, "mom"), '#!/bin/bash\nprintf "%s\\n" "$MOM_GPU_BACKEND" "$@" > invoked\n', { mode: 0o700 });
+      const result = spawnSync("bash", ["-c", command], { cwd: root, encoding: "utf8", timeout: 5000 });
+      assert.equal(result.error, undefined);
+      assert.equal(result.signal, null);
+      assert.equal(result.status, 0);
+      const port = tls ? TEST_PORTS.find(row => row.port === plan.selection.port).tlsPort : plan.selection.port;
+      assert.deepEqual(readFileSync(join(root, "invoked"), "utf8").trim().split("\n"),
+        [gpu, "mine", `gulf.moneroocean.stream:${port}${tls ? "tls" : ""}`, "YOUR_XMR_ADDRESS", "rig01", "--job.dev", "gpu1"]);
+      assert.equal(existsSync(join(root, "gpu-auto.json")), false);
     } finally { rmSync(root, { recursive: true, force: true }); }
+  }
+});
+
+test("auto MoM CLI sanitizes wallet and worker inputs on both platforms", () => {
+  for (const os of ["linux", "windows"]) {
+    const plan = setupPlanWithPorts({ profile: "multi-miner", os, gpu: "intel", miner: "mom",
+      address: "ADDR; touch unsafe-marker; #", worker: "rig; touch unsafe-marker; #" });
+    for (const command of [plan.plainRunCommand, plan.tlsRunCommand]) {
+      assert.match(command, / YOUR_XMR_ADDRESS rig_touch_unsafe-marker_ --job\.dev gpu1$/);
+      assert.doesNotMatch(command, /ADDR;|; touch|\$\(|#|gpu-auto\.json/);
+    }
   }
 });
 

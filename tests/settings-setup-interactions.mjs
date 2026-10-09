@@ -414,7 +414,8 @@ test.describe("settings and setup interactions", { concurrency: false }, () => {
           const command = document.getElementById("setup-run-plain").textContent;
           if (miner === "mom") {
             assert.match(command, new RegExp(`MOM_GPU_BACKEND[^\\n]*${gpu}`));
-            assert.doesNotMatch(command, /--job\.algo|--bench_algo_params 0/);
+            assert.match(command, /--job\.dev gpu1$/);
+            assert.doesNotMatch(command, /gpu-auto\.json|algo_params|perf|--job\.algo|--bench_algo_params 0/);
           } else {
             assert.doesNotMatch(command, /MOM_GPU_BACKEND/);
           }

@@ -454,7 +454,7 @@ function momPlan({ os, gpu, algo, address, password, pool, portRow }) {
     plainRunNote: PLAIN_MODE_NOTE,
     notes: gpu === NVIDIA_AMD ? GPU_AMBIGUOUS_NOTE
       : algo === AUTO_ALGO[0]
-        ? "MoM benchmarks GPU algorithms and switches automatically. GPU donations remain enabled."
+        ? "MoM benchmarks and switches GPU algorithms, including donations. This example selects gpu1 only. Run mom algorithms with the same GPU backend and replace gpu1 with your reported GPU device."
         : "Select GPU: mom algorithms, then --job.dev gpuN."
   };
 }
@@ -478,23 +478,7 @@ function momRun(binary, pool, address, password, algo = "c29", gpu, windows = fa
   if (algo !== AUTO_ALGO[0]) {
     return `${launch} mine ${pool} ${address} ${password} --job.algo ${algo} --bench_algo_params 0`;
   }
-  // MoM 0.9.0 needs JSON login for switching and perf=0 to skip its default CPU benchmarks.
-  // Keep discovered GPU tuning and the normal donation pool; never invent a GPU index.
-  const config = JSON.stringify({
-    pools: [
-      { url: "mom.moneroocean.stream", port: 20001, is_tls: true, login: "user", use_subscribe: false },
-      { url: POOL_HOST, port: Number.parseInt(pool.split(":")[1], 10), is_tls: pool.endsWith("tls"), login: address, pass: password, use_subscribe: false }
-    ],
-    pool_ids: { primary: 1, donate: 0 },
-    algo_params: Object.fromEntries(["ghostrider", "panthera", "rx/0", "rx/arq", "rx/2"].map((name) => [name, { perf: 0 }]))
-  });
-  // All string values above are constants or validated wallet/worker identifiers.
-  const write = windows
-    ? `'${config}' | Set-Content -Encoding ascii gpu-auto.json`
-    : `printf '%s\\n' '${config}' > gpu-auto.json`;
-  return windows
-    ? `${write}\nif ($?) { ${launch} mine gpu-auto.json }`
-    : `${write} &&\n${launch} mine gpu-auto.json`;
+  return `${launch} mine ${pool} ${address} ${password} --job.dev gpu1`;
 }
 
 function multiMinerAlgoArgs({ srbminer, lineContinuation, intelGpu, lolminer, wallet, bzminer = "", bzAlgos = [], lolAlgos = [], srbKawExtra = "" }) {
