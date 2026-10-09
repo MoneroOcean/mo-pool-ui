@@ -46,13 +46,12 @@ export const COIN_EXPLORERS = {
   17750: "https://explorer.havenprotocol.org",
   25182: "https://explorer.bittube.cash",
   11812: "https://explorer.scalaproject.io",
-  19994: "https://explorer.arqma.com",
   16000: "https://explorer.conceal.network",
   17767: "https://explorer.zephyrprotocol.com",
   19081: "https://explorer.salvium.io"
 };
 
-const STANDARD_BLOCK_HEIGHT_PORTS = [19001, 9998, 5110, 11812, 19994, 17767, 19081];
+const STANDARD_BLOCK_HEIGHT_PORTS = [19001, 9998, 5110, 11812, 17767, 19081];
 const standardBlockHeightExplorers = Object.fromEntries(STANDARD_BLOCK_HEIGHT_PORTS.map((port) => [port, blockHeightUrl(COIN_EXPLORERS[port])]));
 
 export const COIN_HEIGHT_EXPLORERS = {
@@ -90,7 +89,6 @@ export const COIN_HASH_EXPLORERS = {
   17750: blockHashUrl(COIN_EXPLORERS[17750]),
   25182: blockHashUrl(COIN_EXPLORERS[25182]),
   11812: blockHashUrl(COIN_EXPLORERS[11812]),
-  19994: blockHashUrl(COIN_EXPLORERS[19994]),
   16000: `${COIN_EXPLORERS[16000]}/index.html?hash={hash}`,
   17767: blockHashUrl(COIN_EXPLORERS[17767]),
   19081: blockHashUrl(COIN_EXPLORERS[19081])
