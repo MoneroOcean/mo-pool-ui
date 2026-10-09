@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+source "$(dirname "$0")/run-memory-limited.sh"
 cd "$(dirname "$0")/.."
 
 SHA="$(git rev-parse --short HEAD 2>/dev/null || date +%s)"

@@ -59,13 +59,13 @@ Requires Node.js `>=22.9.0` and npm `>=11.10.0` (see `engines` in `package.json`
 
 ## Usage
 
-Build and deploy to `/var/www/mo-pool-ui`:
+Build and deploy to the web root configured in `build.sh`:
 
 ```sh
 npm run build
 ```
 
-The build script removes and recreates `build/`, bundles `script.js` with esbuild, bundles `style.css`, rewrites cache-busted asset URLs in `build/index.html`, runs the test suite, and copies the result to `/var/www/mo-pool-ui`.
+The build script removes and recreates `build/`, bundles `script.js` with esbuild, bundles `style.css`, rewrites cache-busted asset URLs in `build/index.html`, runs the test suite, and copies the checked result to the deployment web root.
 
 To produce only the static bundle without deploying:
 
@@ -91,6 +91,28 @@ npm run test:e2e    # browser-only target: builds the static bundle, then runs P
 ```
 
 Both `npm test` and `npm run test:e2e` require the Playwright browser binaries (`npx playwright install`). `npm run test:unit` remains the focused Node.js-only suite.
+
+### Memory safeguards
+
+On Linux, build, lint, and test entry points run in a systemd cgroup with a
+2 GiB total memory limit, no swap, and a 512 MiB Node.js heap limit per process.
+The total limit includes Chromium and other child processes. Exceeding it stops
+the whole group and fails the command. Deployment starts only after tests pass.
+
+Linux requires cgroup v2, `systemd-run`, `flock`, and a working systemd user
+manager (or the system manager when running as root). Commands verify the
+enforced limits before starting work and fail if protection is unavailable.
+A repository lock rejects overlapping runs; nested build/test commands share
+the same lock and memory budget. `npm test` holds both throughout linting,
+bundling, and testing. Direct `build.sh` and `scripts/build-static.sh` invocations
+use the same safeguards.
+
+Playwright runs desktop and mobile checks sequentially with one worker, no
+retries, no trace recording, and a ten-minute suite timeout. Failed tests still
+capture screenshots. Run browser tests through `npm test` or `npm run test:e2e`
+to include the process memory limit; raw `npx playwright test` bypasses the
+wrapper. On other operating systems the wrapper runs without a hard memory
+limit and reports that limitation.
 
 To check an extracted MoM GitHub release without mining, set `MOM_TEST_RELEASE_ROOT`
 (optionally `MOM_TEST_RELEASE_VERSION`) and run `node --test tests/mom-release.mjs`.

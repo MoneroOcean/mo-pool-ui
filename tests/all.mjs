@@ -1,4 +1,5 @@
 import "./build-invariants.mjs";
+import "./resource-guard.mjs";
 import "./core-routing-privacy.mjs";
 import "./rendered-views.mjs";
 import "./wallet-workers-render-policy.mjs";

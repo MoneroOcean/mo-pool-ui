@@ -12,7 +12,7 @@ test.describe("e2e browser suite", { concurrency: false }, () => {
 
 function runPlaywrightNodeSubtests(t) {
   return new Promise((resolve, reject) => {
-    const child = spawn("npx", ["playwright", "test", "--config=tests/playwright.config.mjs", "--reporter=./tests/e2e/node-progress-reporter.cjs"], {
+    const child = spawn("npx", ["playwright", "test", "--config=tests/playwright.config.mjs", "--workers=1", "--reporter=./tests/e2e/node-progress-reporter.cjs"], {
       cwd: process.cwd(),
       env: { ...process.env, PLAYWRIGHT_LIST_PRINT_STEPS: "0" },
       stdio: ["ignore", "pipe", "pipe"]

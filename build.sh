@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+source "$(dirname "$0")/scripts/run-memory-limited.sh"
 cd "$(dirname "$0")"
 
 run_privileged() {

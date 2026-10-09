@@ -8,7 +8,10 @@ import { gzipSync } from "node:zlib";
 test.describe("build invariants", { concurrency: false }, () => {
   test("npm test builds the current sources before checking the production bundle", async () => {
     const { scripts } = JSON.parse(await readFile("package.json", "utf8"));
-    assert.deepEqual(scripts.pretest.split(/\s*&&\s*/), ["npm run lint", "npm run build:static"]);
+    assert.equal(scripts.test, "./scripts/test-all.sh");
+    assert.equal(scripts.pretest, undefined, "build and tests must share one resource boundary and lock");
+    const testScript = await readFile("scripts/test-all.sh", "utf8");
+    assert.match(testScript, /source .*run-memory-limited\.sh[\s\S]*npm run lint\s+npm run build:static\s+node .*tests\/all\.mjs/);
     const browserTests = await readFile("tests/e2e-suite.mjs", "utf8");
     assert.doesNotMatch(browserTests, /buildStaticBundle|build:static/, "the browser suite reuses the same checked build");
     const deployScript = await readFile("build.sh", "utf8");

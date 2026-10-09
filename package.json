@@ -7,14 +7,13 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "pretest": "npm run lint && npm run build:static",
-    "test": "node --require ./tests/common/test_output_buffer.cjs --test --test-reporter=./tests/common/spec_reporter.cjs --test-concurrency=1 tests/all.mjs",
-    "test:unit": "node --require ./tests/common/test_output_buffer.cjs --test --test-reporter=./tests/common/spec_reporter.cjs --test-concurrency=1 tests/build-invariants.mjs tests/core-routing-privacy.mjs tests/rendered-views.mjs tests/wallet-workers-render-policy.mjs tests/setup-settings.mjs tests/dom-interactions.mjs tests/settings-setup-interactions.mjs",
+    "test": "./scripts/test-all.sh",
+    "test:unit": "./scripts/run-memory-limited.sh node --require ./tests/common/test_output_buffer.cjs --test --test-reporter=./tests/common/spec_reporter.cjs --test-concurrency=1 tests/resource-guard.mjs tests/build-invariants.mjs tests/core-routing-privacy.mjs tests/rendered-views.mjs tests/wallet-workers-render-policy.mjs tests/setup-settings.mjs tests/dom-interactions.mjs tests/settings-setup-interactions.mjs",
     "build:static": "./scripts/build-static.sh",
-    "test:e2e": "npm run build:static && playwright test --config=tests/playwright.config.mjs",
+    "test:e2e": "./scripts/run-memory-limited.sh bash -c 'npm run build:static && playwright test --config=tests/playwright.config.mjs --workers=1'",
     "test:all": "npm test",
     "build": "./build.sh",
-    "lint": "eslint ."
+    "lint": "./scripts/run-memory-limited.sh eslint ."
   },
   "devDependencies": {
     "@playwright/test": "^1.59.1",
