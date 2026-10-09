@@ -5,7 +5,7 @@ import { api } from "../src/api.js";
 import { state } from "../src/state.js";
 import { setupConfiguredPorts } from "../src/setup.js";
 import { bindSettingsForms } from "../src/views/wallet.js";
-import { bindSetupEvents } from "../src/views/setup.js";
+import { bindSetupEvents, setupView } from "../src/views/setup.js";
 
 class TestEvent {
   constructor(type, options = {}) {
@@ -329,13 +329,15 @@ test.describe("settings and setup interactions", { concurrency: false }, () => {
     gpuWrap.children[0].value = "gpu";
     const algoWrap = el("label", { class: "setup-algo-field hidden" }, [el("select", { id: "setup-algo" })]);
     algoWrap.children[0].value = "rx/0";
+    const minerWrap = el("label", { class: "setup-miner-field hidden" }, [el("select", { id: "setup-miner" })]);
+    minerWrap.children[0].value = "";
     const rate = el("input", { id: "setup-hashrate-input" });
     rate.value = "4";
     const unit = el("select", { id: "setup-hashrate-unit" });
     unit.value = "kh";
     const tabs = el("div", { id: "setup-tabs-top" }, [el("button", { "data-setup-input": "setup-profile", "data-setup-value": "srb-gpu" })]);
     const note = el("p", { id: "setup-notes" });
-    setupControls.append(os, profile, wallet, gpuWrap, algoWrap, rate, unit, tabs, note);
+    setupControls.append(os, profile, wallet, gpuWrap, algoWrap, minerWrap, rate, unit, tabs, note);
     document.body.append(setupControls);
     for (const [id, wrapId] of [["setup-download"], ["setup-run-tls", "setup-run-tls-wrap"], ["setup-run-plain", "setup-run-plain-wrap"], ["setup-run-tor", "setup-run-tor-wrap"], ["setup-run-local", "setup-run-local-wrap"]]) {
       document.body.append(
@@ -361,13 +363,76 @@ test.describe("settings and setup interactions", { concurrency: false }, () => {
     assert.equal(profile.value, "srb-gpu");
     assert.equal(gpuWrap.classList.contains("hidden"), false);
     assert.equal(algoWrap.classList.contains("hidden"), false);
-    assert.match(document.getElementById("setup-run-plain").textContent, /SRBMiner-MULTI|SRBMiner/i);
+    assert.equal(minerWrap.classList.contains("hidden"), false);
+    assert.equal(document.getElementById("setup-miner").value, "bzminer");
+    assert.match(document.getElementById("setup-run-plain").textContent, /bzminer|SRBMiner/i);
+    minerWrap.children[0].value = "srbminer";
+    await minerWrap.children[0].dispatchEvent(new TestEvent("change"));
+    assert.match(document.getElementById("setup-run-plain").textContent, /SRBMiner/i);
+    assert.match(location.hash, /miner=srbminer/);
     assert.match(location.hash, /#\/setup\?/);
     assert.match(location.hash, /profile=srb-gpu/);
+
+    gpuWrap.children[0].value = "intel";
+    await gpuWrap.children[0].dispatchEvent(new TestEvent("change"));
+    assert.equal(document.getElementById("setup-miner").value, "mom");
+    gpuWrap.children[0].value = "gpu";
+    await gpuWrap.children[0].dispatchEvent(new TestEvent("change"));
+    assert.equal(document.getElementById("setup-miner").value, "bzminer");
 
     (await bindViewEvents())();
     await document.querySelector('[data-copy-target="#setup-run-plain"]').dispatchEvent(new TestEvent("click"));
     assert.equal(writes.length, 1);
-    assert.match(writes[0], /SRBMiner-MULTI|SRBMiner/i);
+    assert.match(writes[0], /bzminer|SRBMiner/i);
+
+    tabs.children[0].dataset.setupValue = "multi-miner";
+    await setupControls.dispatchEvent(click);
+    assert.equal(profile.value, "multi-miner");
+    assert.equal(algoWrap.classList.contains("hidden"), true);
+    assert.equal(minerWrap.classList.contains("hidden"), true);
+    tabs.children[0].dataset.setupValue = "srb-gpu";
+    await setupControls.dispatchEvent(click);
+
+    gpuWrap.children[0].value = "nvidia";
+    algoWrap.children[0].value = "autolykos2";
+    await algoWrap.children[0].dispatchEvent(new TestEvent("change"));
+    minerWrap.children[0].value = "srbminer";
+    await minerWrap.children[0].dispatchEvent(new TestEvent("change"));
+    assert.equal(minerWrap.children[0].value, "srbminer");
+
+    tabs.children[0].dataset.setupInput = "setup-os";
+    tabs.children[0].dataset.setupValue = "windows";
+    await setupControls.dispatchEvent(click);
+    assert.equal(os.value, "windows");
+    assert.equal(minerWrap.children[0].value, "bzminer");
+    assert.ok(!minerWrap.children[0].innerHTML.includes('value="srbminer"'), "Windows NVIDIA omits the failing SRB recipe");
+    assert.ok(minerWrap.children[0].innerHTML.includes('value="lolminer"'), "Windows NVIDIA offers the existing Ergo fallback");
+    minerWrap.children[0].value = "lolminer";
+    await minerWrap.children[0].dispatchEvent(new TestEvent("change"));
+    assert.ok(document.getElementById("setup-run-tls").textContent.includes("--algo AUTOLYKOS2"), "Rendered TLS recipe uses the Ergo algorithm");
+    assert.ok(document.getElementById("setup-run-tls").textContent.includes("--tls on"), "Rendered TLS recipe enables TLS");
+
+    tabs.children[0].dataset.setupValue = "linux";
+    await setupControls.dispatchEvent(click);
+    assert.equal(os.value, "linux");
+    assert.ok(minerWrap.children[0].innerHTML.includes('value="srbminer"'), "Linux retains SRB");
+    assert.ok(!minerWrap.children[0].innerHTML.includes('value="lolminer"'), "Linux does not gain an unnecessary fallback");
+
+    const previousPoolPorts = api.poolPorts;
+    const previousRoute = state.r;
+    api.poolPorts = async () => ({ global: [{ port: 10008, tls: false, targetHashrate: 4000, difficulty: 80000 }] });
+    try {
+      state.r = { n: "setup", p: "#/setup", q: { os: "linux", profile: "srb-gpu", gpu: "gpu", algo: "kawpow", miner: "srbminer", rate: "4", unit: "kh" } };
+      const rendered = await setupView();
+      assert.match(rendered, /<option value="srbminer" selected>SRBMiner-Multi<\/option>/);
+      assert.match(rendered, /SRBMiner-MULTI/);
+      state.r = { n: "setup", p: "#/setup", q: { ...state.r.q } };
+      const roundTrip = await setupView();
+      assert.match(roundTrip, /<option value="srbminer" selected>SRBMiner-Multi<\/option>/);
+      assert.match(roundTrip, /SRBMiner-MULTI/);
+    } finally {
+      api.poolPorts = previousPoolPorts;
+      state.r = previousRoute;
+    }
   });
 });

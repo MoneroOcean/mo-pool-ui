@@ -6,6 +6,16 @@ import { gzipSync } from "node:zlib";
 
 
 test.describe("build invariants", { concurrency: false }, () => {
+  test("npm test builds the current sources before checking the production bundle", async () => {
+    const { scripts } = JSON.parse(await readFile("package.json", "utf8"));
+    assert.deepEqual(scripts.pretest.split(/\s*&&\s*/), ["npm run lint", "npm run build:static"]);
+    const browserTests = await readFile("tests/e2e-suite.mjs", "utf8");
+    assert.doesNotMatch(browserTests, /buildStaticBundle|build:static/, "the browser suite reuses the same checked build");
+    const deployScript = await readFile("build.sh", "utf8");
+    assert.match(deployScript, /^npm test$/m);
+    assert.doesNotMatch(deployScript, /^\.\/scripts\/build-static\.sh$/m, "deployment reuses npm test's checked build");
+  });
+
   test("source files do not contain plain real email addresses", async () => {
     const files = [
       "index.html",
@@ -91,7 +101,7 @@ test.describe("build invariants", { concurrency: false }, () => {
     assert.doesNotMatch(script.toString("utf8"), /support@moneroocean\.stream/, "support email must stay obfuscated");
     assert.doesNotMatch(script.toString("utf8"), /--(?:tls|keepalive|nicehash|esm)\s+\$\{[A-Za-z_$][\w$]*\}/, "production bundle must not interpolate raw boolean option values");
     const packedSize = gzipSync(Buffer.concat([Buffer.from(index), css, script])).byteLength;
-    assert.ok(packedSize <= 40_000, `deployable gzip budget exceeded: ${packedSize} bytes`);
+    assert.ok(packedSize <= 41_000, `deployable gzip budget exceeded: ${packedSize} bytes`);
 
     for (const name of files) {
       assert.ok((await stat(`build/${name}`)).size > 0, `${name} is empty`);

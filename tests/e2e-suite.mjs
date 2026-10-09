@@ -4,26 +4,11 @@ import { spawn } from "node:child_process";
 
 test.describe("e2e browser suite", { concurrency: false }, () => {
   test("playwright browser checks", async (t) => {
-    await buildStaticBundle();
     const run = await runPlaywrightNodeSubtests(t);
     assert.equal(run.code, 0, run.message);
     assert.equal(run.failures, 0, run.message);
   });
 });
-
-function buildStaticBundle() {
-  return new Promise((resolve, reject) => {
-    const child = spawn("npm", ["run", "build:static"], {
-      cwd: process.cwd(),
-      stdio: ["ignore", "inherit", "inherit"]
-    });
-    child.on("error", reject);
-    child.on("close", (code) => {
-      if (code === 0) resolve();
-      else reject(new Error(`Static build exited with code ${code}`));
-    });
-  });
-}
 
 function runPlaywrightNodeSubtests(t) {
   return new Promise((resolve, reject) => {

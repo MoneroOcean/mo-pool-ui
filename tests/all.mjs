@@ -5,4 +5,6 @@ import "./wallet-workers-render-policy.mjs";
 import "./setup-settings.mjs";
 import "./dom-interactions.mjs";
 import "./settings-setup-interactions.mjs";
+import "./mom-release.mjs";
 import "./e2e-suite.mjs";
+import './windows-miner-staging.mjs';

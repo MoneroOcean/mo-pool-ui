@@ -9,7 +9,10 @@ const LINUX = "linux";
 const MACOS = "macos";
 const WINDOWS = "windows";
 const INTEL = "intel";
+const NVIDIA = "nvidia";
+const AMD = "amd";
 const NVIDIA_AMD = "gpu";
+const GPU_AMBIGUOUS_NOTE = "Select NVIDIA or AMD";
 const XMRIG_MO = "xmrig-mo";
 const SRB_GPU = "srb-gpu";
 const MULTI_MINER = "multi-miner";
@@ -26,6 +29,12 @@ const SRBMINER_BIN = `./${SRBMINER}`;
 const SRBMINER_DIR = "srbminer";
 const SRBMINER_ARCHIVE = `${SRBMINER_DIR}.tar`;
 const SRBMINER_ZIP = `${SRBMINER_DIR}.zip`;
+const BZMINER = "bzminer";
+const BZMINER_EXE = `${BZMINER}.exe`;
+const BZMINER_BIN = `./${BZMINER}`;
+const BZMINER_DIR = "bzminer";
+const BZMINER_ARCHIVE = `${BZMINER_DIR}.tar.gz`;
+const BZMINER_ZIP = `${BZMINER_DIR}.zip`;
 const LOLMINER = "lolMiner";
 const LOLMINER_EXE = `${LOLMINER}.exe`;
 const LOLMINER_BIN = `./${LOLMINER}`;
@@ -43,12 +52,14 @@ const MULTI_MINER_ARCHIVE = "mm.tar.gz";
 const GITHUB_RELEASE_API = "https://api.github.com/repos/";
 const XMRIG_RELEASE_API = `${GITHUB_RELEASE_API}MoneroOcean/xmrig/releases/latest`;
 const SRBMINER_RELEASE_API = `${GITHUB_RELEASE_API}doktor83/SRBMiner-Multi/releases/latest`;
+const BZMINER_RELEASE_API = `${GITHUB_RELEASE_API}bzminer/bzminer/releases/latest`;
 const LOLMINER_RELEASE_API = `${GITHUB_RELEASE_API}Lolliedieb/lolMiner-releases/releases/latest`;
 const MOM_RELEASE_API = `${GITHUB_RELEASE_API}MoneroOcean/mo-miner/releases/latest`;
 const MULTI_MINER_RELEASE_API = `${GITHUB_RELEASE_API}MoneroOcean/multi-miner/releases/latest`;
 const XMRIG_PROXY_RELEASE_API = `${GITHUB_RELEASE_API}MoneroOcean/xmrig-proxy/releases/latest`;
 export const TOR_MINING_HOST = "mo2tor2amawhphlrgyaqlrqx7o27jaj7yldnx3t6jip3ow4bujlwz6id.onion";
-const LINUX_XMRIG_ASSET = "grep -E 'lin-compat\\.tar\\.gz|lin\\.tar\\.gz'";
+const LINUX_XMRIG_ASSET = "lin-compat\\.tar\\.gz|lin\\.tar\\.gz";
+const LINUX_XMRIG_COMPAT_ASSET = "lin-compat\\.tar\\.gz$";
 const XMRIG_WINDOWS_ZIP_ASSET = "win\\.zip$";
 const WIN64_ZIP_ASSET = "win64\\.zip$";
 const XMRIG_PROXY_TAR = "xmrig-proxy.tar.gz";
@@ -73,39 +84,96 @@ export const SETUP_OS = [
 export const SETUP_HASHRATE_UNITS = HASHRATE_UNITS;
 
 export const SETUP_GPU_VENDORS = [
-  [INTEL, "Intel"],
-  [NVIDIA_AMD, "NVIDIA/AMD"]
+  [INTEL, "Intel dGPU"],
+  [NVIDIA, "NVIDIA"],
+  [AMD, "AMD"],
+  [NVIDIA_AMD, GPU_AMBIGUOUS_NOTE]
 ];
 
-const GPU_ALGO_IDS = ["autolykos2", "kawpow", "etchash", "cn/gpu", "c29"];
+const GPU_ALGO_IDS = ["autolykos2", "kawpow", "etchash", "cn/gpu", "c29", "pearlhash"];
 const GPU_PROFILES = [SRB_GPU, MULTI_MINER];
 const AUTO_PROFILES = [XMRIG_MO, MULTI_MINER, XMRIG_PROXY, XMR_NODE_PROXY];
 const MAC_PROFILES = [XMRIG_MO, XMRIG_PROXY, XMR_NODE_PROXY];
 const AUTO_ALGO = ["auto", "Auto switch"];
 const SETUP_ALGOS = [
   AUTO_ALGO,
-  ...GPU_ALGO_IDS.map((id) => [id, id])
+  ...GPU_ALGO_IDS.map((id) => [id, id === "pearlhash" ? "PRL / Pearl" : id])
 ];
 
 const SRB_ALGO = {
   autolykos2: "autolykos2",
   "cn/gpu": "cryptonight_gpu",
   etchash: "etchash",
-  kawpow: "kawpow"
+  kawpow: "kawpow",
+  pearlhash: "pearlhash"
+};
+const BZ_ALGO = {
+  autolykos2: "ergo",
+  "cn/gpu": "cn/gpu",
+  etchash: "etchash",
+  kawpow: "kawpow",
+  c29: "c29",
+  pearlhash: "pearl"
 };
 const ETCHASH_EXTRA = " --esm 2 --nicehash true";
-const MULTI_MINER_ALGOS = Object.keys(SRB_ALGO).map((name) => [name, SRB_ALGO[name], name === "etchash" ? ETCHASH_EXTRA : ""]);
-const WINDOWS_POWERSHELL_BKM = "Open Windows PowerShell first. From cmd.exe, run: powershell -NoProfile. Windows Security or other antivirus may quarantine miner archives; if extraction is blocked, review the alert and allow or exclude only this mining folder if you trust the release.";
-const MOM_WINDOWS_BKM = `${WINDOWS_POWERSHELL_BKM} Run the setup from an Administrator PowerShell because mom's bundled install.bat installs required GPU runtime support.`;
+const KAWPOW_SLOW_BUILD = " --gpu-table-slow-build";
+const MULTI_MINER_ALGOS = Object.keys(SRB_ALGO)
+  .filter((name) => name !== "pearlhash")
+  .map((name) => [name, SRB_ALGO[name], name === "etchash" ? ETCHASH_EXTRA : ""]);
+const WINDOWS_POWERSHELL_BKM = "Open Windows PowerShell (cmd.exe: powershell -NoProfile). Review antivirus alerts; allow only the mining folder if you trust the release.";
+const MOM_WINDOWS_BKM = `${WINDOWS_POWERSHELL_BKM} Run install.bat as Administrator for GPU prerequisites.`;
 const PORT_METADATA_UNAVAILABLE = "Pool port metadata unavailable from API.";
-const TLS_MODE_NOTE = "TLS encrypts miner-to-pool traffic. Use plain only when TLS is blocked or unsupported.";
-const PLAIN_MODE_NOTE = "Plain mode uses the non-TLS mining port for tests or restricted networks.";
-const TOR_MODE_NOTE = "Tor mode uses MoneroOcean's onion host via local SOCKS5 and the selected non-TLS setup port. Use 127.0.0.1:9050 for system Tor or 127.0.0.1:9150 for Tor Browser. TLS does not improve security over Tor.";
-const SRB_RUN_NOTE = "Use --list-devices first if GPU 0 is wrong. Intel Alchemist/Battlemage, NVIDIA Pascal+, and supported AMD GPUs work.";
-const PROXY_HOSTS_PORT_3333 = "workers connect to this host on port 3333.";
-const REPLACE_PROXY_HOST = "Replace PROXY_HOST with the proxy machine hostname or address.";
-const XMRIG_AUTO_SWITCH_NOTE = "MoneroOcean XMRig benchmarks/switches CPU algos for XMR payout; first run may benchmark for several minutes before pool jobs appear.";
-const SMALL_PROXY_NOTE = "For small proxy setups, start with 64-128 KH/s.";
+const TLS_MODE_NOTE = "TLS encrypts pool traffic.";
+const PLAIN_MODE_NOTE = "Plain is unencrypted; use only if TLS is unavailable.";
+const TOR_MODE_NOTE = "Tor uses the onion host and selected non-TLS port via SOCKS5: 127.0.0.1:9050 (Tor) or 127.0.0.1:9150 (Tor Browser). TLS adds no security over Tor.";
+const SRB_RUN_NOTE = "Use --list-devices; start at 1 KH/s if shares stall.";
+const PROXY_HOSTS_PORT_3333 = "workers use port 3333.";
+const REPLACE_PROXY_HOST = "Replace PROXY_HOST; install XMRig on each worker.";
+const XMRIG_AUTO_SWITCH_NOTE = "Keep config.json beside XMRig.";
+const SMALL_PROXY_NOTE = "Small proxies: start at 64-128 KH/s.";
+
+const GPU_MINER_LABELS = {
+  mom: "MoM",
+  bzminer: "BZMiner",
+  srbminer: "SRBMiner-Multi",
+  lolminer: "lolMiner"
+};
+
+function gpuMinerSupport(miner, gpu, algo, os) {
+  const intel = isIntelGpu(gpu);
+  const windowsNvidia = os === WINDOWS && gpu === NVIDIA;
+  // Tested RX 9060 XT/gfx1200: BZ v100.45 Ergo rejects its Linux binary and builds a wrong Windows table.
+  // These are curated vendor-profile recommendations, not a claim about every AMD model.
+  if (miner === BZMINER && gpu === AMD && algo === "autolykos2" && [LINUX, WINDOWS].includes(os)) return false;
+  if (miner === "lolminer" && os === WINDOWS && gpu === AMD && algo === "c29") return false;
+  if (miner === "lolminer") return algo === "c29" && !intel || windowsNvidia && ["autolykos2", "etchash"].includes(algo);
+  // On Windows RTX 5060 Ti, SRB had zero-rate CN/GPU, an Ergo kernel error and stalled Etchash initialization.
+  if (miner === "srbminer" && windowsNvidia && ["cn/gpu", "autolykos2", "etchash"].includes(algo)) return false;
+  if (miner === "srbminer" && (algo === "c29" || intel && algo === "pearlhash")) return false;
+  // BZ v100.45 documents no Intel KawPoW implementation; B580 confirms it is skipped.
+  return GPU_ALGO_IDS.includes(algo) && !(intel && miner === "bzminer" && ["autolykos2", "etchash", "kawpow"].includes(algo));
+}
+
+function normalizeGpuAlgo(algo) {
+  if (algo === "prl") return "pearlhash";
+  return algo;
+}
+
+export function setupGpuMinerOptions({ os = LINUX, gpu = INTEL, algo = GPU_ALGO_IDS[0] } = {}) {
+  const normalizedGpu = gpuId(gpu);
+  const normalizedAlgo = normalizeGpuAlgo(algo);
+  const intel = isIntelGpu(normalizedGpu);
+  const srbSupported = gpuMinerSupport("srbminer", normalizedGpu, normalizedAlgo, os);
+  const order = intel
+    ? ["mom", "bzminer", "srbminer"]
+    : ["bzminer", srbSupported ? "srbminer" : "lolminer", "mom"];
+  return order
+    .filter((miner) => gpuMinerSupport(miner, normalizedGpu, normalizedAlgo, os))
+    .map((miner) => {
+      const conditional = miner === "bzminer" && normalizedAlgo === "c29" && isIntelGpu(normalizedGpu) ? "Arc Battlemage" : "";
+      return [miner, conditional ? `${GPU_MINER_LABELS[miner]} (${conditional})` : GPU_MINER_LABELS[miner]];
+    });
+}
 
 export function setupAddress({ queryAddress = "", activeAddress = "", watchlist = [] } = {}) {
   return queryAddress || activeAddress || watchlist.find((row) => row?.address)?.address || DEFAULT_ADDRESS;
@@ -177,7 +245,7 @@ export function setupPlan(options = {}) {
   const os = optionId(options.os, SETUP_OS, LINUX);
   const profile = profileId(options.profile, os);
   const gpu = gpuId(options.gpu);
-  const requestedAlgo = optionId(options.algo, SETUP_ALGOS, profileUsesAutoAlgo(profile) ? AUTO_ALGO[0] : "rx/0");
+  const requestedAlgo = optionId(normalizeGpuAlgo(options.algo), SETUP_ALGOS, profileUsesAutoAlgo(profile) ? AUTO_ALGO[0] : "rx/0");
   const algo = normalizeProfileAlgo(profile, requestedAlgo);
   const defaultHashrate = setupHashrateDefaults(profile, gpu, algo);
   const hashrateUnit = optionId(options.hashrateUnit, SETUP_HASHRATE_UNITS, defaultHashrate.unit);
@@ -191,10 +259,13 @@ export function setupPlan(options = {}) {
   const pool = `${POOL_HOST}:${port}`;
   const password = profile === XMRIG_MO || algo === AUTO_ALGO[0] ? worker : `${worker}~${algo}`;
 
-  const selection = { profile, os, gpu, algo, address, hashrate, hashrateUnit, hashrateHps, port };
-  const planOptions = { os, gpu, algo, address: commandAddress, worker, password, pool, port, portRow };
+  const selection = { profile, os, gpu, algo, miner: "", address, hashrate, hashrateUnit, hashrateHps, port };
+  const planOptions = { os, gpu, algo, miner: options.miner, address: commandAddress, worker, password, pool, port, portRow };
   if (!portRow) return withSelection(unavailablePortPlan(), selection);
-  if (profile === SRB_GPU) return withSelection(srbPlan(planOptions), selection);
+  if (profile === SRB_GPU) {
+    const plan = srbPlan(planOptions);
+    return withSelection(plan, { ...selection, miner: plan.miner });
+  }
   if (profile === MULTI_MINER) return withSelection(multiMinerPlan(planOptions), selection);
   if (profile === XMRIG_PROXY) return withSelection(xmrigProxyPlan(planOptions), selection);
   if (profile === XMR_NODE_PROXY) return withSelection(xmrNodeProxyPlan(planOptions), selection);
@@ -226,12 +297,12 @@ function xmrigPlan({ os, address, worker, pool, portRow }) {
   const macos = os === MACOS;
   const binary = windows ? windowsLocal(XMRIG_EXE) : XMRIG_BIN;
   const download = windows
-    ? windowsZipDownload(XMRIG_RELEASE_API, XMRIG_WINDOWS_ZIP_ASSET, "xmrig.zip", "moneroocean")
+    ? windowsZipDownload(XMRIG_RELEASE_API, XMRIG_WINDOWS_ZIP_ASSET, "xmrig.zip", "moneroocean", XMRIG_EXE)
     : macos
       ? macXmrigDownload()
-    : `${linuxReleaseDownload("moneroocean", XMRIG_RELEASE_API, LINUX_XMRIG_ASSET, XMRIG_TAR)} && tar xf ${XMRIG_TAR} && chmod +x ${XMRIG}`;
-  const directRun = xmrigRun(binary, pool, address, worker);
-  const tlsRun = portRow.tlsPort ? xmrigRun(binary, `${POOL_HOST}:${portRow.tlsPort}`, address, worker, true) : "";
+    : `${linuxReleaseDownload("moneroocean", XMRIG_RELEASE_API, LINUX_XMRIG_COMPAT_ASSET, XMRIG_TAR)} && tar xf ${XMRIG_TAR} && chmod +x ${XMRIG}`;
+  const directRun = xmrigRun(binary, pool, address, worker, false, windows);
+  const tlsRun = portRow.tlsPort ? xmrigRun(binary, `${POOL_HOST}:${portRow.tlsPort}`, address, worker, true, windows) : "";
   return {
     summary: setupPoolSummary(pool, portRow),
     downloadCommand: download,
@@ -248,18 +319,32 @@ function xmrigPlan({ os, address, worker, pool, portRow }) {
   };
 }
 
-function srbPlan({ os, gpu, algo, address, worker, password, pool, portRow }) {
-  const intelGpu = isIntelGpu(gpu);
-  if (algo === "c29") {
-    return intelGpu
-      ? momPlan({ os, address, password, pool, portRow })
-      : lolminerPlan({ os, address, password, pool, portRow });
-  }
+function srbPlan(args) {
+  const options = setupGpuMinerOptions(args);
+  const miner = options.find(([id]) => id === args.miner)?.[0] || options[0]?.[0] || "srbminer";
+  const minerPlan = miner === "mom"
+    ? momPlan(args)
+    : miner === "bzminer"
+      ? bzminerPlan(args)
+      : miner === "lolminer"
+        ? lolminerPlan(args)
+        : srbFixedPlan(args);
+  return {
+    ...minerPlan,
+    notes: `${minerPlan.notes}${args.os === WINDOWS && args.gpu === AMD && ["autolykos2", "c29"].includes(args.algo)
+      ? ` On tested RX 9060 XT/gfx1200, ${args.algo === "autolykos2" ? "BZMiner v100.45 Ergo failed table verification; use SRBMiner or MoM" : "lolMiner C29 reported a device crash; use BZMiner or MoM"}. Other AMD models are not established by this result.` : ""}`,
+    minerOptions: options,
+    miner
+  };
+}
+
+function srbFixedPlan({ os, gpu, algo, address, worker, password, pool, portRow }) {
   const windows = os === WINDOWS;
   const binary = windows ? windowsLocal(SRBMINER_EXE) : SRBMINER_BIN;
   const srbAlgo = SRB_ALGO[algo] || GPU_ALGO_IDS[0];
-  const disable = gpuDisableFlags(intelGpu);
-  const ethExtra = algo === "etchash" ? ETCHASH_EXTRA : "";
+  const disable = gpuDisableFlags(gpu);
+  // Qualified Windows RTX 5060 Ti needs slow table build before KawPoW hashes.
+  const extra = algo === "etchash" ? ETCHASH_EXTRA : windows && gpu === NVIDIA && algo === "kawpow" ? KAWPOW_SLOW_BUILD : "";
   const download = windows
     ? srbWindowsDownload()
     : srbLinuxDownload();
@@ -267,37 +352,43 @@ function srbPlan({ os, gpu, algo, address, worker, password, pool, portRow }) {
     summary: setupPoolSummary(pool, portRow),
     downloadCommand: download,
     downloadNote: windows ? WINDOWS_POWERSHELL_BKM : "",
-    tlsRunCommand: portRow.tlsPort ? srbRun(binary, disable, srbAlgo, `${POOL_HOST}:${portRow.tlsPort}`, address, password, worker, true, ethExtra) : "",
+    tlsRunCommand: portRow.tlsPort ? srbRun(binary, disable, srbAlgo, `${POOL_HOST}:${portRow.tlsPort}`, address, password, worker, true, extra) : "",
     tlsRunNote: `${TLS_MODE_NOTE} ${SRB_RUN_NOTE}`,
-    plainRunCommand: srbRun(binary, disable, srbAlgo, pool, address, password, worker, false, ethExtra),
-    plainRunNote: PLAIN_MODE_NOTE,
-    notes: "SRBMiner-Multi is used for fixed algo GPU mining."
+    plainRunCommand: srbRun(binary, disable, srbAlgo, pool, address, password, worker, false, extra),
+    plainRunNote: `${PLAIN_MODE_NOTE} ${SRB_RUN_NOTE}`,
+    notes: "Fixed GPU recipe."
   };
 }
 
 function multiMinerPlan({ os, gpu, address, pool, portRow }) {
   const windows = os === WINDOWS;
   const intelGpu = isIntelGpu(gpu);
-  const disable = gpuDisableFlags(intelGpu);
+  const bzAlgos = !windows ? [] : gpu === NVIDIA ? ["cn/gpu", "autolykos2"] : gpu === AMD ? ["c29"] : [];
+  const lolAlgos = windows && gpu === NVIDIA ? ["etchash"] : [];
+  const disable = gpuDisableFlags(gpu);
   const tlsPool = portRow.tlsPort ? `${POOL_HOST}:ssl${portRow.tlsPort}` : pool;
   return {
     summary: setupPoolSummary(tlsPool, portRow, `. MM listens on ${LOCAL_PROXY} for child miners.`),
     downloadCommand: windows
-      ? multiMinerWindowsDownload(intelGpu)
+      ? multiMinerWindowsDownload(intelGpu, bzAlgos)
       : multiMinerLinuxDownload(intelGpu),
-    downloadNote: windows ? (intelGpu ? MOM_WINDOWS_BKM : WINDOWS_POWERSHELL_BKM) : "",
-    tlsRunCommand: windows ? multiMinerWindowsRun({ address, pool: tlsPool, disable, intelGpu }) : multiMinerLinuxRun({ address, pool: tlsPool, disable, intelGpu }),
+    downloadNote: windows ? WINDOWS_POWERSHELL_BKM : "",
+    tlsRunCommand: windows ? multiMinerWindowsRun({ address, pool: tlsPool, disable, intelGpu, bzAlgos, lolAlgos, gpu }) : multiMinerLinuxRun({ address, pool: tlsPool, disable, intelGpu }),
     tlsRunNote: TLS_MODE_NOTE,
-    notes: "Use this only for GPU algo switching; fixed GPU setup is simpler. First run benchmarks/autotunes configured algorithms before normal mining output appears."
+    notes: `Fixed-algorithm miners use multi-miner for switching; MoM switches directly.${intelGpu ? " This Intel example covers CN/GPU, KawPow, Autolykos2 and Etchash." : ""}`
   };
 }
 
-function gpuDisableFlags(intelGpu) {
-  return intelGpu ? "--disable-gpu-amd --disable-gpu-nvidia" : "";
+function gpuDisableFlags(gpu) {
+  return isIntelGpu(gpu) ? "--disable-gpu-amd --disable-gpu-nvidia" : "";
 }
 
-function xmrigRun(binary, pool, address, worker, tls = false) {
-  return `${binary} -o ${pool} -u ${address} --rig-id ${worker} ${KEEPALIVE}${tls ? " --tls" : ""}`;
+function xmrigRun(binary, pool, address, worker, tls = false, windows = false) {
+  return `${binary} ${xmrigConfigArg(windows)} -o ${pool} -u ${address} --rig-id ${worker} ${KEEPALIVE}${tls ? " --tls" : ""}`;
+}
+
+function xmrigConfigArg(windows = false) {
+  return windows ? '--config=".\\config.json"' : "--config=./config.json";
 }
 
 function srbRun(binary, disable, algo, pool, address, password, worker, tls, extra = "") {
@@ -312,62 +403,89 @@ function srbCommon(disable, pool, address, worker, binary = "") {
   return [binary, "--disable-cpu", disable, "--pool", pool, "--wallet", address, "--worker", worker, "--gpu-id", "0", "--keepalive", "true"].filter(Boolean).join(" ");
 }
 
-function lolminerPlan({ os, address, password, pool, portRow }) {
+function lolminerPlan({ os, algo, address, password, pool, portRow }) {
   const windows = os === WINDOWS;
   const binary = windows ? windowsLocal(LOLMINER_EXE) : LOLMINER_BIN;
   return {
     summary: setupPoolSummary(pool, portRow),
     downloadCommand: windows ? lolminerWindowsDownload() : lolminerLinuxDownload(),
     downloadNote: windows ? WINDOWS_POWERSHELL_BKM : "",
-    tlsRunCommand: portRow.tlsPort ? lolminerRun(binary, `${POOL_HOST}:${portRow.tlsPort}`, address, password, true) : "",
+    tlsRunCommand: portRow.tlsPort ? lolminerRun(binary, algo, `${POOL_HOST}:${portRow.tlsPort}`, address, password, true) : "",
     tlsRunNote: TLS_MODE_NOTE,
-    plainRunCommand: lolminerRun(binary, pool, address, password, false),
+    plainRunCommand: lolminerRun(binary, algo, pool, address, password, false),
     plainRunNote: PLAIN_MODE_NOTE,
-    notes: "lolMiner is used for fixed C29 on NVIDIA/AMD GPUs."
+    notes: `Fixed ${algo === "autolykos2" ? "Autolykos2" : algo === "etchash" ? "Etchash" : "C29"} recipe.${algo === "etchash" ? " SRBMiner stalled on the tested Windows RTX 5060 Ti; other NVIDIA models are not established by this result." : ""}`
   };
 }
 
-function momPlan({ os, address, password, pool, portRow }) {
+function bzminerPlan({ os, algo, address, password, pool, portRow }) {
+  const windows = os === WINDOWS;
+  const binary = windows ? windowsLocal(BZMINER_EXE) : BZMINER_BIN;
+  const tlsPool = portRow.tlsPort ? `${POOL_HOST}:${portRow.tlsPort}` : pool;
+  return {
+    summary: setupPoolSummary(pool, portRow),
+    downloadCommand: windows ? bzminerWindowsDownload() : bzminerLinuxDownload(),
+    downloadNote: windows ? WINDOWS_POWERSHELL_BKM : "",
+    tlsRunCommand: portRow.tlsPort ? bzminerRun(binary, algo, tlsPool, address, password, true) : "",
+    tlsRunNote: TLS_MODE_NOTE,
+    plainRunCommand: bzminerRun(binary, algo, pool, address, password, false),
+    plainRunNote: PLAIN_MODE_NOTE,
+    notes: "Fixed GPU recipe."
+  };
+}
+
+function momPlan({ os, gpu, algo, address, password, pool, portRow }) {
   const windows = os === WINDOWS;
   const binary = windows ? windowsLocal(MOM_CMD) : MOM_BIN;
-  const momJson = momC29Json({ escapeQuotes: windows });
   return {
     summary: setupPoolSummary(pool, portRow),
     downloadCommand: windows ? momWindowsDownload() : momLinuxDownload(),
     downloadNote: windows ? MOM_WINDOWS_BKM : "",
-    tlsRunCommand: portRow.tlsPort ? momRun(binary, `${POOL_HOST}:${portRow.tlsPort}tls`, address, password, momJson) : "",
+    tlsRunCommand: portRow.tlsPort ? momRun(binary, `${POOL_HOST}:${portRow.tlsPort}tls`, address, password, algo, gpu, windows) : "",
     tlsRunNote: TLS_MODE_NOTE,
-    plainRunCommand: momRun(binary, pool, address, password, momJson),
+    plainRunCommand: momRun(binary, pool, address, password, algo, gpu, windows),
     plainRunNote: PLAIN_MODE_NOTE,
-    notes: "mom is used for fixed Intel GPU C29. Its bundled installer supplies required GPU runtime support; automatic backend selection and tuning remain enabled."
+    notes: gpu === NVIDIA_AMD ? GPU_AMBIGUOUS_NOTE
+        : "Select GPU: mom algorithms, then --job.dev gpuN."
   };
 }
 
-function lolminerRun(binary, pool, address, password, tls) {
-  return `${binary} --algo CR29 --pool ${pool} --user ${address} --pass ${password}${tls ? " --tls on" : ""}`;
+function bzminerRun(binary, algo, pool, address, password, tls) {
+  const endpoint = `stratum+${tls ? "ssl" : "tcp"}://${pool}`;
+  const bzAlgo = BZ_ALGO[algo] || algo;
+  // BZMiner enables CPU by default; fixed GPU recipes must scope it off explicitly.
+  return `${binary} -a ${bzAlgo} -p ${endpoint} -w ${address} --pass ${password} --cpu 0`;
 }
 
-function momRun(binary, pool, address, password, momJson = momC29Json()) {
-  return `${binary} mine ${pool} ${address} ${password} --new.algo_param.c29 '${momJson}'`;
+function lolminerRun(binary, algo, pool, address, password, tls) {
+  const algorithm = algo === "autolykos2" ? "AUTOLYKOS2" : algo === "etchash" ? "ETCHASH" : "CR29";
+  return `${binary} --algo ${algorithm} --pool ${pool} --user ${address} --pass ${password}${algo === "etchash" ? " --ethstratum ETHV1" : ""}${tls ? " --tls on" : ""}`;
 }
 
-function momC29Json({ escapeQuotes = false, perf = false } = {}) {
-  const json = JSON.stringify(perf ? { dev: "gpu1", perf: 1 } : { dev: "gpu1" });
-  return escapeQuotes ? json.replaceAll('"', '\\"') : json;
+function momRun(binary, pool, address, password, algo = "c29", gpu, windows = false) {
+  const command = `${binary} mine ${pool} ${address} ${password} --job.algo ${algo} --bench_algo_params 0`;
+  const backend = isIntelGpu(gpu) ? INTEL : gpu === NVIDIA || gpu === AMD ? gpu : null;
+  if (!backend) return "";
+  return windows
+    ? `$env:MOM_GPU_BACKEND='${backend}'; & ${command}`
+    : `MOM_GPU_BACKEND=${backend} ${command}`;
 }
 
-function multiMinerAlgoArgs({ common, lineContinuation, intelGpu, lolminer, mom, wallet, momJson }) {
-  return multiMinerCommands({ common, intelGpu, lolminer, mom, wallet, momJson })
+function multiMinerAlgoArgs({ common, lineContinuation, intelGpu, lolminer, wallet, bzminer = "", bzAlgos = [], lolAlgos = [], srbKawExtra = "" }) {
+  // AMD's BZ alternative is C29 only; keep its Ergo path on SRBMiner.
+  const commands = MULTI_MINER_ALGOS.map(([name, algorithm, extra]) => [name, bzAlgos.includes(name)
+    ? bzminerRun(bzminer, name, LOCAL_PROXY, wallet, "mm", false)
+    : lolAlgos.includes(name) ? lolminerRun(lolminer, name, LOCAL_PROXY, wallet, "x", false)
+    : `${common} --algorithm ${algorithm} --password x${extra}${name === "kawpow" ? srbKawExtra : ""}`]);
+  // MoM switches directly; Intel lacks fixed-miner Pearl/C29 entries here.
+  if (!intelGpu) {
+    commands.push(["pearlhash", `${common} --algorithm pearlhash --password x`]);
+    commands.push(["c29", bzAlgos.includes("c29") ? bzminerRun(bzminer, "c29", LOCAL_PROXY, wallet, "mm", false)
+      : `${lolminer} --algo CR29 --pool ${LOCAL_PROXY} --user ${wallet} --pass x`]);
+  }
+  return commands
     .map(([name, command]) => `  --${name}="${command}"`)
     .join(` ${lineContinuation}\n`);
-}
-
-function multiMinerCommands({ common, intelGpu, lolminer, mom, wallet, momJson }) {
-  const commands = MULTI_MINER_ALGOS.map(([name, algorithm, extra]) => [name, `${common} --algorithm ${algorithm} --password x${extra}`]);
-  commands.push(intelGpu
-    ? ["c29", `${mom} mine ${LOCAL_PROXY} ${wallet} x --new.algo_param.c29 '${momJson}'`]
-    : ["c29", `${lolminer} --algo CR29 --pool ${LOCAL_PROXY} --user ${wallet} --pass x`]);
-  return commands;
 }
 
 function multiMinerLinuxRun({ address, pool, disable, intelGpu }) {
@@ -375,24 +493,24 @@ function multiMinerLinuxRun({ address, pool, disable, intelGpu }) {
 POOL='${pool}'
 LOCAL_PROXY='${LOCAL_PROXY}'
 SRB='${SRBMINER_BIN}'
-${intelGpu ? `MOM='./${MOM_DIR}/${MOM}'` : `LOLMINER='${LOLMINER_BIN}'`}
+${intelGpu ? "" : `LOLMINER='${LOLMINER_BIN}'`}
 ${disable ? `GPU_FLAGS='${disable}'\n` : ""}COMMON="${srbCommon(disable ? "$GPU_FLAGS" : "", "$LOCAL_PROXY", "$WALLET", "mm", "$SRB")} --tls false"
 
 ./mm --no-config-save --pool="$POOL" --user="$WALLET" --pass=x --algo_min_time=60 \\
-${multiMinerAlgoArgs({ common: "$COMMON", lineContinuation: "\\", intelGpu, lolminer: "$LOLMINER", mom: "$MOM", wallet: "$WALLET", momJson: momC29Json({ escapeQuotes: true, perf: true }) })}`;
+${multiMinerAlgoArgs({ common: "$COMMON", lineContinuation: "\\", intelGpu, lolminer: "$LOLMINER", wallet: "$WALLET" })}`;
 }
 
-function multiMinerWindowsRun({ address, pool, disable, intelGpu }) {
+function multiMinerWindowsRun({ address, pool, disable, intelGpu, bzAlgos, lolAlgos, gpu }) {
   return `$Wallet="${address}"
 $Pool="${pool}"
 $LocalProxy="${LOCAL_PROXY}"
 $Srb="${windowsLocal(SRBMINER_EXE)}"
-${intelGpu ? `$Mom="${windowsLocal(MOM_CMD)}"
-$MomJson='${momC29Json({ escapeQuotes: true, perf: true })}'` : `$Lolminer="${windowsLocal(LOLMINER_EXE)}"`}
+${bzAlgos.length ? `$Bzminer="${windowsLocal(BZMINER_EXE)}"\n` : ""}
+${intelGpu || bzAlgos.includes("c29") ? "" : `$Lolminer="${windowsLocal(LOLMINER_EXE)}"`}
 ${disable ? `$GpuFlags="${disable}"\n` : ""}$Common="${srbCommon(disable ? "$GpuFlags" : "", "$LocalProxy", "$Wallet", "mm", "$Srb")} --tls false"
 
 ${windowsLocal("mm.exe")} --no-config-save --pool="$Pool" --user="$Wallet" --pass=x --algo_min_time=60 \`
-${multiMinerAlgoArgs({ common: "$Common", lineContinuation: "`", intelGpu, lolminer: "$Lolminer", mom: "$Mom", wallet: "$Wallet", momJson: intelGpu ? "$MomJson" : momC29Json({ perf: true }) })}`;
+${multiMinerAlgoArgs({ common: "$Common", lineContinuation: "`", intelGpu, lolminer: "$Lolminer", wallet: "$Wallet", bzminer: bzAlgos.length ? "$Bzminer" : "", bzAlgos, lolAlgos, srbKawExtra: gpu === NVIDIA ? KAWPOW_SLOW_BUILD : "" })}`;
 }
 
 function xmrigProxyPlan({ os, address, worker, pool, portRow }) {
@@ -411,9 +529,9 @@ function xmrigProxyPlan({ os, address, worker, pool, portRow }) {
     downloadNote: windows ? WINDOWS_POWERSHELL_BKM : "",
     tlsRunCommand: proxyRunCommand,
     tlsRunNote: TLS_MODE_NOTE,
-    localCommand: `${windows ? windowsLocal(XMRIG_EXE) : XMRIG_BIN} -o PROXY_HOST:3333 -u ${worker} --nicehash --donate-over-proxy 1 ${KEEPALIVE}`,
+    localCommand: `${windows ? windowsLocal(XMRIG_EXE) : XMRIG_BIN} ${xmrigConfigArg(windows)} -o PROXY_HOST:3333 -u ${worker} --nicehash --donate-over-proxy 1 ${KEEPALIVE}`,
     localNote: `Worker miners connect to this proxy on port 3333 using NiceHash-compatible mode. ${REPLACE_PROXY_HOST}`,
-    notes: `${macos ? "The download selects the current Apple Silicon or Intel archive. " : ""}Use when many XMRig CPU workers share one upstream pool connection. ${SMALL_PROXY_NOTE} MoneroOcean fork keeps proxy aligned with algo switching. Keep fixed GPU miners direct or behind Multi-Miner.`
+    notes: `${macos ? "The download selects the current Apple Silicon or Intel archive. " : ""}Share one upstream connection between XMRig CPU workers. ${SMALL_PROXY_NOTE} Use MoneroOcean XMRig for algo switching; use GPU fixed or Multi-Miner for GPUs.`
   };
 }
 
@@ -428,9 +546,9 @@ function xmrNodeProxyPlan({ os, address, worker, port, portRow }) {
       : "sudo apt-get install git\ngit clone https://github.com/MoneroOcean/xmr-node-proxy.git ~/xmr-node-proxy\ncd ~/xmr-node-proxy\nbash install.sh",
     tlsRunCommand: `cat > config.json <<'JSON'\n${config}\nJSON\nnode proxy.js --config config.json`,
     tlsRunNote: TLS_MODE_NOTE,
-    localCommand: `${XMRIG_BIN} -o PROXY_HOST:3333 -u ${worker}`,
+    localCommand: `${XMRIG_BIN} ${xmrigConfigArg()} -o PROXY_HOST:3333 -u ${worker}`,
     localNote: `Worker miners connect to xmr-node-proxy on port 3333. ${REPLACE_PROXY_HOST}`,
-    notes: `Use for many CPU workers on XMR-style algorithms. ${SMALL_PROXY_NOTE} Generated xmr-node-proxy config is an rx/0 starter config. Add real algo_perf for full switching. Not for Etchash, KawPow, Autolykos2, or XTM/Tari c29.`
+    notes: `Preinstall Node.js 22.9.0+ and npm 11.10.0+ on PATH; install.sh checks them before changing system packages. Use for many CPU workers on XMR-style algorithms. ${SMALL_PROXY_NOTE} Generated xmr-node-proxy config is an rx/0 starter config. Add real algo_perf for full switching. Not for Etchash, KawPow, Autolykos2, or XTM/Tari c29.`
   };
 }
 
@@ -439,7 +557,7 @@ function xmrigTorRun({ os, address, worker, port }) {
     ? "brew install tor && brew services start tor"
     : "sudo apt-get install tor && sudo systemctl enable --now tor";
   return `${setup}
-${XMRIG_BIN} -o ${TOR_MINING_HOST}:${port} -x 127.0.0.1:9050 -u ${address} --rig-id ${worker} ${KEEPALIVE}`;
+${XMRIG_BIN} ${xmrigConfigArg()} -o ${TOR_MINING_HOST}:${port} -x 127.0.0.1:9050 -u ${address} --rig-id ${worker} ${KEEPALIVE}`;
 }
 
 function xmrNodeProxyConfig({ address, port }) {
@@ -503,14 +621,13 @@ function profileId(value, os = LINUX) {
 }
 
 function gpuId(value) {
-  if (value === INTEL) return INTEL;
-  if (value === NVIDIA_AMD || value === "nvidia" || value === "amd") return NVIDIA_AMD;
-  return INTEL;
+  return optionId(value || INTEL, SETUP_GPU_VENDORS, NVIDIA_AMD);
 }
 
 function isIntelGpu(gpu) {
   return gpu === INTEL;
 }
+
 
 function optionId(value, rows, fallback) {
   return rows.some((row) => row[0] === value) ? value : fallback;
@@ -525,11 +642,19 @@ function macXmrigDownload() {
 }
 
 function srbLinuxDownload() {
-  return `${linuxReleaseDownload(SRBMINER_DIR, SRBMINER_RELEASE_API, srbMinerLinuxAsset(), SRBMINER_ARCHIVE)} && ${unpackSrbMinerLinux()}`;
+  return `${linuxReleaseDownload(SRBMINER_DIR, SRBMINER_RELEASE_API, srbMinerLinuxAsset(), SRBMINER_ARCHIVE, ["wget"])} && ${unpackSrbMinerLinux()}`;
 }
 
 function srbWindowsDownload() {
-  return windowsZipDownload(SRBMINER_RELEASE_API, WIN64_ZIP_ASSET, SRBMINER_ZIP, SRBMINER_DIR);
+  return windowsZipDownload(SRBMINER_RELEASE_API, WIN64_ZIP_ASSET, SRBMINER_ZIP, SRBMINER_DIR, SRBMINER_EXE);
+}
+
+function bzminerLinuxDownload() {
+  return `${linuxReleaseDownload(BZMINER_DIR, BZMINER_RELEASE_API, "bzminer_.*_linux\\.tar\\.gz$", BZMINER_ARCHIVE)} && tar xf ${BZMINER_ARCHIVE} --strip-components=1 && chmod +x ${BZMINER}`;
+}
+
+function bzminerWindowsDownload() {
+  return windowsZipDownload(BZMINER_RELEASE_API, "bzminer_.*_windows\\.zip$", BZMINER_ZIP, BZMINER_DIR, BZMINER_EXE);
 }
 
 function lolminerLinuxDownload() {
@@ -537,45 +662,57 @@ function lolminerLinuxDownload() {
 }
 
 function lolminerWindowsDownload() {
-  return windowsZipDownload(LOLMINER_RELEASE_API, WIN64_ZIP_ASSET, LOLMINER_ZIP, LOLMINER_DIR);
+  return windowsZipDownload(LOLMINER_RELEASE_API, WIN64_ZIP_ASSET, LOLMINER_ZIP, LOLMINER_DIR, LOLMINER_EXE);
 }
 
 function momLinuxDownload() {
-  return `sudo apt-get install -y curl
+  return `sudo apt-get install -y curl jq
 mkdir -p ~/${MOM_DIR} && cd ~/${MOM_DIR}
 ${downloadMom()} && chmod +x ${MOM}
 sudo ./install.sh`;
 }
 
 function momWindowsDownload() {
-  return `${windowsAssetDownload(MOM_RELEASE_API, "mom-v.*-win\\.zip$", MOM_ZIP)}
-${windowsExpandFlatten(MOM_ZIP, MOM_DIR, "mdir")}
+  return `${windowsZipDownload(MOM_RELEASE_API, "mom-v.*-win\\.zip$", MOM_ZIP, MOM_DIR, MOM_CMD)}
 .\\install.bat`;
 }
 
-// Expand a release zip and copy its single top-level subfolder's contents into the
-// current directory (some releases nest a versioned folder, some do not).
-function windowsExpandFlatten(zip, dir, varName) {
-  return `Expand-Archive ${zip} -DestinationPath .\\${dir} -Force
-$${varName}=Get-ChildItem .\\${dir} -Directory | ${FIRST_ASSET}
-if ($${varName}) { Copy-Item "$($${varName}.FullName)\\*" . -Recurse -Force } else { Copy-Item ".\\${dir}\\*" . -Recurse -Force }`;
+// Release layouts vary; locate the expected executable and copy its siblings.
+function windowsExpandFlatten(zip, expectedFile) {
+  // Only fixed filenames or our function parameters reach these quoted arguments.
+  return `$stage = Join-Path ([IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
+New-Item -ItemType Directory -Path $stage -ErrorAction Stop | Out-Null
+try {
+  Expand-Archive -LiteralPath "${zip}" -DestinationPath $stage -Force -ErrorAction Stop
+  $miner = @(Get-ChildItem -LiteralPath $stage -Recurse -File -Filter "${expectedFile}" -ErrorAction Stop)
+  if ($miner.Count -ne 1) { throw 'Expected one staged miner file' }
+  Get-ChildItem -LiteralPath $miner[0].Directory.FullName -Force -ErrorAction Stop | Copy-Item -Destination . -Recurse -Force -ErrorAction Stop
+} finally {
+  Remove-Item -LiteralPath $stage -Recurse -Force
+}`;
 }
 
 function multiMinerLinuxDownload(intelGpu) {
-  return `sudo apt-get install -y curl
+  return `sudo apt-get install -y curl jq wget
 mkdir -p ~/${MULTI_MINER_DIR} && cd ~/${MULTI_MINER_DIR}
 ${downloadMultiMinerLinux()} && chmod +x mm
 ${releaseAssetDownload(SRBMINER_RELEASE_API, srbMinerLinuxAsset(), SRBMINER_ARCHIVE)} && ${unpackSrbMinerLinux()}
-${intelGpu ? `mkdir -p ${MOM_DIR} && (cd ${MOM_DIR} && ${downloadMom()} && chmod +x ${MOM} && sudo ./install.sh)` : `${releaseAssetDownload(LOLMINER_RELEASE_API, lolMinerLinuxAsset(), LOLMINER_ARCHIVE)} && ${unpackLolMinerLinux()}`}`;
+${intelGpu ? "" : `${releaseAssetDownload(LOLMINER_RELEASE_API, lolMinerLinuxAsset(), LOLMINER_ARCHIVE)} && ${unpackLolMinerLinux()}`}`;
 }
 
-function multiMinerWindowsDownload(intelGpu) {
-  return `${windowsAssetDownload(MULTI_MINER_RELEASE_API, "mm-v.*-win\\.zip$", "mm.zip")}
-${windowsExtractZip("mm.zip", MULTI_MINER, false)}
+function multiMinerWindowsDownload(intelGpu, bzAlgos) {
+  const expand = (zip, expectedFile) => `Expand-MinerArchive '${zip}' '${expectedFile}'`;
+  const staging = `function Expand-MinerArchive($zip, $expectedFile) {
+${windowsExpandFlatten("$zip", "$expectedFile").replace(/^/gm, "  ")}
+}
+`;
+  return `${staging}${windowsAssetDownload(MULTI_MINER_RELEASE_API, "mm-v.*-win\\.zip$", "mm.zip")}
+${windowsExtractZip("mm.zip", MULTI_MINER, "mm.exe", expand)}
 ${windowsAssetDownload(SRBMINER_RELEASE_API, WIN64_ZIP_ASSET, SRBMINER_ZIP)}
-${windowsExpandFlatten(SRBMINER_ZIP, SRBMINER_DIR, "dir")}
-${intelGpu ? momWindowsDownload() : `${windowsAssetDownload(LOLMINER_RELEASE_API, WIN64_ZIP_ASSET, LOLMINER_ZIP)}
-${windowsExpandFlatten(LOLMINER_ZIP, LOLMINER_DIR, "gdir")}`}`;
+${expand(SRBMINER_ZIP, SRBMINER_EXE)}
+${intelGpu || bzAlgos.includes("c29") ? "" : `${windowsAssetDownload(LOLMINER_RELEASE_API, WIN64_ZIP_ASSET, LOLMINER_ZIP)}
+${expand(LOLMINER_ZIP, LOLMINER_EXE)}`}${bzAlgos.length ? `\n${windowsAssetDownload(BZMINER_RELEASE_API, "bzminer_.*_windows\\.zip$", BZMINER_ZIP)}
+${expand(BZMINER_ZIP, BZMINER_EXE)}` : ""}`;
 }
 
 function xmrigProxyLinuxDownload() {
@@ -587,35 +724,33 @@ function xmrigProxyMacDownload() {
 }
 
 function xmrigProxyWindowsDownload() {
-  return windowsZipDownload(XMRIG_PROXY_RELEASE_API, XMRIG_WINDOWS_ZIP_ASSET, "xmrig-proxy.zip", XMRIG_PROXY);
+  return windowsZipDownload(XMRIG_PROXY_RELEASE_API, XMRIG_WINDOWS_ZIP_ASSET, "xmrig-proxy.zip", XMRIG_PROXY, "xmrig-proxy.exe");
 }
 
-function releaseDownload(dir, api, grepCommand, file) {
-  return `mkdir -p ~/${dir} && cd ~/${dir}
-${releaseAssetDownload(api, grepCommand, file)}`;
-}
-
-function releaseAssetDownload(api, grepCommand, file) {
-  return `url=$(curl -fsSL ${api} | grep ${BROWSER_DOWNLOAD_URL} | ${grepCommand} | head -1 | cut -d '"' -f 4)
-curl -L "$url" -o ${file}`;
+function releaseAssetDownload(api, pattern, file) {
+  const prefix = api.replace("https://api.github.com/repos/", "https://github.com/").replace(/\/releases\/latest$/, "/releases/download/");
+  // Patterns and repositories are fixed recipes; only the architecture's $asset is expanded.
+  const asset = pattern === "$asset" ? '"$asset"' : `'${pattern}'`;
+  return `url=$(set -o pipefail; curl -fsSL ${api} | jq -er --arg asset ${asset} --arg prefix '${prefix}' '.assets | if type == "array" then . else error("Expected release assets") end | map(select(type == "object") | select(.name | type == "string") | select(.name | test($asset; "i")) | .browser_download_url | select(type == "string") | select(startswith($prefix) and test("^https://[-A-Za-z0-9._~:/%+]+$"))) | first') || { echo 'No matching release asset' >&2; exit 1; }
+curl -fL -o ${file} -- "$url"`;
 }
 
 function downloadMultiMinerLinux() {
   return `asset='mm-v.*-lin\\.tar\\.gz'
 case "$(uname -m)" in aarch64|arm64) asset='mm-v.*-lin-arm\\.tar\\.gz';; esac
-${releaseAssetDownload(MULTI_MINER_RELEASE_API, 'grep "$asset"', MULTI_MINER_ARCHIVE)} && tar xf ${MULTI_MINER_ARCHIVE}`;
+${releaseAssetDownload(MULTI_MINER_RELEASE_API, "$asset", MULTI_MINER_ARCHIVE)} && tar xf ${MULTI_MINER_ARCHIVE}`;
 }
 
 function downloadMom() {
-  return `${releaseAssetDownload(MOM_RELEASE_API, "grep 'mom-v.*-lin\\.tgz'", MOM_ARCHIVE)} && tar --strip-components=1 -xf ${MOM_ARCHIVE}`;
+  return `${releaseAssetDownload(MOM_RELEASE_API, "mom-v.*-lin\\.tgz$", MOM_ARCHIVE)} && tar --strip-components=1 -xf ${MOM_ARCHIVE}`;
 }
 
 function srbMinerLinuxAsset() {
-  return "grep -Ei 'SRBMiner-Multi-.*-Linux\\.tar\\.(gz|xz)'";
+  return "SRBMiner-Multi-.*-Linux\\.tar\\.(gz|xz)$";
 }
 
 function lolMinerLinuxAsset() {
-  return "grep -E 'lolMiner_v.*_Lin64\\.tar\\.gz'";
+  return "lolMiner_v.*_Lin64\\.tar\\.gz$";
 }
 
 function unpackSrbMinerLinux() {
@@ -626,34 +761,36 @@ function unpackLolMinerLinux() {
   return `tar xf ${LOLMINER_ARCHIVE} && cp "$(find . -name lolMiner -type f | head -1)" ${LOLMINER} && chmod +x ${LOLMINER}`;
 }
 
-function linuxReleaseDownload(dir, api, grepCommand, file) {
-  return `sudo apt-get install curl
-${releaseDownload(dir, api, grepCommand, file)}`;
+function linuxReleaseDownload(dir, api, pattern, file, extraPackages = []) {
+  return `sudo apt-get install ${["curl", "jq", ...extraPackages].join(" ")}
+mkdir -p ~/${dir} && cd ~/${dir}
+${releaseAssetDownload(api, pattern, file)}`;
 }
 
-function windowsZipDownload(api, pattern, file, dir) {
+function windowsZipDownload(api, pattern, file, dir, expectedFile) {
   return `${windowsAssetDownload(api, pattern, file)}
-${windowsExtractZip(file, dir)}`;
+${windowsExtractZip(file, dir, expectedFile)}`;
 }
 
-function windowsExtractZip(file, dir, enterChild = true) {
-  return `New-Item -ItemType Directory -Force ${dir} | Out-Null
-Expand-Archive ${file} -DestinationPath .\\${dir} -Force
-${enterChild ? `$dir=Get-ChildItem .\\${dir} -Directory | ${FIRST_ASSET}
-if ($dir) { Set-Location $dir.FullName } else { Set-Location .\\${dir} }` : `Set-Location .\\${dir}`}`;
+function windowsExtractZip(file, dir, expectedFile, expand = windowsExpandFlatten) {
+  return `New-Item -ItemType Directory -Force ${dir} -ErrorAction Stop | Out-Null
+Set-Location -LiteralPath .\\${dir} -ErrorAction Stop
+${expand(`..\\${file}`, expectedFile)}`;
 }
 
 function macTarDownload(dir, api, file, binary) {
-  return `mkdir -p ~/${dir} && cd ~/${dir}
-asset='mac\\.tar\\.gz'
-case "$(uname -m)" in x86_64|amd64) asset='mac-intel\\.tar\\.gz';; esac
-url=$(curl -fsSL ${api} | grep ${BROWSER_DOWNLOAD_URL} | grep "$asset" | head -1 | cut -d '"' -f 4)
-curl -L "$url" -o ${file} && tar xf ${file} && chmod +x ${binary}
+  return `brew install jq
+mkdir -p ~/${dir} && cd ~/${dir}
+asset='mac\\.tar\\.gz$'
+case "$(uname -m)" in x86_64|amd64) asset='mac-intel\\.tar\\.gz$';; esac
+${releaseAssetDownload(api, "$asset", file)} && tar xf ${file} && chmod +x ${binary}
 xattr -d com.apple.quarantine ${binary} 2>/dev/null || true`;
 }
 
 function windowsAssetDownload(api, pattern, file) {
-  return `$r=Invoke-RestMethod ${api}
+  const prefix = api.replace("https://api.github.com/repos/", "https://github.com/").replace(/\/releases\/latest$/, "/releases/download/");
+  return `$r=Invoke-RestMethod ${api} -ErrorAction Stop
 $a=$r.assets | Where-Object name -match '${pattern}' | ${FIRST_ASSET}
-iwr $a.${BROWSER_DOWNLOAD_URL} -OutFile ${file}`;
+if (!$a -or $a.${BROWSER_DOWNLOAD_URL} -isnot [string] -or !$a.${BROWSER_DOWNLOAD_URL}.StartsWith('${prefix}') -or $a.${BROWSER_DOWNLOAD_URL} -cnotmatch '^https://[-A-Za-z0-9._~:/%+]+\\z') { throw 'No matching release asset' }
+iwr $a.${BROWSER_DOWNLOAD_URL} -OutFile ${file} -ErrorAction Stop`;
 }

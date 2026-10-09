@@ -23,6 +23,7 @@ export async function setupView() {
     profile: query.profile,
     gpu: query.gpu,
     algo: query.algo,
+    miner: query.miner,
     hashrate: query.rate,
     hashrateUnit: query.unit,
     ports: state.s
@@ -39,6 +40,7 @@ export async function setupView() {
           <div class="setup-form-row">
             ${setupSelect("setup-gpu", "GPU", SETUP_GPU_VENDORS, plan.selection.gpu, `setup-gpu-field ${showGpu ? "" : "hidden"}`)}
             ${setupSelect("setup-algo", "Algorithm", setupAlgoOptions(plan.selection.profile), plan.selection.algo, `setup-algo-field ${showAlgo ? "" : "hidden"}`)}
+            ${setupSelect("setup-miner", "Miner", plan.minerOptions || [], plan.selection.miner, `setup-miner-field ${showAlgo ? "" : "hidden"}`)}
             <label class=setup-hashrate>XMR h/r<input id=setup-hashrate-input value="${escapeHtml(String(plan.selection.hashrate))}" inputmode=decimal autocomplete=off></label>
             <label class="setup-unit">Unit<select id="setup-hashrate-unit">${optionMarkup(SETUP_HASHRATE_UNITS, plan.selection.hashrateUnit)}</select></label>
           </div>
@@ -92,14 +94,13 @@ export function bindSetupEvents() {
   });
   on(byId("setup-algo"), "change", () => {
     resetSetupHashrate();
-    updateSetupCommand();
+    updateSetupCommand(true);
   });
-  ["setup-hashrate-unit"].forEach((id) => {
-    on(byId(id), "change", updateSetupCommand);
-  });
+  on(byId("setup-miner"), "change", () => updateSetupCommand());
+  on(byId("setup-hashrate-unit"), "change", updateSetupCommand);
   on(byId("setup-gpu"), "change", () => {
     resetSetupHashrate();
-    updateSetupCommand();
+    updateSetupCommand(true);
   });
   on(qs(".setup-controls"), "click", (event) => {
     const button = event.target.closest("[data-setup-input]");
@@ -108,16 +109,17 @@ export function bindSetupEvents() {
     if (!input) return;
     input.value = button.dataset.setupValue || "";
     resetSetupHashrate();
-    updateSetupCommand();
+    updateSetupCommand(true);
   });
 }
 
-function updateSetupCommand() {
+function updateSetupCommand(resetMiner = false) {
   const plan = setupPlan({
     os: byId("setup-os")?.value,
     profile: byId("setup-profile")?.value,
     gpu: byId("setup-gpu")?.value,
     algo: byId("setup-algo")?.value,
+    miner: resetMiner === true ? "" : byId("setup-miner")?.value,
     address: byId("setup-wallet")?.value,
     hashrate: byId("setup-hashrate-input")?.value,
     hashrateUnit: byId("setup-hashrate-unit")?.value,
@@ -165,6 +167,11 @@ function syncSetupInputs(plan) {
     algo.innerHTML = optionMarkup(setupAlgoOptions(plan.selection.profile), plan.selection.algo);
     algo.value = plan.selection.algo;
   }
+  const miner = byId("setup-miner");
+  if (miner) {
+    miner.innerHTML = optionMarkup(plan.minerOptions || [], plan.selection.miner);
+    miner.value = plan.selection.miner;
+  }
   const tabs = byId("setup-tabs-top");
   if (tabs) {
     tabs.innerHTML = setupTopButtons(plan);
@@ -172,6 +179,7 @@ function syncSetupInputs(plan) {
   }
   tog(qs(".setup-gpu-field"), "hidden", !setupShowsGpu(plan.selection.profile));
   tog(qs(".setup-algo-field"), "hidden", !setupShowsAlgo(plan.selection.profile));
+  tog(qs(".setup-miner-field"), "hidden", !setupShowsAlgo(plan.selection.profile));
 }
 
 function syncSetupRoute(plan) {
@@ -180,6 +188,7 @@ function syncSetupRoute(plan) {
   if (isXmrAddress(plan.selection.address)) query.addr = plan.selection.address;
   if (setupShowsGpu(plan.selection.profile)) query.gpu = plan.selection.gpu;
   if (setupShowsAlgo(plan.selection.profile)) query.algo = plan.selection.algo;
+  if (plan.selection.miner) query.miner = plan.selection.miner;
   const params = Object.entries(query).map(([key, value]) => `${key}=${value}`).join("&");
   history.replaceState(null, "", `#/setup?${params}`);
   state.r.q = query;

@@ -144,8 +144,6 @@ NODE
   printf 'Updated nginx CSP hash in %s to %s; backup: %s\n' "$target" "$hash" "$backup"
 }
 
-./scripts/build-static.sh
-
 npm test
 
 SUDO=""
@@ -167,6 +165,6 @@ const parts = ["build/index.html", "build/style.css", "build/script.js"].map((pa
 process.stdout.write(String(gzipSync(Buffer.concat(parts)).byteLength));
 NODE
 )"
-printf 'Build gzip packed size: %s bytes / 40000 byte target\n' "$PACKED_SIZE"
+printf 'Build gzip packed size: %s bytes\n' "$PACKED_SIZE"
 printf 'Deployed to /var/www/mo-pool-ui\n'
 printf 'Current JSON-LD CSP hash is %s\n' "$CSP_HASH"

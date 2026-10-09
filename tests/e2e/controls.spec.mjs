@@ -38,7 +38,10 @@ test("table sorting, paging, and graph controls produce visible effects", async 
 
   await openApp(page, "#/setup?os=linux&profile=xmrig-mo");
   await page.locator('[data-setup-value="srb-gpu"]').click();
-  await expect(page.locator("#setup-run-plain")).toContainText(/SRBMiner/i);
+  await expect(page.locator("#setup-gpu")).toHaveValue("intel");
+  await expect(page.locator("#setup-miner")).toHaveValue("mom");
+  await expect(page.locator("#setup-run-plain")).toContainText(/^MOM_GPU_BACKEND=intel \.\/mom mine /);
+  await expect(page.locator("#setup-run-plain")).toContainText(/ --job\.algo autolykos2 --bench_algo_params 0$/);
 
   await openApp(page, "#/calc?rate=2&unit=kh");
   await page.locator("#ch").fill("4");

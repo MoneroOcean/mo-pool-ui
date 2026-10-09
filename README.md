@@ -26,10 +26,12 @@ The UI is the frontend companion to [nodejs-pool](https://github.com/MoneroOcean
 
 - Pool overview, coin list, blocks, payments, uptime, and profit calculator views.
 - Wallet dashboard with workers, hashrate charts, block rewards, payout history, and wallet settings helpers.
-- Miner setup command generation for MoneroOcean XMRig, SRBMiner-Multi, Multi-Miner, xmrig-proxy, and xmr-node-proxy.
+- Miner and proxy setup generation for direct mining and managed algorithm switching.
 - Hash-route navigation with SEO metadata and canonical URL updates.
 - Local display preferences for theme and explanatory text.
 - Focused Node.js tests for routing, formatting, wallet behavior, setup output, scheduler behavior, build invariants, and pool-specific calculations.
+
+GPU recommendations reflect tested cards, not universal vendor support.
 
 ## Architecture
 
@@ -77,16 +79,22 @@ npm run build:static
 npm test
 ```
 
-Runs the Node.js unit and integration suite (`tests/all.mjs`) using the built-in `node --test` runner with a single-concurrency spec reporter.
+Runs the Node.js unit and integration suite plus the browser checks registered by `tests/all.mjs` using the built-in `node --test` runner with a single-concurrency spec reporter.
+
+Linux/macOS shell tests require Bash and `jq` (`sudo apt-get install jq` or `brew install jq`).
 
 Additional targets:
 
 ```sh
 npm run test:unit   # focused Node.js unit suite
-npm run test:e2e    # builds the static bundle, then runs Playwright e2e tests
+npm run test:e2e    # browser-only target: builds the static bundle, then runs Playwright e2e tests
 ```
 
-The end-to-end target builds the static output first and drives a real browser via Playwright, so it requires the Playwright browser binaries to be installed (`npx playwright install`) and is heavier than the default unit run.
+Both `npm test` and `npm run test:e2e` require the Playwright browser binaries (`npx playwright install`). `npm run test:unit` remains the focused Node.js-only suite.
+
+To check an extracted MoM GitHub release without mining, set `MOM_TEST_RELEASE_ROOT`
+(optionally `MOM_TEST_RELEASE_VERSION`) and run `node --test tests/mom-release.mjs`.
+Windows archive-staging checks run when PowerShell is available.
 
 ## Contributors
 
