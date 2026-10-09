@@ -164,7 +164,7 @@ export function setupGpuMinerOptions({ os = LINUX, gpu = INTEL, algo = GPU_ALGO_
   const normalizedAlgo = normalizeGpuAlgo(algo);
   const intel = isIntelGpu(normalizedGpu);
   if (profile === MULTI_MINER) {
-    return (intel ? ["mom", MULTI_MINER] : [MULTI_MINER, "mom"])
+    return ["mom", MULTI_MINER]
       .map((miner) => [miner, GPU_MINER_LABELS[miner]]);
   }
   const srbSupported = gpuMinerSupport("srbminer", normalizedGpu, normalizedAlgo, os);
@@ -692,6 +692,7 @@ function lolminerWindowsDownload() {
 function momLinuxDownload() {
   return `sudo apt-get install -y curl jq
 mkdir -p ~/${MOM_DIR} && cd ~/${MOM_DIR}
+${unixReleaseDownloadHelper()}
 ${downloadMom()} && chmod +x ${MOM}
 sudo ./install.sh`;
 }
@@ -719,9 +720,12 @@ try {
 function multiMinerLinuxDownload(intelGpu) {
   return `sudo apt-get install -y curl jq wget
 mkdir -p ~/${MULTI_MINER_DIR} && cd ~/${MULTI_MINER_DIR}
+${unixReleaseDownloadHelper()}
 ${downloadMultiMinerLinux()} && chmod +x mm
-${releaseAssetDownload(SRBMINER_RELEASE_API, srbMinerLinuxAsset(), SRBMINER_ARCHIVE)} && ${unpackSrbMinerLinux()}
-${intelGpu ? "" : `${releaseAssetDownload(LOLMINER_RELEASE_API, lolMinerLinuxAsset(), LOLMINER_ARCHIVE)} && ${unpackLolMinerLinux()}`}`;
+${releaseAssetDownload(SRBMINER_RELEASE_API, srbMinerLinuxAsset(), SRBMINER_ARCHIVE)} &&
+  ${unpackSrbMinerLinux()}
+${intelGpu ? "" : `${releaseAssetDownload(LOLMINER_RELEASE_API, lolMinerLinuxAsset(), LOLMINER_ARCHIVE)} &&
+  ${unpackLolMinerLinux()}`}`;
 }
 
 function multiMinerWindowsDownload(intelGpu, bzAlgos) {
@@ -751,18 +755,34 @@ function xmrigProxyWindowsDownload() {
   return windowsZipDownload(XMRIG_PROXY_RELEASE_API, XMRIG_WINDOWS_ZIP_ASSET, "xmrig-proxy.zip", XMRIG_PROXY, "xmrig-proxy.exe");
 }
 
+function unixReleaseDownloadHelper() {
+  return `download_release() {
+  local url
+  url=$(set -o pipefail
+    curl -fsSL "https://api.github.com/repos/$1/releases/latest" |
+      jq -er --arg asset "$2" --arg prefix "https://github.com/$1/releases/download/" '
+        .assets | if type == "array" then . else error("Expected release assets") end
+        | map(select(type == "object") | select(.name | type == "string")
+          | select(.name | test($asset; "i")) | .browser_download_url
+          | select(type == "string")
+          | select(startswith($prefix) and test("^https://[-A-Za-z0-9._~:/%+]+$")))
+        | first') || { echo 'No matching release asset' >&2; exit 1; }
+  curl -fL -o "$3" -- "$url"
+}`;
+}
+
 function releaseAssetDownload(api, pattern, file) {
-  const prefix = api.replace("https://api.github.com/repos/", "https://github.com/").replace(/\/releases\/latest$/, "/releases/download/");
+  const repo = api.replace(GITHUB_RELEASE_API, "").replace(/\/releases\/latest$/, "");
   // Patterns and repositories are fixed recipes; only the architecture's $asset is expanded.
   const asset = pattern === "$asset" ? '"$asset"' : `'${pattern}'`;
-  return `url=$(set -o pipefail; curl -fsSL ${api} | jq -er --arg asset ${asset} --arg prefix '${prefix}' '.assets | if type == "array" then . else error("Expected release assets") end | map(select(type == "object") | select(.name | type == "string") | select(.name | test($asset; "i")) | .browser_download_url | select(type == "string") | select(startswith($prefix) and test("^https://[-A-Za-z0-9._~:/%+]+$"))) | first') || { echo 'No matching release asset' >&2; exit 1; }
-curl -fL -o ${file} -- "$url"`;
+  return `download_release ${repo} ${asset} ${file}`;
 }
 
 function downloadMultiMinerLinux() {
   return `asset='mm-v.*-lin\\.tar\\.gz'
 case "$(uname -m)" in aarch64|arm64) asset='mm-v.*-lin-arm\\.tar\\.gz';; esac
-${releaseAssetDownload(MULTI_MINER_RELEASE_API, "$asset", MULTI_MINER_ARCHIVE)} && tar xf ${MULTI_MINER_ARCHIVE}`;
+${releaseAssetDownload(MULTI_MINER_RELEASE_API, "$asset", MULTI_MINER_ARCHIVE)} &&
+  tar xf ${MULTI_MINER_ARCHIVE}`;
 }
 
 function downloadMom() {
@@ -788,6 +808,7 @@ function unpackLolMinerLinux() {
 function linuxReleaseDownload(dir, api, pattern, file, extraPackages = []) {
   return `sudo apt-get install ${["curl", "jq", ...extraPackages].join(" ")}
 mkdir -p ~/${dir} && cd ~/${dir}
+${unixReleaseDownloadHelper()}
 ${releaseAssetDownload(api, pattern, file)}`;
 }
 
@@ -805,6 +826,7 @@ ${expand(`..\\${file}`, expectedFile)}`;
 function macTarDownload(dir, api, file, binary) {
   return `brew install jq
 mkdir -p ~/${dir} && cd ~/${dir}
+${unixReleaseDownloadHelper()}
 asset='mac\\.tar\\.gz$'
 case "$(uname -m)" in x86_64|amd64) asset='mac-intel\\.tar\\.gz$';; esac
 ${releaseAssetDownload(api, "$asset", file)} && tar xf ${file} && chmod +x ${binary}

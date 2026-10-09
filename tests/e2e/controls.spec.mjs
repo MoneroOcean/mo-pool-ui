@@ -69,7 +69,7 @@ test("GPU multi miner choices update commands and survive route reloads", async 
     for (const gpu of ["intel", "nvidia", "amd"]) {
       await page.locator("#setup-gpu").selectOption(gpu);
       await expect(miner).toHaveValue("multi-miner");
-      await expect(miner.locator("option")).toHaveText(gpu === "intel" ? ["MoM", "Multi-Miner"] : ["Multi-Miner", "MoM"]);
+      await expect(miner.locator("option")).toHaveText(["MoM", "Multi-Miner"]);
       await page.locator("#setup-hashrate-input").fill("7");
       await miner.selectOption("mom");
       await expectHashParams(page, { os, profile: "multi-miner", gpu, miner: "mom", rate: "7" });

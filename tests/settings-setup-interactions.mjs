@@ -400,7 +400,7 @@ test.describe("settings and setup interactions", { concurrency: false }, () => {
         gpuWrap.children[0].value = gpu;
         await gpuWrap.children[0].dispatchEvent(new TestEvent("change"));
         assert.equal(minerWrap.children[0].value, "multi-miner", "GPU changes reset the miner");
-        assert.equal(minerWrap.children[0].innerHTML.indexOf('value="mom"') < minerWrap.children[0].innerHTML.indexOf('value="multi-miner"'), gpu === "intel");
+        assert.equal(minerWrap.children[0].innerHTML.indexOf('value="mom"') < minerWrap.children[0].innerHTML.indexOf('value="multi-miner"'), true);
         rate.value = "7";
         await rate.dispatchEvent(new TestEvent("input"));
         for (const miner of ["mom", "multi-miner"]) {

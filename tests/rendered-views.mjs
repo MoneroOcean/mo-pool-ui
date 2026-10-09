@@ -568,7 +568,7 @@ test.describe("rendered views, links, charts, and coins", { concurrency: false }
               const selectedMiner = miner === "mom" ? "mom" : "multi-miner";
               assert.match(selected, new RegExp(`<option value="${selectedMiner}" selected>`));
               const options = selected.match(/<select id="setup-miner">([\s\S]*?)<\/select>/)[1];
-              assert.equal(options.indexOf('value="mom"') < options.indexOf('value="multi-miner"'), gpu === "intel");
+              assert.equal(options.indexOf('value="mom"') < options.indexOf('value="multi-miner"'), true);
               if (miner === "mom") {
                 assert.match(selected, new RegExp(`MOM_GPU_BACKEND[^\\n]*${gpu}`));
                 assert.doesNotMatch(selected, /--job\.algo|--bench_algo_params 0/);

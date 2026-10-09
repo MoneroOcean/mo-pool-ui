@@ -49,13 +49,19 @@ function runReleaseSelector(metadata, { os = "linux", profile = "xmrig-mo", expe
     writeFileSync(join(root, "curl"), '#!/bin/bash\nif [[ "$1" == -fsSL ]]; then /bin/cat "$RELEASE_FIXTURE"; exit "$FIXTURE_HTTP_EXIT"; fi\nprintf "%s\\n" "$@" > "$DOWNLOAD_CAPTURE"\n', { mode: 0o700 });
     const command = setupPlanWithPorts({ os, profile, gpu, miner, algo }).downloadCommand;
     const lines = command.split("\n");
-    const first = lines.map((line, index) => line.startsWith("url=$(") ? index : -1).filter((index) => index >= 0)[selectorIndex];
-    const last = lines.findIndex((line, index) => index > first && line.startsWith("curl "));
-    assert.ok(first >= 0 && last > first);
-    const script = lines.slice(first, last + 1).join("\n").split(" && tar")[0];
+    const first = lines.indexOf("download_release() {");
+    const last = lines.findIndex((line, index) => index > first && line === "}");
+    const call = lines.filter(line => line.startsWith("download_release "))[selectorIndex];
+    assert.ok(first >= 0 && last > first && call, "bind the actual shared helper and selected release call");
+    const script = `${lines.slice(first, last + 1).join("\n")}\n${call.split(" &&")[0]}`;
     const result = spawnSync("bash", ["-c", script], { cwd: root, encoding: "utf8", timeout: 5000,
       env: { ...process.env, PATH: `${root}:${process.env.PATH}`, RELEASE_FIXTURE: fixture, DOWNLOAD_CAPTURE: capture, FIXTURE_HTTP_EXIT: String(httpExit), asset: architectureAsset || (os === "macos" ? "mac\\.tar\\.gz$" : "") } });
     const args = existsSync(capture) ? readFileSync(capture, "utf8").trim().split("\n") : [];
+    assert.equal(result.stdout, "", "release selection must not emit its URL on stdout");
+    if (args.length) {
+      assert.equal(args.length, 5);
+      assert.deepEqual([args[0], args[1], args[3]], ["-fL", "-o", "--"]);
+    }
     return { exit: result.status, downloaded: args.length > 0, selectedExpected: args.includes(expectedUrl), output: result.stderr, unsafeMarkerCreated: existsSync(join(root, "unsafe-marker")) };
   } finally { rmSync(root, { recursive: true, force: true }); }
 }
@@ -214,9 +220,9 @@ function setupRunCommands(plan) {
     .join("\n");
 }
 
-test("GPU auto switching offers vendor-ordered miners without changing the Multi-Miner default", () => {
+test("GPU auto switching offers MoM first for every vendor without changing the Multi-Miner default", () => {
   for (const os of ["linux", "windows"]) for (const gpu of ["intel", "amd", "nvidia"]) {
-    const expected = gpu === "intel" ? ["mom", "multi-miner"] : ["multi-miner", "mom"];
+    const expected = ["mom", "multi-miner"];
     for (const miner of [undefined, "", "invalid", "srbminer", "multi-miner", "mom"]) {
       const plan = setupPlanWithPorts({ profile: "multi-miner", os, gpu, miner });
       assert.deepEqual(plan.minerOptions.map(([id]) => id), expected, `${os}/${gpu}/${miner}`);
@@ -234,7 +240,7 @@ test("explicit GPU auto MoM reuses its installer and switches directly without a
     const fixed = setupPlanWithPorts({ ...options, profile: "srb-gpu", algo: "c29" });
     assert.equal(plan.downloadCommand, fixed.downloadCommand, `${os}/${gpu}/installer`);
     assert.equal(plan.downloadNote, fixed.downloadNote);
-    assert.match(plan.downloadCommand, /MoneroOcean\/mo-miner\/releases\/latest/);
+    assert.match(plan.downloadCommand, /(?:download_release MoneroOcean\/mo-miner |MoneroOcean\/mo-miner\/releases\/latest)/);
     assert.match(plan.downloadCommand, os === "windows" ? /\.\\install\.bat/ : /sudo \.\/install\.sh/);
     assert.doesNotMatch(plan.downloadCommand, /multi-miner|SRBMiner|lolMiner|bzminer/);
     for (const [command, tls] of [[plan.plainRunCommand, false], [plan.tlsRunCommand, true]]) {
@@ -328,6 +334,30 @@ test("Multi-Miner SRBMiner variable simplification preserves expanded child comm
 });
 
 test.describe("setup, settings, uptime, and copy", { concurrency: false }, () => {
+  test("Unix download snippets share one readable release helper", () => {
+    const options = [
+      ...["linux", "macos"].flatMap(os => ["xmrig-mo", "xmrig-proxy"].map(profile => ({ os, profile }))),
+      ...["mom", "bzminer", "srbminer", "lolminer"].map(miner => ({ os: "linux", profile: "srb-gpu", gpu: "nvidia", algo: miner === "srbminer" ? "kawpow" : "c29", miner })),
+      ...["intel", "amd", "nvidia"].map(gpu => ({ os: "linux", profile: "multi-miner", gpu }))
+    ];
+    let sharedHelper = "";
+    for (const args of options) {
+      const command = setupPlanWithPorts(args).downloadCommand;
+      const helpers = [...command.matchAll(/^download_release\(\) \{\n[\s\S]*?^\}/gm)];
+      assert.equal(helpers.length, 1, `${args.os}/${args.profile}/${args.miner || args.gpu || ""}/one helper`);
+      if (!sharedHelper) sharedHelper = helpers[0][0];
+      assert.equal(helpers[0][0], sharedHelper, "all Unix recipes reuse the same validating download helper");
+      assert.equal((command.match(/jq -er/g) || []).length, 1);
+      if (args.profile === "multi-miner") {
+        assert.ok(Math.max(...command.split("\n").map(line => line.length)) <= 140, "Multi-Miner download lines stay readable");
+        const calls = command.split("\n").filter(line => line.startsWith("download_release "));
+        assert.equal(calls.length, args.gpu === "intel" ? 2 : 3);
+        assert.ok(calls.every(line => line.endsWith(" &&")), "download/extraction chains wrap at the call boundary");
+        assert.match(calls[0], /^download_release MoneroOcean\/multi-miner "\$asset" /);
+      }
+    }
+  });
+
   test("setup output and ports mapping include required miners and ports", () => {
     assert.equal(COIN_EXPLORERS[18081], "https://xmrchain.net");
     assert.equal(COIN_EXPLORERS[8645], "https://etc.blockscout.com");
@@ -369,7 +399,7 @@ test.describe("setup, settings, uptime, and copy", { concurrency: false }, () =>
     assert.doesNotMatch(setupPlanWithPorts({ profile: "xmrig-mo", os: "linux" }).torCommand, /--coin monero| -p tor|YOUR_XMR_WALLET|9150|do not add --tls|First run may benchmark|setup-step -ltn|Use 127\.0\.0\.1:9050|:20128|--tls/);
     assert.match(setupPlanWithPorts({ profile: "xmrig-mo", os: "linux" }).notes, /Keep config\.json beside XMRig/);
     assert.match(setupPlanWithPorts({ profile: "xmrig-mo", os: "linux" }).downloadCommand, /sudo apt-get install curl/);
-    assert.match(setupPlanWithPorts({ profile: "xmrig-mo", os: "linux" }).downloadCommand, /--arg asset 'lin-compat\\\.tar\\\.gz\$'/);
+    assert.match(setupPlanWithPorts({ profile: "xmrig-mo", os: "linux" }).downloadCommand, /download_release MoneroOcean\/xmrig 'lin-compat\\\.tar\\\.gz\$' xmrig\.tar\.gz/);
     assert.match(setupPlanWithPorts({ profile: "xmrig-mo", os: "linux" }).downloadCommand, /sudo apt-get install curl jq/);
     assert.doesNotMatch(setupPlanWithPorts({ profile: "xmrig-mo", os: "linux" }).downloadCommand, /lin64/);
     assert.match(setupPlanWithPorts({ profile: "xmrig-mo", os: "linux" }).downloadCommand, /tar xf xmrig\.tar\.gz && chmod \+x xmrig/);
@@ -387,7 +417,7 @@ test.describe("setup, settings, uptime, and copy", { concurrency: false }, () =>
     assert.doesNotMatch(setupPlanWithPorts({ profile: "multi-miner", os: "windows" }).plainRunCommand || "", /Open Windows PowerShell/);
     assert.match(setupPlanWithPorts({ profile: "xmrig-mo", os: "macos" }).downloadCommand, /asset='mac\\\.tar\\\.gz\$'/);
     assert.match(setupPlanWithPorts({ profile: "xmrig-mo", os: "macos" }).downloadCommand, /x86_64\|amd64.*asset='mac-intel\\\.tar\\\.gz\$'/);
-    assert.match(setupPlanWithPorts({ profile: "xmrig-mo", os: "macos" }).downloadCommand, /jq -er --arg asset "\$asset"/);
+    assert.match(setupPlanWithPorts({ profile: "xmrig-mo", os: "macos" }).downloadCommand, /download_release MoneroOcean\/xmrig "\$asset" xmrig\.tar\.gz/);
     assert.doesNotMatch(setupPlanWithPorts({ profile: "xmrig-mo", os: "macos" }).downloadCommand, /mac64/);
     assert.match(setupPlanWithPorts({ profile: "xmrig-mo", os: "macos" }).downloadCommand, /xattr -d com\.apple\.quarantine xmrig/);
     assert.equal(setupPlanWithPorts({ profile: "xmrig-mo", os: "macos" }).downloadNote, "");
@@ -454,7 +484,7 @@ test.describe("setup, settings, uptime, and copy", { concurrency: false }, () =>
     assert.match(setupPlanWithPorts({ profile: "srb-gpu", os: "windows", gpu: "intel", algo: "c29" }).plainRunCommand, /^\$env:MOM_GPU_BACKEND='intel'; & \.\\mom\.cmd mine gulf\.moneroocean\.stream:10002 .*--job\.algo c29 --bench_algo_params 0/);
     assert.match(setupPlanWithPorts({ profile: "srb-gpu", os: "windows", gpu: "intel", algo: "c29", address: "ADDR; Start-Process calc; #" }).plainRunCommand, /\.\\mom\.cmd mine gulf\.moneroocean\.stream:10002 YOUR_XMR_ADDRESS /);
     assert.doesNotMatch(setupPlanWithPorts({ profile: "srb-gpu", os: "windows", gpu: "intel", algo: "c29" }).plainRunCommand, /mom\.exe|new\.algo_param/);
-    assert.match(setupPlanWithPorts({ profile: "srb-gpu", gpu: "intel", algo: "c29" }).downloadCommand, /MoneroOcean\/mo-miner\/releases\/latest/);
+    assert.match(setupPlanWithPorts({ profile: "srb-gpu", gpu: "intel", algo: "c29" }).downloadCommand, /download_release MoneroOcean\/mo-miner /);
     assert.match(setupPlanWithPorts({ profile: "srb-gpu", gpu: "intel", algo: "c29" }).downloadCommand, /mom-v\.\*-lin\\\.tgz/);
     assert.match(setupPlanWithPorts({ profile: "srb-gpu", gpu: "intel", algo: "c29" }).downloadCommand, /sudo \.\/install\.sh/);
     assert.match(setupPlanWithPorts({ profile: "srb-gpu", os: "windows", gpu: "intel", algo: "c29" }).downloadCommand, /\.\\install\.bat/);
@@ -467,13 +497,13 @@ test.describe("setup, settings, uptime, and copy", { concurrency: false }, () =>
     assert.equal(gpuC29LolPlan.selection.miner, "lolminer");
     assert.match(gpuC29LolPlan.plainRunCommand, /^\.\/lolMiner --algo CR29/);
     assert.match(gpuC29LolPlan.downloadCommand, /Lolliedieb\/lolMiner-releases/);
-    assert.match(setupPlanWithPorts({ profile: "srb-gpu", gpu: "gpu", algo: "c29" }).downloadCommand, /bzminer\/bzminer\/releases\/latest/);
-    assert.doesNotMatch(setupPlanWithPorts({ profile: "srb-gpu", gpu: "gpu", algo: "c29" }).downloadCommand, /Lolliedieb\/lolMiner-releases|MoneroOcean\/mo-miner\/releases\/latest/);
+    assert.match(setupPlanWithPorts({ profile: "srb-gpu", gpu: "gpu", algo: "c29" }).downloadCommand, /download_release bzminer\/bzminer /);
+    assert.doesNotMatch(setupPlanWithPorts({ profile: "srb-gpu", gpu: "gpu", algo: "c29" }).downloadCommand, /Lolliedieb\/lolMiner-releases|MoneroOcean\/mo-miner/);
     assert.equal(setupPlanWithPorts({ profile: "meta-miner", gpu: "gpu" }).selection.profile, "multi-miner");
     assert.doesNotMatch(setupPlanWithPorts({ profile: "multi-miner", gpu: "gpu" }).tlsRunCommand, /mm\.json/);
     assert.match(setupPlanWithPorts({ profile: "multi-miner", gpu: "gpu" }).downloadCommand, /sudo apt-get install -y curl/);
     assert.doesNotMatch(setupPlanWithPorts({ profile: "multi-miner", gpu: "gpu" }).downloadCommand, /nodejs|git clone --depth 1/);
-    assert.match(setupPlanWithPorts({ profile: "multi-miner", gpu: "gpu" }).downloadCommand, /MoneroOcean\/multi-miner\/releases\/latest/);
+    assert.match(setupPlanWithPorts({ profile: "multi-miner", gpu: "gpu" }).downloadCommand, /download_release MoneroOcean\/multi-miner /);
     assert.match(setupPlanWithPorts({ profile: "multi-miner", gpu: "gpu" }).downloadCommand, /uname -m/);
     assert.match(setupPlanWithPorts({ profile: "multi-miner", gpu: "gpu" }).downloadCommand, /mm-v\.\*-lin\\\.tar\\\.gz/);
     assert.match(setupPlanWithPorts({ profile: "multi-miner", gpu: "gpu" }).downloadCommand, /mm-v\.\*-lin-arm\\\.tar\\\.gz/);
@@ -481,7 +511,7 @@ test.describe("setup, settings, uptime, and copy", { concurrency: false }, () =>
     assert.match(setupPlanWithPorts({ profile: "multi-miner", gpu: "gpu" }).downloadCommand, /Lolliedieb\/lolMiner-releases/);
     assert.match(setupPlanWithPorts({ profile: "multi-miner", gpu: "intel" }).downloadCommand, /sudo apt-get install -y curl/);
     assert.doesNotMatch(setupPlanWithPorts({ profile: "multi-miner", gpu: "intel" }).downloadCommand, /docker\.io/);
-    assert.ok(!/MoneroOcean\/mo-miner\/releases\/latest/.test(setupPlanWithPorts({ profile: "multi-miner", gpu: "intel" }).downloadCommand), 'MM must omit MoM downloads, wrappers, and setup instructions');
+    assert.ok(!/MoneroOcean\/mo-miner/.test(setupPlanWithPorts({ profile: "multi-miner", gpu: "intel" }).downloadCommand), 'MM must omit MoM downloads, wrappers, and setup instructions');
     assert.ok(!/mom-v\.\*-lin\\\.tgz/.test(setupPlanWithPorts({ profile: "multi-miner", gpu: "intel" }).downloadCommand), 'MM must omit MoM downloads, wrappers, and setup instructions');
     assert.ok(!/sudo \.\/install\.sh/.test(setupPlanWithPorts({ profile: "multi-miner", gpu: "intel" }).downloadCommand), 'MM must omit MoM downloads, wrappers, and setup instructions');
     assert.ok(!/MOM='\.\/mom\/mom'/.test(setupPlanWithPorts({ profile: "multi-miner", gpu: "intel" }).tlsRunCommand), 'MM must omit MoM downloads, wrappers, and setup instructions');
@@ -628,25 +658,25 @@ test.describe("setup, settings, uptime, and copy", { concurrency: false }, () =>
     const intelDgpuPlan = setupPlanWithPorts({ profile: "srb-gpu", gpu: "intel", algo: "kawpow" });
     assert.equal(intelDgpuPlan.selection.miner, "mom");
     assert.deepEqual(intelDgpuPlan.minerOptions.map(([id]) => id), ["mom", "srbminer"]);
-    assert.match(intelDgpuPlan.downloadCommand, /MoneroOcean\/mo-miner\/releases\/latest/);
-    assert.doesNotMatch(intelDgpuPlan.downloadCommand, /bzminer\/bzminer\/releases\/latest|doktor83\/SRBMiner-Multi\/releases\/latest/);
+    assert.match(intelDgpuPlan.downloadCommand, /download_release MoneroOcean\/mo-miner /);
+    assert.doesNotMatch(intelDgpuPlan.downloadCommand, /bzminer\/bzminer|doktor83\/SRBMiner-Multi/);
     const intelDgpuBzPlan = setupPlanWithPorts({ profile: "srb-gpu", gpu: "intel", algo: "cn/gpu", miner: "bzminer" });
     assert.equal(intelDgpuBzPlan.selection.miner, "bzminer");
     assert.match(intelDgpuBzPlan.plainRunCommand, /^\.\/bzminer -a cn\/gpu/);
-    assert.match(intelDgpuBzPlan.downloadCommand, /bzminer\/bzminer\/releases\/latest/);
+    assert.match(intelDgpuBzPlan.downloadCommand, /download_release bzminer\/bzminer /);
     const intelDgpuSrbPlan = setupPlanWithPorts({ profile: "srb-gpu", gpu: "intel", algo: "kawpow", miner: "srbminer" });
     assert.match(intelDgpuSrbPlan.plainRunCommand, /^\.\/SRBMiner-MULTI/);
-    assert.match(intelDgpuSrbPlan.downloadCommand, /doktor83\/SRBMiner-Multi\/releases\/latest/);
+    assert.match(intelDgpuSrbPlan.downloadCommand, /download_release doktor83\/SRBMiner-Multi /);
     const nvidiaPlan = setupPlanWithPorts({ profile: "srb-gpu", gpu: "gpu", algo: "kawpow" });
     assert.equal(nvidiaPlan.selection.miner, "bzminer");
-    assert.match(nvidiaPlan.downloadCommand, /bzminer\/bzminer\/releases\/latest/);
-    assert.doesNotMatch(nvidiaPlan.downloadCommand, /doktor83\/SRBMiner-Multi\/releases\/latest|MoneroOcean\/mo-miner\/releases\/latest/);
+    assert.match(nvidiaPlan.downloadCommand, /download_release bzminer\/bzminer /);
+    assert.doesNotMatch(nvidiaPlan.downloadCommand, /doktor83\/SRBMiner-Multi|MoneroOcean\/mo-miner/);
     const nvidiaSrbPlan = setupPlanWithPorts({ profile: "srb-gpu", gpu: "gpu", algo: "kawpow", miner: "srbminer" });
     assert.match(nvidiaSrbPlan.plainRunCommand, /^\.\/SRBMiner-MULTI/);
-    assert.match(nvidiaSrbPlan.downloadCommand, /doktor83\/SRBMiner-Multi\/releases\/latest/);
+    assert.match(nvidiaSrbPlan.downloadCommand, /download_release doktor83\/SRBMiner-Multi /);
     const nvidiaMomPlan = setupPlanWithPorts({ profile: "srb-gpu", gpu: "nvidia", algo: "kawpow", miner: "mom" });
     assert.match(nvidiaMomPlan.plainRunCommand, /^MOM_GPU_BACKEND=nvidia \.\/mom mine/);
-    assert.match(nvidiaMomPlan.downloadCommand, /MoneroOcean\/mo-miner\/releases\/latest/);
+    assert.match(nvidiaMomPlan.downloadCommand, /download_release MoneroOcean\/mo-miner /);
     const bzAlgos = ["autolykos2", "kawpow", "etchash", "cn/gpu", "c29", "pearlhash"];
     for (const gpu of ["nvidia", "amd"]) {
       for (const os of ["linux", "windows"]) {
