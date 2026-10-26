@@ -64,6 +64,10 @@ export async function helpView() {
       "Low difficulty share means a result missed assigned difficulty. If one device repeats it, check miner, clocks, memory, thermals, and algo.",
       `If many miners report the same reject pattern, check ${statusOrDiscord} before large local changes.`
     ]],
+    ["Botnet policy and abuse reports", [
+      "Botnet and unauthorized mining are prohibited. Permanent wallet bans for malware/botnet activity require sufficient evidence.",
+      `Report suspected abuse to ${helpLink(`mailto:${supportEmail()}`, supportEmail())}. Include the mining wallet address (miner -u), pool host/port, worker ID if available, and timestamps with timezone, plus a short log/config excerpt or screenshot showing the unauthorized mining.`
+    ]],
     ["Hosts, ports, Tor", [
       `Use ${POOL_HOST}; it routes miners to a nearby healthy node. Check ${statusOrDiscord} during incidents.`,
       `Setup selects a port from estimated hashrate. Reference ports:${referencePortList()}`,
