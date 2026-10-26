@@ -9,7 +9,7 @@ const CALC_MO_CVS_URL = "https://github.com/MoneroOcean/nodejs-pool/blob/master/
 const XMRCHAIN_URL = "https://xmrchain.net";
 const DEFAULT_REFERENCE_PORTS = [80, ...Array.from({ length: 14 }, (_, index) => 10000 + 2 ** index)];
 
-export async function helpView() {
+export async function helpView(route = {}) {
   const policy = payoutPolicyFromConfig(await recover(api.config(), {}));
   const thresholdText = (value) => formatPayoutThresholdInput(value, policy);
   const historyEnabled = localHistoryEnabled();
@@ -67,7 +67,7 @@ export async function helpView() {
     ["Botnet policy and abuse reports", [
       "Botnet and unauthorized mining are prohibited. Permanent wallet bans for malware/botnet activity require sufficient evidence.",
       `Report suspected abuse to ${helpLink(`mailto:${supportEmail()}`, supportEmail())}. Include the mining wallet address (miner -u), pool host/port, worker ID if available, and timestamps with timezone, plus a short log/config excerpt or screenshot showing the unauthorized mining.`
-    ]],
+    ], route.q?.topic === "botnet", "botnet"],
     ["Hosts, ports, Tor", [
       `Use ${POOL_HOST}; it routes miners to a nearby healthy node. Check ${statusOrDiscord} during incidents.`,
       `Setup selects a port from estimated hashrate. Reference ports:${referencePortList()}`,
@@ -88,11 +88,11 @@ export async function helpView() {
       `Report broken explorers, confusing UI/setup output, and incidents in ${discordLink} or by email. Donation address:<div class="code-box help-donation"><button class="copy-button" data-copy-target="#da">Copy</button><pre id="da">${DONATION_XMR}</pre></div>`
     ]]
   ];
-  return `<section class=panel><div class=panel-header><h1>Help</h1></div><div class="card grid help-grid">${rows.map(([q, a, open]) => helpEntry(q, a, open)).join("")}</div></section>`;
+  return `<section class=panel><div class=panel-header><h1>Help</h1></div><div class="card grid help-grid">${rows.map(([q, a, open, topic]) => helpEntry(q, a, open, topic)).join("")}</div></section>`;
 }
 
-function helpEntry(question, answers, open = false) {
-  return `<details ${open ? "open" : ""}><summary>${escapeHtml(question)}</summary><div class="muted help-entry"><ul class="help-list">${answers.map((answer) => `<li>${answer}</li>`).join("")}</ul></div></details>`;
+function helpEntry(question, answers, open = false, topic = "") {
+  return `<details ${open ? "open" : ""}${topic ? ` data-help-topic="${escapeHtml(topic)}"` : ""}><summary>${escapeHtml(question)}</summary><div class="muted help-entry"><ul class="help-list">${answers.map((answer) => `<li>${answer}</li>`).join("")}</ul></div></details>`;
 }
 
 function helpLink(href, label) {

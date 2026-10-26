@@ -44,6 +44,18 @@ test("main route matrix renders usable pages with valid internal links", async (
   api.assertNoConsoleErrors();
 });
 
+test("botnet help deep link expands the reporting FAQ and scrolls it into view", async ({ page }) => {
+  const api = await mockApi(page);
+  await openApp(page, "#/help?topic=botnet");
+
+  const entry = page.locator('details[data-help-topic="botnet"]');
+  await expect(entry).toHaveCount(1);
+  await expect(entry).toHaveAttribute("open", "");
+  await expect(entry.locator('a[href="mailto:support@moneroocean.stream"]')).toHaveCount(1);
+  await expect(entry).toBeInViewport();
+  api.assertNoConsoleErrors();
+});
+
 test("malformed and empty API fixtures degrade without broken output", async ({ page }) => {
   const api = await mockApi(page, {
     poolStats: { coins: {}, miners: undefined, totalPayments: 0, totalBlocksFound: 0 },

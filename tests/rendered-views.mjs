@@ -530,6 +530,18 @@ test.describe("rendered views, links, charts, and coins", { concurrency: false }
     });
   });
 
+  test("botnet FAQ deep link opens the policy and exposes the reporting email", async () => {
+    await withApiStubs({ config: async () => ({}) }, async () => {
+      const html = await helpView(parseRoute("#/help?topic=botnet"));
+      assert.match(html, /<details open data-help-topic="botnet"><summary>Botnet policy and abuse reports<\/summary>/);
+      assert.match(html, /href="mailto:support@moneroocean\.stream"/);
+      for (const hash of ["#/help", "#/help?topic=unknown"]) {
+        const defaultHtml = await helpView(parseRoute(hash));
+        assert.doesNotMatch(defaultHtml, /<details open data-help-topic="botnet"/);
+      }
+    });
+  });
+
   test("setupView renders the command grid and the no-ports fallback", async () => {
     const prev = { r: state.r, a: state.a, w: state.w, s: state.s };
     state.a = ""; state.w = [];

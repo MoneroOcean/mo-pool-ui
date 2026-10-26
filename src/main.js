@@ -87,6 +87,7 @@ async function render({ background = false } = {}) {
     if (background && isStaticRoute(parseRoute(location.hash || "#/"))) return;
     view.innerHTML = html;
     bindViewEvents();
+    if (state.r.n === "help") view.querySelector("details[data-help-topic][open]")?.scrollIntoView();
     if (!isStaticRoute(state.r)) lastRefreshAt = Date.now();
   } catch (error) {
     if (!background && !keepCurrentView) view.innerHTML = errorPanel(error);

@@ -45,6 +45,7 @@ Setup:
 
 Help:
   #/help
+  params: topic=botnet
 
 Wallet:
   #/wallet/<address>
